@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /onboarding/
+Disallow: /chat/
+Disallow: /api/
+
+Sitemap: https://garbin.si/sitemap.xml
