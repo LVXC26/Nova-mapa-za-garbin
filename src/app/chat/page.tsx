@@ -6,15 +6,7 @@ import { Send, MessageCircle, Search, ArrowLeft } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-
-interface Sporocilo {
-  id: string
-  sender_id: string
-  receiver_id: string
-  content: string
-  created_at: string
-  read: boolean
-}
+import type { Message } from '@/types/database'
 
 interface Konverzacija {
   user_id: string
@@ -24,70 +16,165 @@ interface Konverzacija {
   neprebrana: number
 }
 
-// Mock konverzacije za prikaz ko Supabase ni povezan
-const mockKonverzacije: Konverzacija[] = [
-  { user_id: 'u1', ime: 'Janez Novak', zadnje_sporocilo: 'Zanima me Bavaria Cruiser 46...', cas: '14:32', neprebrana: 2 },
-  { user_id: 'u2', ime: 'Adriatic Sail d.o.o.', zadnje_sporocilo: 'Plovilo je še na voljo!', cas: '11:15', neprebrana: 0 },
-  { user_id: 'u3', ime: 'Marko Horvat (Skipper)', zadnje_sporocilo: 'Jutri sem na voljo.', cas: 'Včeraj', neprebrana: 1 },
-]
-
-const mockSporocila: Record<string, Sporocilo[]> = {
-  u1: [
-    { id: 'm1', sender_id: 'u1', receiver_id: 'me', content: 'Zanima me Bavaria Cruiser 46, ali je še naprodaj?', created_at: '2024-03-15T14:30:00Z', read: true },
-    { id: 'm2', sender_id: 'me', receiver_id: 'u1', content: 'Ja, plovilo je še dostopno. Kdaj bi si ga radi ogledali?', created_at: '2024-03-15T14:31:00Z', read: true },
-    { id: 'm3', sender_id: 'u1', receiver_id: 'me', content: 'Bi prišel v sredo popoldne.', created_at: '2024-03-15T14:32:00Z', read: false },
-  ],
-  u2: [
-    { id: 'm4', sender_id: 'me', receiver_id: 'u2', content: 'Ali imate na voljo jadrnico za teden dni julija?', created_at: '2024-03-15T11:10:00Z', read: true },
-    { id: 'm5', sender_id: 'u2', receiver_id: 'me', content: 'Plovilo je še na voljo!', created_at: '2024-03-15T11:15:00Z', read: true },
-  ],
-  u3: [
-    { id: 'm6', sender_id: 'u3', receiver_id: 'me', content: 'Jutri sem na voljo za plovbo.', created_at: '2024-03-14T18:00:00Z', read: false },
-  ],
+function formatCas(isoString: string): string {
+  const date = new Date(isoString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  if (diff < 86400000) return date.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })
+  if (diff < 172800000) return 'Včeraj'
+  return date.toLocaleDateString('sl-SI', { day: 'numeric', month: 'short' })
 }
 
 export default function ChatPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const supabase = createClient()
   const [aktivnaKonv, setAktivnaKonv] = useState<string | null>(null)
-  const [sporocila, setSporocila] = useState<Sporocilo[]>([])
+  const aktivnaKonvRef = useRef<string | null>(null)
+  const [konverzacije, setKonverzacije] = useState<Konverzacija[]>([])
+  const [sporocila, setSporocila] = useState<Message[]>([])
   const [novoSporocilo, setNovoSporocilo] = useState('')
   const [iskanje, setIskanje] = useState('')
+  const [nalaga, setNalaga] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    aktivnaKonvRef.current = aktivnaKonv
+  }, [aktivnaKonv])
 
   useEffect(() => {
     if (!user) {
       router.push('/prijava?redirect=/chat')
+      return
     }
-  }, [user, router])
 
-  useEffect(() => {
-    if (aktivnaKonv) {
-      setSporocila(mockSporocila[aktivnaKonv] ?? [])
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
-    }
-  }, [aktivnaKonv])
+    naloziKonverzacije()
 
-  function posljiSporocilo() {
-    if (!novoSporocilo.trim() || !aktivnaKonv) return
-    const novo: Sporocilo = {
-      id: `m${Date.now()}`,
-      sender_id: 'me',
-      receiver_id: aktivnaKonv,
-      content: novoSporocilo,
-      created_at: new Date().toISOString(),
-      read: true,
+    const channel = supabase
+      .channel('messages-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      }, async (payload) => {
+        const msg = payload.new as Message
+        if (msg.sender_id !== user.id && msg.receiver_id !== user.id) return
+
+        await naloziKonverzacije()
+
+        const currentKonv = aktivnaKonvRef.current
+        if (currentKonv && (msg.sender_id === currentKonv || msg.receiver_id === currentKonv)) {
+          setSporocila(prev => [...prev, msg])
+          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+          if (msg.receiver_id === user.id) {
+            await supabase.from('messages').update({ read: true }).eq('id', msg.id)
+          }
+        }
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  async function naloziKonverzacije() {
+    if (!user) return
+
+    const { data: messages } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+      .order('created_at', { ascending: false })
+
+    if (!messages || messages.length === 0) {
+      setKonverzacije([])
+      setNalaga(false)
+      return
     }
-    setSporocila(prev => [...prev, novo])
-    setNovoSporocilo('')
-    // Ko bo Supabase povezan: supabase.from('messages').insert(...)
+
+    const konvMap = new Map<string, { zadnje: Message; neprebrana: number }>()
+    for (const msg of messages) {
+      const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id
+      if (!konvMap.has(partnerId)) {
+        konvMap.set(partnerId, { zadnje: msg, neprebrana: 0 })
+      }
+      if (msg.receiver_id === user.id && !msg.read) {
+        konvMap.get(partnerId)!.neprebrana++
+      }
+    }
+
+    const partnerIds = Array.from(konvMap.keys())
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, ime')
+      .in('id', partnerIds)
+
+    const profileMap = new Map(profiles?.map(p => [p.id, p.ime ?? 'Neznani uporabnik']) ?? [])
+
+    setKonverzacije(
+      partnerIds.map(id => {
+        const { zadnje, neprebrana } = konvMap.get(id)!
+        return {
+          user_id: id,
+          ime: profileMap.get(id) ?? 'Neznani uporabnik',
+          zadnje_sporocilo: zadnje.content,
+          cas: formatCas(zadnje.created_at),
+          neprebrana,
+        }
+      })
+    )
+    setNalaga(false)
   }
 
-  const filtrirane = mockKonverzacije.filter(k =>
+  async function naloziSporocila(partnerId: string) {
+    if (!user) return
+
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
+      .order('created_at', { ascending: true })
+
+    if (data) {
+      setSporocila(data)
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+
+      const neprebranaIds = data.filter(m => m.receiver_id === user.id && !m.read).map(m => m.id)
+      if (neprebranaIds.length > 0) {
+        await supabase.from('messages').update({ read: true }).in('id', neprebranaIds)
+        naloziKonverzacije()
+      }
+    }
+  }
+
+  async function posljiSporocilo() {
+    if (!novoSporocilo.trim() || !aktivnaKonv || !user) return
+    const vsebina = novoSporocilo.trim()
+    setNovoSporocilo('')
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({ sender_id: user.id, receiver_id: aktivnaKonv, content: vsebina, read: false })
+      .select()
+      .single()
+
+    if (!error && data) {
+      setSporocila(prev => [...prev, data as Message])
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+      naloziKonverzacije()
+    }
+  }
+
+  function handleKonverzacijaKlik(userId: string) {
+    setAktivnaKonv(userId)
+    naloziSporocila(userId)
+  }
+
+  const filtrirane = konverzacije.filter(k =>
     k.ime.toLowerCase().includes(iskanje.toLowerCase())
   )
 
-  const aktivnaKonvData = mockKonverzacije.find(k => k.user_id === aktivnaKonv)
+  const aktivnaKonvData = konverzacije.find(k => k.user_id === aktivnaKonv)
 
   if (!user) return null
 
@@ -114,7 +201,11 @@ export default function ChatPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {filtrirane.length === 0 ? (
+              {nalaga ? (
+                <div className="p-8 text-center">
+                  <div className="w-6 h-6 border-2 border-[#c9a84c] border-t-transparent rounded-full animate-spin mx-auto" />
+                </div>
+              ) : filtrirane.length === 0 ? (
                 <div className="p-8 text-center">
                   <MessageCircle className="w-8 h-8 text-gray-200 mx-auto mb-2" />
                   <p className="text-sm text-gray-400">Ni konverzacij</p>
@@ -123,7 +214,7 @@ export default function ChatPage() {
                 filtrirane.map((k) => (
                   <button
                     key={k.user_id}
-                    onClick={() => setAktivnaKonv(k.user_id)}
+                    onClick={() => handleKonverzacijaKlik(k.user_id)}
                     className={`w-full flex items-center gap-3 p-4 text-left border-b border-gray-50 hover:bg-gray-50 transition-colors ${
                       aktivnaKonv === k.user_id ? 'bg-[#0c2340]/5' : ''
                     }`}
@@ -159,7 +250,6 @@ export default function ChatPage() {
               </div>
             ) : (
               <>
-                {/* Chat header */}
                 <div className="p-4 border-b border-gray-100 flex items-center gap-3">
                   <button
                     onClick={() => setAktivnaKonv(null)}
@@ -172,21 +262,19 @@ export default function ChatPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-[#0c2340] text-sm">{aktivnaKonvData?.ime}</p>
-                    <p className="text-xs text-emerald-500">Online</p>
                   </div>
                 </div>
 
-                {/* Sporočila */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {sporocila.map((s) => (
-                    <div key={s.id} className={`flex ${s.sender_id === 'me' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={s.id} className={`flex ${s.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${
-                        s.sender_id === 'me'
+                        s.sender_id === user.id
                           ? 'bg-[#0c2340] text-white rounded-br-sm'
                           : 'bg-gray-100 text-gray-800 rounded-bl-sm'
                       }`}>
                         {s.content}
-                        <div className={`text-xs mt-1 ${s.sender_id === 'me' ? 'text-white/50' : 'text-gray-400'}`}>
+                        <div className={`text-xs mt-1 ${s.sender_id === user.id ? 'text-white/50' : 'text-gray-400'}`}>
                           {new Date(s.created_at).toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
@@ -195,7 +283,6 @@ export default function ChatPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input */}
                 <div className="p-4 border-t border-gray-100">
                   <div className="flex items-center gap-2">
                     <input

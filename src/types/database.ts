@@ -135,6 +135,15 @@ export interface Povprasevanje {
   created_at: string
 }
 
+export interface Message {
+  id: string
+  sender_id: string
+  receiver_id: string
+  content: string
+  read: boolean
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -147,6 +156,7 @@ export interface Database {
       komentarji: { Row: Komentar; Insert: Omit<Komentar, 'id' | 'created_at'>; Update: Partial<Komentar>; Relationships: [] }
       oprema_moznosti: { Row: OpremaOpcija; Insert: Omit<OpremaOpcija, 'id'>; Update: Partial<OpremaOpcija>; Relationships: [] }
       povprasevanja: { Row: Povprasevanje; Insert: Omit<Povprasevanje, 'id' | 'created_at'>; Update: Partial<Povprasevanje>; Relationships: [] }
+      messages: { Row: Message; Insert: Omit<Message, 'id' | 'created_at'>; Update: Partial<Message>; Relationships: [] }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
