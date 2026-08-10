@@ -1,9 +1,14 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Calendar, ArrowRight, ChevronRight, Tag, Star, Flame, Package, Anchor } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { mockPromocije, mockPlovila } from '@/data/mock'
 import { formatCena } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import type { Promocija, Plovilo } from '@/types/database'
 
 const tipConfig: Record<string, { label: string; ikona: string; barva: string }> = {
   popust: { label: 'Popust', ikona: '🏷️', barva: '#0c2340' },
@@ -13,12 +18,28 @@ const tipConfig: Record<string, { label: string; ikona: string; barva: string }>
 }
 
 export default function PromoPage() {
-  const aktivne = mockPromocije.filter(
-    (p) => new Date(p.veljavnost_do) >= new Date()
-  )
-  const pretekle = mockPromocije.filter(
-    (p) => new Date(p.veljavnost_do) < new Date()
-  )
+  const [realnePromocije, setRealnePromocije] = useState<Promocija[]>([])
+  const [realnaPlovila, setRealnaPlovila] = useState<Plovilo[]>([])
+  const [zdaj, setZdaj] = useState<number | null>(null)
+
+  useEffect(() => {
+    ;(async () => {
+      setZdaj(Date.now())
+      const supabase = createClient()
+      const { data: promoData } = await supabase.from('promocije').select('*').order('created_at', { ascending: false })
+      setRealnePromocije(promoData ?? [])
+
+      const idji = (promoData ?? []).map(p => p.plovilo_id).filter((id): id is string => !!id)
+      if (idji.length > 0) {
+        const { data: plovilaData } = await supabase.from('plovila').select('*').in('id', idji)
+        setRealnaPlovila(plovilaData ?? [])
+      }
+    })()
+  }, [])
+
+  const vsePromocije = [...realnePromocije, ...mockPromocije]
+  const vsaPlovila = [...realnaPlovila, ...mockPlovila]
+  const aktivne = vsePromocije.filter((p) => !p.veljavnost_do || zdaj === null || new Date(p.veljavnost_do).getTime() >= zdaj)
 
   return (
     <>
@@ -75,13 +96,13 @@ export default function PromoPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {mockPromocije.map((promo) => {
-                const plovilo = mockPlovila.find((p) => p.id === promo.plovilo_id)
+              {vsePromocije.map((promo) => {
+                const plovilo = vsaPlovila.find((p) => p.id === promo.plovilo_id)
                 const cfg = tipConfig[promo.tip]
-                const stevilDni = Math.ceil(
-                  (new Date(promo.veljavnost_do).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                )
-                const jeAktivna = stevilDni >= 0
+                const stevilDni = promo.veljavnost_do && zdaj !== null
+                  ? Math.ceil((new Date(promo.veljavnost_do).getTime() - zdaj) / (1000 * 60 * 60 * 24))
+                  : null
+                const jeAktivna = stevilDni === null || stevilDni >= 0
 
                 return (
                   <div
@@ -104,7 +125,7 @@ export default function PromoPage() {
                       {/* Levi panel */}
                       <div
                         className="sm:w-48 flex-shrink-0 p-6 flex flex-col items-center justify-center gap-3 text-white relative"
-                        style={{ backgroundColor: promo.barva }}
+                        style={{ backgroundColor: promo.barva ?? '#0c2340' }}
                       >
                         <span className="text-4xl">{cfg.ikona}</span>
                         <span className="text-xs font-medium uppercase tracking-wider opacity-80">{cfg.label}</span>
@@ -161,11 +182,13 @@ export default function PromoPage() {
                           <div className="flex items-center gap-1.5 text-xs text-gray-400">
                             <Calendar className="w-3.5 h-3.5" />
                             <span>
-                              {jeAktivna
-                                ? stevilDni === 0
-                                  ? 'Poteče danes!'
-                                  : `Še ${stevilDni} ${stevilDni === 1 ? 'dan' : stevilDni < 5 ? 'dnevi' : 'dni'}`
-                                : `Potekla ${new Date(promo.veljavnost_do).toLocaleDateString('sl-SI')}`
+                              {!promo.veljavnost_do
+                                ? 'Brez omejitve'
+                                : jeAktivna
+                                  ? stevilDni === 0
+                                    ? 'Poteče danes!'
+                                    : `Še ${stevilDni} ${stevilDni === 1 ? 'dan' : stevilDni! < 5 ? 'dnevi' : 'dni'}`
+                                  : `Potekla ${new Date(promo.veljavnost_do).toLocaleDateString('sl-SI')}`
                               }
                             </span>
                           </div>
@@ -182,7 +205,7 @@ export default function PromoPage() {
                       </div>
                     </div>
 
-                    {jeAktivna && stevilDni <= 7 && (
+                    {jeAktivna && stevilDni !== null && stevilDni <= 7 && (
                       <div className="bg-amber-50 border-t border-amber-100 px-6 py-2 flex items-center gap-2">
                         <Flame className="w-4 h-4 text-amber-500" />
                         <span className="text-xs text-amber-700 font-medium">
@@ -235,7 +258,7 @@ export default function PromoPage() {
               Oglasite vašo akcijo na Garbin in dosežite tisoče zainteresiranih kupcev.
             </p>
             <Link
-              href="/oglas/novo"
+              href="/dashboard/dodaj-plovilo"
               className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-[#0c2340] bg-[#c9a84c] hover:bg-[#e8c76d] rounded-full transition-all duration-200 hover:scale-105"
             >
               Oddaj oglas <ArrowRight className="w-5 h-5" />

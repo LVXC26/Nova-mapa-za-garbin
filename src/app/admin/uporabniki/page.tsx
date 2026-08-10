@@ -1,29 +1,84 @@
 'use client'
 
-import { Shield, Ban, Mail } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Shield, Ban, CheckCircle, Mail } from 'lucide-react'
 
-const mockUporabniki = [
-  { id: 'u1', ime: 'Janez Novak', email: 'janez@primer.si', vloga: 'prodajalec', created: '2024-01-15', aktiven: true },
-  { id: 'u2', ime: 'Adriatic Sail d.o.o.', email: 'info@adriaticsail.si', vloga: 'charter', created: '2024-01-20', aktiven: true },
-  { id: 'u3', ime: 'Marko Horvat', email: 'marko@primer.si', vloga: 'skipper', created: '2024-02-01', aktiven: true },
-  { id: 'u4', ime: 'Ana Kovač', email: 'ana@primer.si', vloga: 'kupec', created: '2024-02-10', aktiven: false },
-]
+interface Uporabnik {
+  id: string
+  ime: string
+  email: string
+  vloga: string
+  created: string
+  aktiven: boolean
+  isAdmin: boolean
+}
 
 const vlogaBarva: Record<string, string> = {
   prodajalec: 'bg-[#0c2340]/10 text-[#0c2340]',
   charter: 'bg-blue-50 text-blue-700',
   skipper: 'bg-[#c9a84c]/15 text-[#9a7a2e]',
   kupec: 'bg-gray-100 text-gray-600',
-  admin: 'bg-red-50 text-red-700',
 }
 
 export default function AdminUporabnikiPage() {
+  const [uporabniki, setUporabniki] = useState<Uporabnik[]>([])
+  const [nalaga, setNalaga] = useState(true)
+  const [napaka, setNapaka] = useState('')
+
+  async function nalozi() {
+    setNalaga(true)
+    setNapaka('')
+    const res = await fetch('/api/admin/uporabniki')
+    const json = await res.json()
+    if (!res.ok) { setNapaka(json.error ?? 'Napaka pri nalaganju'); setNalaga(false); return }
+    setUporabniki(json.data)
+    setNalaga(false)
+  }
+
+  useEffect(() => {
+    ;(async () => { await nalozi() })()
+  }, [])
+
+  async function spremeniVlogo(userId: string, vloga: string) {
+    setUporabniki(prev => prev.map(u => u.id === userId ? { ...u, vloga } : u))
+    const res = await fetch('/api/admin/uporabniki', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, vloga }),
+    })
+    if (!res.ok) await nalozi()
+  }
+
+  async function preklopiBlokado(userId: string, trenutnoAktiven: boolean) {
+    setUporabniki(prev => prev.map(u => u.id === userId ? { ...u, aktiven: !trenutnoAktiven } : u))
+    const res = await fetch('/api/admin/uporabniki', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, aktiven: !trenutnoAktiven }),
+    })
+    if (!res.ok) await nalozi()
+  }
+
+  async function preklopiAdmina(userId: string, trenutnoAdmin: boolean) {
+    setUporabniki(prev => prev.map(u => u.id === userId ? { ...u, isAdmin: !trenutnoAdmin } : u))
+    const res = await fetch('/api/admin/uporabniki', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, isAdmin: !trenutnoAdmin }),
+    })
+    if (!res.ok) await nalozi()
+  }
+
   return (
     <div className="p-8">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-gray-900">Uporabniki</h1>
         <p className="text-gray-500 text-sm mt-1">Pregled računov, sprememba vloge, blokiranje</p>
       </div>
+
+      {napaka && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">{napaka}</div>
+      )}
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
@@ -38,20 +93,26 @@ export default function AdminUporabnikiPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {mockUporabniki.map(u => (
+            {uporabniki.map(u => (
               <tr key={u.id} className="hover:bg-gray-50/50">
                 <td className="px-5 py-3.5 font-medium text-gray-900">{u.ime}</td>
                 <td className="px-5 py-3.5 text-gray-500">{u.email}</td>
                 <td className="px-5 py-3.5">
-                  <select defaultValue={u.vloga} className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 focus:outline-none cursor-pointer ${vlogaBarva[u.vloga] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <select
+                    value={u.vloga}
+                    onChange={e => spremeniVlogo(u.id, e.target.value)}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 focus:outline-none cursor-pointer ${vlogaBarva[u.vloga] ?? 'bg-gray-100 text-gray-600'}`}
+                  >
                     <option value="prodajalec">Prodajalec</option>
                     <option value="charter">Charter</option>
                     <option value="skipper">Skipper</option>
                     <option value="kupec">Kupec</option>
-                    <option value="admin">Admin</option>
                   </select>
+                  {u.isAdmin && (
+                    <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-700">Admin</span>
+                  )}
                 </td>
-                <td className="px-5 py-3.5 text-gray-500">{u.created}</td>
+                <td className="px-5 py-3.5 text-gray-500">{new Date(u.created).toLocaleDateString('sl-SI')}</td>
                 <td className="px-5 py-3.5">
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${u.aktiven ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                     {u.aktiven ? 'Aktiven' : 'Blokiran'}
@@ -59,15 +120,29 @@ export default function AdminUporabnikiPage() {
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Pošlji email"><Mail className="w-4 h-4" /></button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-[#c9a84c] hover:bg-amber-50 transition-colors" title="Admin vloga"><Shield className="w-4 h-4" /></button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Blokiraj"><Ban className="w-4 h-4" /></button>
+                    <a href={`mailto:${u.email}`} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Pošlji email"><Mail className="w-4 h-4" /></a>
+                    <button
+                      onClick={() => preklopiAdmina(u.id, u.isAdmin)}
+                      className={`p-1.5 rounded-lg transition-colors ${u.isAdmin ? 'text-[#c9a84c] bg-amber-50' : 'text-gray-400 hover:text-[#c9a84c] hover:bg-amber-50'}`}
+                      title={u.isAdmin ? 'Odstrani admin dostop' : 'Nastavi kot admin'}
+                    >
+                      <Shield className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => preklopiBlokado(u.id, u.aktiven)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title={u.aktiven ? 'Blokiraj' : 'Odblokiraj'}>
+                      {u.aktiven ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {!nalaga && uporabniki.length === 0 && (
+          <div className="py-12 text-center text-gray-400 text-sm">Ni uporabnikov</div>
+        )}
+        {nalaga && (
+          <div className="py-12 text-center text-gray-400 text-sm">Nalagam...</div>
+        )}
       </div>
     </div>
   )

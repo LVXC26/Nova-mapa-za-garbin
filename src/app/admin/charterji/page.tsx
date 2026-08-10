@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { CheckCircle, XCircle, Eye, BadgeCheck, Gift, X, Calendar, AlertTriangle } from 'lucide-react'
-import { mockCharterji } from '@/data/mock'
+import { createClient } from '@/lib/supabase/client'
 import type { Charter } from '@/types/database'
 
 type TrialStatus = Record<string, { meseci: number; konec: Date } | null>
@@ -117,12 +118,24 @@ function TrialModal({
 }
 
 export default function AdminCharterjiPage() {
+  const [charterji, setCharterji] = useState<Charter[]>([])
+  const [nalaga, setNalaga] = useState(true)
   const [izbraniCharter, setIzbraniCharter] = useState<Charter | null>(null)
   const [triali, setTriali] = useState<TrialStatus>({})
-  const [verificirani, setVerificirani] = useState<Record<string, boolean>>(
-    Object.fromEntries(mockCharterji.map(c => [c.id, c.verified]))
-  )
   const [obvestilo, setObvestilo] = useState<{ tip: 'ok' | 'napaka'; sporocilo: string } | null>(null)
+
+  const supabase = createClient()
+
+  async function nalozi() {
+    setNalaga(true)
+    const { data } = await supabase.from('charterji').select('*').order('created_at', { ascending: false })
+    setCharterji(data ?? [])
+    setNalaga(false)
+  }
+
+  useEffect(() => {
+    ;(async () => { await nalozi() })()
+  }, [])
 
   function prikaziObvestilo(tip: 'ok' | 'napaka', sporocilo: string) {
     setObvestilo({ tip, sporocilo })
@@ -161,8 +174,9 @@ export default function AdminCharterjiPage() {
     }
   }
 
-  function preklopi_verified(id: string) {
-    setVerificirani(prev => ({ ...prev, [id]: !prev[id] }))
+  async function preklopi_verified(id: string, trenutno: boolean) {
+    await supabase.from('charterji').update({ verified: !trenutno }).eq('id', id)
+    nalozi()
   }
 
   return (
@@ -195,9 +209,9 @@ export default function AdminCharterjiPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {mockCharterji.map(c => {
+            {charterji.map(c => {
               const trial = triali[c.id]
-              const jeVerificiran = verificirani[c.id] ?? c.verified
+              const jeVerificiran = c.verified
               const trialAktiven = trial && trial.konec > new Date()
 
               return (
@@ -232,14 +246,16 @@ export default function AdminCharterjiPage() {
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button
+                      <Link
+                        href={`/charterji/${c.id}`}
+                        target="_blank"
                         className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                         title="Oglej profil"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
+                      </Link>
                       <button
-                        onClick={() => preklopi_verified(c.id)}
+                        onClick={() => preklopi_verified(c.id, jeVerificiran)}
                         className={`p-1.5 rounded-lg transition-colors ${
                           jeVerificiran
                             ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
@@ -263,6 +279,12 @@ export default function AdminCharterjiPage() {
             })}
           </tbody>
         </table>
+        {!nalaga && charterji.length === 0 && (
+          <div className="py-12 text-center text-gray-400 text-sm">Ni zadetkov</div>
+        )}
+        {nalaga && (
+          <div className="py-12 text-center text-gray-400 text-sm">Nalagam...</div>
+        )}
       </div>
 
       {/* Legend */}

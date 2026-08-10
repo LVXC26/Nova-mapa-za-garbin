@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, Filter, MapPin, Phone, Mail, Tag, ChevronRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { mockRezervniDeli } from '@/data/mock'
 import { formatCena } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import type { RezervniDel } from '@/types/database'
 
 type Kategorija = 'vse' | 'motor' | 'trup' | 'elektronika' | 'jadra' | 'sidrna oprema' | 'drugo'
 type Stanje = 'vse' | 'novo' | 'rabljeno'
@@ -30,11 +32,23 @@ export default function RezervniDeliPage() {
   const [kategorija, setKategorija] = useState<Kategorija>('vse')
   const [stanje, setStanje] = useState<Stanje>('vse')
   const [iskanje, setIskanje] = useState('')
+  const [realniDeli, setRealniDeli] = useState<RezervniDel[]>([])
 
-  const filtrirani = mockRezervniDeli.filter((del) => {
+  useEffect(() => {
+    createClient()
+      .from('rezervni_deli')
+      .select('*')
+      .eq('potrjeno', true)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setRealniDeli(data) })
+  }, [])
+
+  const vsiDeli = [...realniDeli, ...mockRezervniDeli]
+
+  const filtrirani = vsiDeli.filter((del) => {
     if (kategorija !== 'vse' && del.kategorija !== kategorija) return false
     if (stanje !== 'vse' && del.stanje !== stanje) return false
-    if (iskanje && !del.naziv.toLowerCase().includes(iskanje.toLowerCase()) && !del.opis.toLowerCase().includes(iskanje.toLowerCase())) return false
+    if (iskanje && !del.naziv.toLowerCase().includes(iskanje.toLowerCase()) && !(del.opis ?? '').toLowerCase().includes(iskanje.toLowerCase())) return false
     return true
   })
 
@@ -138,9 +152,10 @@ export default function RezervniDeliPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filtrirani.map((del) => (
-                  <div
+                  <Link
                     key={del.id}
-                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:-translate-y-1 group"
+                    href={`/rezervni-deli/${del.id}`}
+                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:-translate-y-1 group block"
                   >
                     <div className="h-40 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] flex items-center justify-center relative">
                       <span className="text-4xl opacity-30">
@@ -193,6 +208,7 @@ export default function RezervniDeliPage() {
                           {del.kontakt_tel && (
                             <a
                               href={`tel:${del.kontakt_tel}`}
+                              onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-1 text-xs text-[#0c2340] hover:text-[#c9a84c] transition-colors font-medium"
                             >
                               <Phone className="w-3.5 h-3.5" /> Pokliči
@@ -201,6 +217,7 @@ export default function RezervniDeliPage() {
                           {del.kontakt_email && (
                             <a
                               href={`mailto:${del.kontakt_email}`}
+                              onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-1 text-xs text-[#0c2340] hover:text-[#c9a84c] transition-colors font-medium"
                             >
                               <Mail className="w-3.5 h-3.5" /> Email
@@ -209,7 +226,7 @@ export default function RezervniDeliPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

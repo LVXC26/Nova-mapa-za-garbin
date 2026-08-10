@@ -1,9 +1,39 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { CheckCircle, XCircle, Eye, BadgeCheck, Star } from 'lucide-react'
-import { mockSkiperji } from '@/data/mock'
+import { createClient } from '@/lib/supabase/client'
+import type { Skipper } from '@/types/database'
 
 export default function AdminSkiperjiPage() {
+  const [skiperji, setSkiperji] = useState<Skipper[]>([])
+  const [nalaga, setNalaga] = useState(true)
+
+  const supabase = createClient()
+
+  async function nalozi() {
+    setNalaga(true)
+    const { data } = await supabase.from('skiperji').select('*').order('created_at', { ascending: false })
+    setSkiperji(data ?? [])
+    setNalaga(false)
+  }
+
+  useEffect(() => {
+    ;(async () => { await nalozi() })()
+  }, [])
+
+  async function potrdi(id: string) {
+    await supabase.from('skiperji').update({ verified: true }).eq('id', id)
+    nalozi()
+  }
+
+  async function zavrni(id: string) {
+    if (!confirm('Odstrani verified status oziroma zavrni ta profil?')) return
+    await supabase.from('skiperji').update({ verified: false }).eq('id', id)
+    nalozi()
+  }
+
   return (
     <div className="p-8">
       <div className="mb-6">
@@ -24,7 +54,7 @@ export default function AdminSkiperjiPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {mockSkiperji.map(s => (
+            {skiperji.map(s => (
               <tr key={s.id} className="hover:bg-gray-50/50">
                 <td className="px-5 py-3.5 font-medium text-gray-900">{s.ime}</td>
                 <td className="px-5 py-3.5 text-gray-600">{s.lokacija}</td>
@@ -44,15 +74,23 @@ export default function AdminSkiperjiPage() {
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Eye className="w-4 h-4" /></button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"><CheckCircle className="w-4 h-4" /></button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"><XCircle className="w-4 h-4" /></button>
+                    <Link href={`/skiperji/${s.id}`} target="_blank" className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Eye className="w-4 h-4" /></Link>
+                    {!s.verified && (
+                      <button onClick={() => potrdi(s.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"><CheckCircle className="w-4 h-4" /></button>
+                    )}
+                    <button onClick={() => zavrni(s.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"><XCircle className="w-4 h-4" /></button>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {!nalaga && skiperji.length === 0 && (
+          <div className="py-12 text-center text-gray-400 text-sm">Ni zadetkov</div>
+        )}
+        {nalaga && (
+          <div className="py-12 text-center text-gray-400 text-sm">Nalagam...</div>
+        )}
       </div>
     </div>
   )

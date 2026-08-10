@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Anchor, Star, Clock, ChevronRight, Tag, Calendar, TrendingUp, Ship, Compass, CheckCircle } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
@@ -10,6 +10,10 @@ import CharterKartica from '@/components/charterji/CharterKartica'
 import HeroSearch from '@/components/home/HeroSearch'
 import { mockPlovila, mockPromocije, mockNovice, mockCharterji, mockPromotedIds, unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import type { Plovilo, Charter, Promocija, Novica, NovicaKategorija } from '@/types/database'
+
+type NovicaZKategorijo = Novica & { kategorija?: NovicaKategorija }
 
 function NewsletterForm() {
   const [email, setEmail] = useState('')
@@ -41,10 +45,29 @@ function NewsletterForm() {
 }
 
 export default function HomePage() {
-  const plovilaZaProdajo = mockPlovila.filter(p => p.tip_oglasa === 'prodaja').slice(0, 6)
-  const novice = mockNovice.slice(0, 3)
-  const promocije = mockPromocije.slice(0, 4)
-  const charterji = mockCharterji.slice(0, 3)
+  const [realnaPlovila, setRealnaPlovila] = useState<Plovilo[]>([])
+  const [realniCharterji, setRealniCharterji] = useState<Charter[]>([])
+  const [realnePromocije, setRealnePromocije] = useState<Promocija[]>([])
+  const [realneNovice, setRealneNovice] = useState<NovicaZKategorijo[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip_oglasa', 'prodaja')
+      .order('created_at', { ascending: false }).limit(6)
+      .then(({ data }) => { if (data) setRealnaPlovila(data) })
+    supabase.from('charterji').select('*').order('created_at', { ascending: false }).limit(3)
+      .then(({ data }) => { if (data) setRealniCharterji(data) })
+    supabase.from('promocije').select('*').eq('aktivna', true).order('created_at', { ascending: false }).limit(4)
+      .then(({ data }) => { if (data) setRealnePromocije(data) })
+    supabase.from('novice').select('*, kategorija:novice_kategorije(*)').not('published_at', 'is', null)
+      .order('published_at', { ascending: false }).limit(3)
+      .then(({ data }) => { if (data) setRealneNovice(data as NovicaZKategorijo[]) })
+  }, [])
+
+  const plovilaZaProdajo = [...realnaPlovila, ...mockPlovila.filter(p => p.tip_oglasa === 'prodaja')].slice(0, 6)
+  const novice = [...realneNovice, ...mockNovice].slice(0, 3)
+  const promocije = [...realnePromocije, ...mockPromocije].slice(0, 4)
+  const charterji = [...realniCharterji, ...mockCharterji].slice(0, 3)
 
   return (
     <>
@@ -304,7 +327,7 @@ export default function HomePage() {
                   key={promo.id}
                   className="group relative bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-[#c9a84c]/40 transition-all duration-300 cursor-pointer"
                 >
-                  <div className="w-10 h-10 rounded-xl mb-4 flex items-center justify-center text-lg" style={{ backgroundColor: `${promo.barva}40` }}>
+                  <div className="w-10 h-10 rounded-xl mb-4 flex items-center justify-center text-lg" style={{ backgroundColor: `${promo.barva ?? '#0c2340'}40` }}>
                     {promo.tip === 'popust' ? '🏷️' : promo.tip === 'featured' ? '⭐' : promo.tip === 'sezonska' ? '🌊' : '📦'}
                   </div>
                   {promo.popust && (
@@ -314,10 +337,12 @@ export default function HomePage() {
                   )}
                   <h3 className="font-display text-base font-semibold text-white mb-2 group-hover:text-[#c9a84c] transition-colors line-clamp-2">{promo.naziv}</h3>
                   <p className="text-sm text-white/60 line-clamp-3 mb-4">{promo.opis}</p>
-                  <div className="flex items-center gap-1.5 text-xs text-white/40">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Do {new Date(promo.veljavnost_do).toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' })}
-                  </div>
+                  {promo.veljavnost_do && (
+                    <div className="flex items-center gap-1.5 text-xs text-white/40">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Do {new Date(promo.veljavnost_do).toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' })}
+                    </div>
+                  )}
                   <Link href="/promocije" className="mt-4 flex items-center gap-1 text-xs font-medium text-[#c9a84c] hover:gap-2 transition-all">
                     Več info <ArrowRight className="w-3.5 h-3.5" />
                   </Link>

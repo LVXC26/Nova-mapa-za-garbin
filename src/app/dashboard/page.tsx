@@ -8,8 +8,9 @@ import {
   CheckCircle, Activity, Star, TrendingUp
 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { mockPlovila, mockSkiperji, mockCharterji } from '@/data/mock'
+import { mockSkiperji } from '@/data/mock'
 import { createClient } from '@/lib/supabase/client'
+import type { Plovilo, Skipper } from '@/types/database'
 
 function usePovprasevanjaCount() {
   const [count, setCount] = useState<number | null>(null)
@@ -24,10 +25,63 @@ function usePovprasevanjaCount() {
   return count
 }
 
+function useNeprebranaCount(userId: string | undefined) {
+  const [count, setCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+    createClient()
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', userId)
+      .eq('read', false)
+      .then(({ count: c }) => setCount(c ?? 0))
+  }, [userId])
+
+  return count
+}
+
+function useLastnaPlovila(userId: string | undefined) {
+  const [plovila, setPlovila] = useState<Plovilo[]>([])
+  const [nalaga, setNalaga] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      if (!userId) { setNalaga(false); return }
+      const { data } = await createClient()
+        .from('plovila')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      setPlovila(data ?? [])
+      setNalaga(false)
+    })()
+  }, [userId])
+
+  return { plovila, nalaga }
+}
+
+function usePriljubljeniCount(userId: string | undefined) {
+  const [count, setCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+    createClient()
+      .from('priljubljeni')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .then(({ count: c }) => setCount(c ?? 0))
+  }, [userId])
+
+  return count
+}
+
 // ─── CHARTER DASHBOARD ───────────────────────────────────────────────
-function CharterDashboard({ ime }: { ime: string }) {
-  const charter = mockCharterji.find(c => c.naziv.includes('Adriatic')) ?? mockCharterji[0]
+function CharterDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
   const povprasevanjaCount = usePovprasevanjaCount()
+  const neprebrana = useNeprebranaCount(userId)
+  const priljubljeniCount = usePriljubljeniCount(userId)
+  const { plovila, nalaga } = useLastnaPlovila(userId)
 
   return (
     <div className="p-8">
@@ -40,7 +94,7 @@ function CharterDashboard({ ime }: { ime: string }) {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {[
           { label: 'Prejetih povpraševanj', vrednost: povprasevanjaCount ?? '…', ikona: MessageCircle, barva: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Priljubljenosti', vrednost: '—', ikona: Heart, barva: 'bg-rose-50 text-rose-500' },
+          { label: 'Priljubljenosti', vrednost: priljubljeniCount ?? '…', ikona: Heart, barva: 'bg-rose-50 text-rose-500' },
           { label: 'Status profila', vrednost: 'Aktivno', ikona: Activity, barva: 'bg-blue-50 text-blue-600', zelena: true },
         ].map(({ label, vrednost, ikona: Ikona, barva, zelena }) => (
           <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
@@ -58,8 +112,8 @@ function CharterDashboard({ ime }: { ime: string }) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {[
           { href: '/dashboard/dodaj-plovilo', label: 'Dodaj plovilo', opis: 'Razširi svojo floto', ikona: PlusCircle, cls: 'bg-[#0c2340] text-white' },
-          { href: '/dashboard/moja-plovila', label: 'Moja plovila', opis: `${charter.st_plovil} aktivnih`, ikona: Ship, cls: 'bg-[#c9a84c] text-[#0c2340]' },
-          { href: '/chat', label: 'Sporočila', opis: '3 neprebrana', ikona: MessageCircle, cls: 'bg-white border border-gray-200 text-[#0c2340]' },
+          { href: '/dashboard/moja-plovila', label: 'Moja plovila', opis: `${plovila.length} aktivnih`, ikona: Ship, cls: 'bg-[#c9a84c] text-[#0c2340]' },
+          { href: '/chat', label: 'Sporočila', opis: neprebrana ? `${neprebrana} neprebranih` : 'Ni neprebranih', ikona: MessageCircle, cls: 'bg-white border border-gray-200 text-[#0c2340]' },
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md group ${cls}`}>
@@ -78,16 +132,24 @@ function CharterDashboard({ ime }: { ime: string }) {
       {/* Moja plovila preview */}
       <h2 className="font-semibold text-[#0c2340] mb-4">Vaša plovila</h2>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {mockPlovila.filter(p => p.tip === 'jadrnica').slice(0, 3).map((p, i) => (
-          <div key={p.id} className={`flex items-center gap-4 p-4 ${i < 2 ? 'border-b border-gray-50' : ''}`}>
-            <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0">⛵</div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-[#0c2340] text-sm truncate">{p.naziv}</p>
-              <p className="text-xs text-gray-500">{p.lokacija} · {p.letnik}</p>
+        {nalaga ? (
+          <div className="p-8 text-center text-sm text-gray-400">Nalagam...</div>
+        ) : plovila.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">Nimate še nobenega plovila.</div>
+        ) : (
+          plovila.slice(0, 3).map((p, i) => (
+            <div key={p.id} className={`flex items-center gap-4 p-4 ${i < Math.min(plovila.length, 3) - 1 ? 'border-b border-gray-50' : ''}`}>
+              <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0">⛵</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[#0c2340] text-sm truncate">{p.naziv}</p>
+                <p className="text-xs text-gray-500">{p.lokacija} · {p.letnik}</p>
+              </div>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${p.potrjeno ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {p.potrjeno ? 'Aktivno' : 'V pregledu'}
+              </span>
             </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">Aktivno</span>
-          </div>
-        ))}
+          ))
+        )}
         <div className="p-4 border-t border-gray-50">
           <Link href="/dashboard/moja-plovila" className="text-sm text-[#c9a84c] font-medium hover:underline">
             Vsa plovila →
@@ -99,9 +161,31 @@ function CharterDashboard({ ime }: { ime: string }) {
 }
 
 // ─── SKIPPER DASHBOARD ────────────────────────────────────────────────
-function SkipperDashboard({ ime }: { ime: string }) {
-  const skipper = mockSkiperji.find(s => s.ime === 'Marko Horvat') ?? mockSkiperji[0]
+function useLastniSkipper(userId: string | undefined) {
+  const [skipper, setSkipper] = useState<Skipper | null>(null)
+  const [nalaga, setNalaga] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      if (!userId) { setNalaga(false); return }
+      const { data } = await createClient()
+        .from('skiperji')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+      setSkipper(data)
+      setNalaga(false)
+    })()
+  }, [userId])
+
+  return { skipper, nalaga }
+}
+
+function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
+  const { skipper: lastniSkipper, nalaga: nalagaSkipper } = useLastniSkipper(userId)
+  const skipper = lastniSkipper ?? mockSkiperji[0]
   const povprasevanjaCount = usePovprasevanjaCount()
+  const neprebrana = useNeprebranaCount(userId)
 
   return (
     <div className="p-8">
@@ -114,8 +198,8 @@ function SkipperDashboard({ ime }: { ime: string }) {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {[
           { label: 'Prejetih povpraševanj', vrednost: povprasevanjaCount ?? '…', ikona: MessageCircle, barva: 'bg-purple-50 text-purple-600', zelena: false },
-          { label: 'Priljubljenosti', vrednost: '—', ikona: Heart, barva: 'bg-rose-50 text-rose-500', zelena: false },
-          { label: 'Status profila', vrednost: 'Aktivno', ikona: Activity, barva: 'bg-blue-50 text-blue-600', zelena: true },
+          { label: 'Ocena', vrednost: lastniSkipper ? lastniSkipper.ocena.toFixed(1) : '—', ikona: Heart, barva: 'bg-rose-50 text-rose-500', zelena: false },
+          { label: 'Status profila', vrednost: lastniSkipper ? 'Aktivno' : 'Ni izpolnjen', ikona: Activity, barva: 'bg-blue-50 text-blue-600', zelena: !!lastniSkipper },
         ].map(({ label, vrednost, ikona: Ikona, barva, zelena }) => (
           <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${barva}`}>
@@ -131,7 +215,7 @@ function SkipperDashboard({ ime }: { ime: string }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {[
           { href: '/dashboard/profil', label: 'Uredi profil', opis: 'Posodobi certifikate in bio', ikona: Compass, cls: 'bg-[#0c2340] text-white' },
-          { href: '/chat', label: 'Sporočila', opis: '2 neprebrani', ikona: MessageCircle, cls: 'bg-[#c9a84c] text-[#0c2340]' },
+          { href: '/chat', label: 'Sporočila', opis: neprebrana ? `${neprebrana} neprebranih` : 'Ni neprebranih', ikona: MessageCircle, cls: 'bg-[#c9a84c] text-[#0c2340]' },
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>
@@ -150,44 +234,59 @@ function SkipperDashboard({ ime }: { ime: string }) {
       {/* Profil povzetek */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-semibold text-[#0c2340] mb-4">Vaš skipper profil</h2>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-16 h-16 rounded-2xl bg-[#0c2340]/10 flex items-center justify-center text-3xl">👨‍✈️</div>
-          <div>
-            <p className="font-bold text-[#0c2340]">{skipper.ime}</p>
-            <p className="text-sm text-gray-500">{skipper.lokacija} · {skipper.izkusnje_let} let izkušenj</p>
-            <div className="flex items-center gap-1 mt-1">
-              {Array.from({length: 5}).map((_, i) => (
-                <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(skipper.ocena) ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
-              ))}
-              <span className="text-xs text-gray-500 ml-1">{skipper.ocena.toFixed(1)} ({skipper.st_ocen} ocen)</span>
+        {nalagaSkipper ? (
+          <p className="text-sm text-gray-400 py-4 text-center">Nalagam...</p>
+        ) : !lastniSkipper ? (
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-500 mb-4">Vaš skipper profil še ni izpolnjen — dokler ga ne dopolnite, vas kupci ne vidijo na strani skiperjev.</p>
+            <Link href="/dashboard/profil" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] text-[#0c2340] font-semibold text-sm rounded-full hover:bg-[#e8c76d] transition-all">
+              Izpolni profil
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-[#0c2340]/10 flex items-center justify-center text-3xl">👨‍✈️</div>
+              <div>
+                <p className="font-bold text-[#0c2340]">{skipper.ime}</p>
+                <p className="text-sm text-gray-500">{skipper.lokacija} · {skipper.izkusnje_let} let izkušenj</p>
+                <div className="flex items-center gap-1 mt-1">
+                  {Array.from({length: 5}).map((_, i) => (
+                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(skipper.ocena) ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                  ))}
+                  <span className="text-xs text-gray-500 ml-1">{skipper.ocena.toFixed(1)} ({skipper.st_ocen} ocen)</span>
+                </div>
+              </div>
+              <div className="ml-auto">
+                {skipper.verified && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-1.5 rounded-full">
+                    <CheckCircle className="w-3.5 h-3.5" /> Verificiran
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="ml-auto">
-            {skipper.verified && (
-              <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-1.5 rounded-full">
-                <CheckCircle className="w-3.5 h-3.5" /> Verificiran
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {skipper.certifikati.map(c => (
-            <span key={c} className="text-xs px-2.5 py-1 bg-[#0c2340]/5 text-[#0c2340] rounded-full font-medium">{c}</span>
-          ))}
-        </div>
-        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-          <p className="text-sm text-gray-500">Cena: <span className="font-bold text-[#0c2340]">{skipper.cena_dan} € / dan</span></p>
-          <Link href={`/skiperji/${skipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline">
-            Oglej profil →
-          </Link>
-        </div>
+            <div className="flex flex-wrap gap-1.5">
+              {skipper.certifikati.map(c => (
+                <span key={c} className="text-xs px-2.5 py-1 bg-[#0c2340]/5 text-[#0c2340] rounded-full font-medium">{c}</span>
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
+              <p className="text-sm text-gray-500">Cena: <span className="font-bold text-[#0c2340]">{skipper.cena_dan} € / dan</span></p>
+              <Link href={`/skiperji/${skipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline">
+                Oglej profil →
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
 // ─── KUPEC DASHBOARD ──────────────────────────────────────────────────
-function KupecDashboard({ ime }: { ime: string }) {
+function KupecDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
+  const priljubljeniCount = usePriljubljeniCount(userId)
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -218,22 +317,57 @@ function KupecDashboard({ ime }: { ime: string }) {
 
       {/* Priljubljena plovila */}
       <h2 className="font-semibold text-[#0c2340] mb-4">Priljubljena plovila</h2>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
-        <Heart className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-        <p className="font-medium text-gray-400 mb-1">Nimate shranjenih plovil</p>
-        <p className="text-sm text-gray-300 mb-5">Kliknite ❤ na katerikoli kartici plovila.</p>
-        <Link href="/plovila"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] text-[#0c2340] font-semibold text-sm rounded-full hover:bg-[#e8c76d] transition-all hover:scale-105">
-          <Ship className="w-4 h-4" /> Išči plovila
-        </Link>
-      </div>
+      {priljubljeniCount ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Heart className="w-8 h-8 text-rose-400" />
+            <div>
+              <p className="font-semibold text-[#0c2340]">{priljubljeniCount} shranjenih plovil</p>
+              <p className="text-sm text-gray-500">Poglejte si jih na vašem seznamu priljubljenih.</p>
+            </div>
+          </div>
+          <Link href="/dashboard/priljubljeni"
+            className="px-4 py-2.5 bg-[#0c2340] text-white font-medium text-sm rounded-full hover:bg-[#1e3a5f] transition-all whitespace-nowrap">
+            Poglej vse
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+          <Heart className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+          <p className="font-medium text-gray-400 mb-1">Nimate shranjenih plovil</p>
+          <p className="text-sm text-gray-300 mb-5">Kliknite ❤ na katerikoli kartici plovila.</p>
+          <Link href="/plovila"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] text-[#0c2340] font-semibold text-sm rounded-full hover:bg-[#e8c76d] transition-all hover:scale-105">
+            <Ship className="w-4 h-4" /> Išči plovila
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
 
 // ─── PRODAJALEC DASHBOARD ─────────────────────────────────────────────
-function ProdajalecDashboard({ ime, vloga }: { ime: string; vloga: string | null }) {
+function useShranjenoPriKupcih(plovilaIds: string[]) {
+  const [count, setCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    ;(async () => {
+      if (plovilaIds.length === 0) { setCount(0); return }
+      const { count: c } = await createClient()
+        .from('priljubljeni')
+        .select('*', { count: 'exact', head: true })
+        .in('plovilo_id', plovilaIds)
+      setCount(c ?? 0)
+    })()
+  }, [plovilaIds])
+
+  return count
+}
+
+function ProdajalecDashboard({ ime, vloga, userId }: { ime: string; vloga: string | null; userId: string | undefined }) {
   const povprasevanjaCount = usePovprasevanjaCount()
+  const { plovila, nalaga } = useLastnaPlovila(userId)
+  const shranjenaCount = useShranjenoPriKupcih(plovila.map(p => p.id))
 
   return (
     <div className="p-8">
@@ -248,9 +382,9 @@ function ProdajalecDashboard({ ime, vloga }: { ime: string; vloga: string | null
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {[
-          { label: 'Aktivnih oglasov', vrednost: '0', ikona: List, barva: 'bg-blue-50 text-blue-600' },
+          { label: 'Aktivnih oglasov', vrednost: String(plovila.filter(p => p.potrjeno).length), ikona: List, barva: 'bg-blue-50 text-blue-600' },
           { label: 'Prejetih povpraševanj', vrednost: povprasevanjaCount ?? '…', ikona: MessageCircle, barva: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Shranjenih s strani kupcev', vrednost: '0', ikona: TrendingUp, barva: 'bg-amber-50 text-amber-600' },
+          { label: 'Shranjenih s strani kupcev', vrednost: shranjenaCount ?? '…', ikona: TrendingUp, barva: 'bg-amber-50 text-amber-600' },
         ].map(({ label, vrednost, ikona: Ikona, barva }) => (
           <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${barva}`}>
@@ -283,15 +417,39 @@ function ProdajalecDashboard({ ime, vloga }: { ime: string; vloga: string | null
       </div>
 
       <h2 className="font-semibold text-[#0c2340] mb-4">Vaši oglasi</h2>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
-        <div className="text-4xl mb-3">⚓</div>
-        <p className="font-medium text-gray-500 mb-1">Nimate še nobenih oglasov</p>
-        <p className="text-sm text-gray-400 mb-5">Dodajte svoje prvo plovilo in začnite prodajati.</p>
-        <Link href="/dashboard/dodaj-plovilo"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-105">
-          <PlusCircle className="w-4 h-4" /> Dodaj plovilo
-        </Link>
-      </div>
+      {nalaga ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center text-sm text-gray-400">Nalagam...</div>
+      ) : plovila.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+          <div className="text-4xl mb-3">⚓</div>
+          <p className="font-medium text-gray-500 mb-1">Nimate še nobenih oglasov</p>
+          <p className="text-sm text-gray-400 mb-5">Dodajte svoje prvo plovilo in začnite prodajati.</p>
+          <Link href="/dashboard/dodaj-plovilo"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-105">
+            <PlusCircle className="w-4 h-4" /> Dodaj plovilo
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          {plovila.slice(0, 5).map((p, i) => (
+            <div key={p.id} className={`flex items-center gap-4 p-4 ${i < Math.min(plovila.length, 5) - 1 ? 'border-b border-gray-50' : ''}`}>
+              <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0">⚓</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[#0c2340] text-sm truncate">{p.naziv}</p>
+                <p className="text-xs text-gray-500">{p.lokacija}</p>
+              </div>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${p.potrjeno ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {p.potrjeno ? 'Aktivno' : 'V pregledu'}
+              </span>
+            </div>
+          ))}
+          <div className="p-4 border-t border-gray-50">
+            <Link href="/dashboard/moja-plovila" className="text-sm text-[#c9a84c] font-medium hover:underline">
+              Vsi oglasi →
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -301,8 +459,8 @@ export default function DashboardPage() {
   const { user, vloga } = useAuth()
   const ime = user?.user_metadata?.ime ?? 'Uporabnik'
 
-  if (vloga === 'charter') return <CharterDashboard ime={ime} />
-  if (vloga === 'skipper') return <SkipperDashboard ime={ime} />
-  if (vloga === 'kupec') return <KupecDashboard ime={ime} />
-  return <ProdajalecDashboard ime={ime} vloga={vloga} />
+  if (vloga === 'charter') return <CharterDashboard ime={ime} userId={user?.id} />
+  if (vloga === 'skipper') return <SkipperDashboard ime={ime} userId={user?.id} />
+  if (vloga === 'kupec') return <KupecDashboard ime={ime} userId={user?.id} />
+  return <ProdajalecDashboard ime={ime} vloga={vloga} userId={user?.id} />
 }

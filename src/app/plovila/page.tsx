@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, Suspense } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { SlidersHorizontal, X, Search, ArrowUpDown, GitCompare, ArrowRight } from 'lucide-react'
@@ -11,7 +11,8 @@ import RangeSlider from '@/components/plovila/RangeSlider'
 import { mockPlovila } from '@/data/mock'
 import { CENA_VALUES, cenaValueToIdx, formatCena } from '@/lib/cenaSlider'
 import { usePrimerjava } from '@/context/PrimerjaContext'
-import type { TipPlovila } from '@/types/database'
+import { createClient } from '@/lib/supabase/client'
+import type { TipPlovila, Plovilo } from '@/types/database'
 
 const CENA_MAX_IDX = CENA_VALUES.length - 1
 const DOLZINA_MIN = 3
@@ -53,11 +54,26 @@ function PlovilaContent() {
 
   const { primerjava, odstraniIzPrimerjave, pocistiPrimerjavo } = usePrimerjava()
 
+  const [realPlovila, setRealPlovila] = useState<Plovilo[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('plovila')
+      .select('*')
+      .eq('potrjeno', true)
+      .eq('tip_oglasa', 'prodaja')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setRealPlovila(data) })
+  }, [])
+
+  const vsaPlovila = useMemo(() => [...realPlovila, ...mockPlovila], [realPlovila])
+
   const cenaMin = CENA_VALUES[cenaIdx[0]]
   const cenaMax = CENA_VALUES[cenaIdx[1]]
 
   const filtrirano = useMemo(() => {
-    let result = mockPlovila.filter((p) => {
+    let result = vsaPlovila.filter((p) => {
       if (tip !== 'vse' && p.tip !== tip) return false
       if (p.cena < cenaMin || p.cena > cenaMax) return false
       if (p.dolzina_m !== null && (p.dolzina_m < dolzina[0] || p.dolzina_m > dolzina[1])) return false
@@ -78,7 +94,7 @@ function PlovilaContent() {
       ...result.filter(p => !p.promoted && !p.urgentno && !p.prodano),
       ...result.filter(p => p.prodano),
     ]
-  }, [tip, cenaIdx, dolzina, sortiranje])
+  }, [vsaPlovila, tip, cenaIdx, dolzina, sortiranje])
 
   const skupajStrani = Math.ceil(filtrirano.length / PER_PAGE)
   const prikazana = filtrirano.slice((stran - 1) * PER_PAGE, stran * PER_PAGE)

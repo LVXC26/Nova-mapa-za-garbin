@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, MapPin, Star, CheckCircle, Phone, Mail, MessageCircle, Calendar, Award, Globe, Ship, Users, Building2 } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
@@ -9,6 +9,12 @@ import { mockSkiperji, unsplashSkipperji } from '@/data/mock'
 import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
+import { createClient } from '@/lib/supabase/client'
+import type { Skipper, Rating } from '@/types/database'
+
+interface OcenaZImenom extends Rating {
+  ime: string
+}
 
 const tipIkone: Record<string, string> = {
   jadrnica: '⛵',
@@ -22,8 +28,86 @@ const tipIkone: Record<string, string> = {
 export default function SkipperDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
-  const skipper = mockSkiperji.find(s => s.id === id)
+  const mockMatch = mockSkiperji.find(s => s.id === id)
+  const [realSkipper, setRealSkipper] = useState<Skipper | null>(null)
+  const [nalaga, setNalaga] = useState(!mockMatch)
   const [tab, setTab] = useState<'objave' | 'o_meni' | 'ocene' | 'ekipa'>('o_meni')
+  const [ocene, setOcene] = useState<OcenaZImenom[]>([])
+  const [nalagaOcen, setNalagaOcen] = useState(true)
+  const [dodajOceno, setDodajOceno] = useState(false)
+  const [novaOcena, setNovaOcena] = useState(5)
+  const [novKomentar, setNovKomentar] = useState('')
+  const [posiljaOceno, setPosiljaOceno] = useState(false)
+  const [ocenaNapaka, setOcenaNapaka] = useState('')
+
+  useEffect(() => {
+    if (mockMatch) return
+    const supabase = createClient()
+    supabase.from('skiperji').select('*').eq('id', id).maybeSingle().then(({ data }) => {
+      setRealSkipper(data)
+      setNalaga(false)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  async function nalozOcene() {
+    setNalagaOcen(true)
+    const supabase = createClient()
+    const { data } = await supabase.from('ratings').select('*').eq('rated_id', id).eq('rated_type', 'skipper').order('created_at', { ascending: false })
+    const seznam = data ?? []
+    const raterIds = Array.from(new Set(seznam.map(r => r.rater_id)))
+    const imena = new Map<string, string>()
+    if (raterIds.length > 0) {
+      const { data: profili } = await supabase.from('profiles').select('id, ime').in('id', raterIds)
+      profili?.forEach(p => imena.set(p.id, p.ime ?? 'Uporabnik'))
+    }
+    setOcene(seznam.map(r => ({ ...r, ime: imena.get(r.rater_id) ?? 'Uporabnik' })))
+    setNalagaOcen(false)
+  }
+
+  useEffect(() => {
+    ;(async () => { await nalozOcene() })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  async function posljiOceno() {
+    if (!user) return
+    setOcenaNapaka('')
+    setPosiljaOceno(true)
+    const supabase = createClient()
+    const { error } = await supabase.from('ratings').insert({
+      rater_id: user.id,
+      rated_id: id,
+      rated_type: 'skipper',
+      score: novaOcena,
+      komentar: novKomentar || null,
+    })
+    setPosiljaOceno(false)
+    if (error) {
+      setOcenaNapaka(error.message.includes('duplicate') ? 'Tega skiperja ste že ocenili.' : 'Napaka pri shranjevanju ocene.')
+      return
+    }
+    setDodajOceno(false)
+    setNovKomentar('')
+    setNovaOcena(5)
+    nalozOcene()
+  }
+
+  const skipper = mockMatch ?? realSkipper ?? undefined
+  const povprecje = ocene.length ? ocene.reduce((a, o) => a + o.score, 0) / ocene.length : (skipper?.ocena ?? 0)
+  const steviloOcen = ocene.length || (skipper?.st_ocen ?? 0)
+
+  if (nalaga) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 pt-16 flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 rounded-full border-4 border-[#c9a84c] border-t-transparent animate-spin" />
+        </main>
+        <Footer />
+      </>
+    )
+  }
 
   if (!skipper) {
     return (
@@ -44,7 +128,7 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
     )
   }
 
-  const zvezdice = Array.from({ length: 5 }, (_, i) => i < Math.round(skipper.ocena))
+  const zvezdice = Array.from({ length: 5 }, (_, i) => i < Math.round(povprecje))
 
   // Placeholder galerija — ko bo Supabase: skipper.slike[]
   const galerijaPlaceholder = [1, 2, 3, 4, 5]
@@ -104,8 +188,8 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                         <Star key={i} className={`w-3.5 h-3.5 ${poln ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-white/20 fill-white/20'}`} />
                       ))}
                     </div>
-                    <span className="font-medium text-white">{skipper.ocena.toFixed(1)}</span>
-                    <span className="text-white/50">({skipper.st_ocen} ocen)</span>
+                    <span className="font-medium text-white">{povprecje.toFixed(1)}</span>
+                    <span className="text-white/50">({steviloOcen} ocen)</span>
                   </span>
                 </div>
               </div>
@@ -229,8 +313,7 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                   <FeedObjave
                     title="Objave"
                     showAddPost={!!user}
-                    avtor={skipper.ime}
-                    vloga={skipper.tip_skiper === 'agencija' ? 'agencija' : 'skipper'}
+                    lastnikUserId={skipper.user_id ?? null}
                   />
                 )}
 
@@ -245,39 +328,72 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                             <Star key={i} className={`w-4 h-4 ${poln ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
                           ))}
                         </div>
-                        <span className="font-bold text-[#0c2340]">{skipper.ocena.toFixed(1)}</span>
-                        <span className="text-gray-400 text-sm">({skipper.st_ocen})</span>
+                        <span className="font-bold text-[#0c2340]">{povprecje.toFixed(1)}</span>
+                        <span className="text-gray-400 text-sm">({steviloOcen})</span>
                       </div>
                     </div>
-                    <div className="space-y-4">
-                      {[
-                        { ime: 'Janez K.', ocena: 5, datum: 'Junij 2024', komentar: 'Odličen skipper! Izjemno poznavanje Jadrana, varen in profesionalen.' },
-                        { ime: 'Maria S.', ocena: 5, datum: 'Maj 2024', komentar: 'Fantastična izkušnja. Izkušen in prijazen, naučil nas je osnov jadralnega plovna.' },
-                        { ime: 'Peter N.', ocena: 4, datum: 'Avgust 2023', komentar: 'Zelo zadovoljen z izletom. Dobro poznavanje lokalnih otokov.' },
-                      ].map((o, i) => (
-                        <div key={i} className="border-b border-gray-50 last:border-0 pb-4 last:pb-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-sm font-bold text-[#0c2340]">{o.ime[0]}</div>
-                              <span className="font-medium text-[#0c2340] text-sm">{o.ime}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex">
-                                {Array.from({length: 5}).map((_, j) => (
-                                  <Star key={j} className={`w-3 h-3 ${j < o.ocena ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
-                                ))}
+
+                    {nalagaOcen ? (
+                      <p className="text-sm text-gray-400 text-center py-8">Nalagam ocene...</p>
+                    ) : ocene.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-8">Ta skipper še nima ocen.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {ocene.map((o) => (
+                          <div key={o.id} className="border-b border-gray-50 last:border-0 pb-4 last:pb-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-sm font-bold text-[#0c2340]">{o.ime[0]}</div>
+                                <span className="font-medium text-[#0c2340] text-sm">{o.ime}</span>
                               </div>
-                              <span className="text-xs text-gray-400">{o.datum}</span>
+                              <div className="flex items-center gap-2">
+                                <div className="flex">
+                                  {Array.from({length: 5}).map((_, j) => (
+                                    <Star key={j} className={`w-3 h-3 ${j < o.score ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                                  ))}
+                                </div>
+                                <span className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })}</span>
+                              </div>
                             </div>
+                            {o.komentar && <p className="text-sm text-gray-600 leading-relaxed ml-10">{o.komentar}</p>}
                           </div>
-                          <p className="text-sm text-gray-600 leading-relaxed ml-10">{o.komentar}</p>
-                        </div>
-                      ))}
-                    </div>
-                    {user && (
-                      <button className="mt-5 w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors font-medium">
+                        ))}
+                      </div>
+                    )}
+
+                    {user && !dodajOceno && (
+                      <button onClick={() => setDodajOceno(true)} className="mt-5 w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors font-medium">
                         + Dodaj oceno
                       </button>
+                    )}
+
+                    {user && dodajOceno && (
+                      <div className="mt-5 p-4 bg-gray-50 rounded-xl">
+                        {ocenaNapaka && <p className="text-sm text-red-600 mb-3">{ocenaNapaka}</p>}
+                        <label className="block text-sm font-semibold text-[#0c2340] mb-2">Vaša ocena</label>
+                        <div className="flex gap-1 mb-3">
+                          {[1, 2, 3, 4, 5].map(n => (
+                            <button key={n} type="button" onClick={() => setNovaOcena(n)}>
+                              <Star className={`w-6 h-6 ${n <= novaOcena ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          value={novKomentar}
+                          onChange={e => setNovKomentar(e.target.value)}
+                          rows={3}
+                          placeholder="Delite svojo izkušnjo (neobvezno)..."
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none mb-3"
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={posljiOceno} disabled={posiljaOceno} className="px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold text-sm rounded-full transition-all">
+                            {posiljaOceno ? 'Pošiljam...' : 'Objavi oceno'}
+                          </button>
+                          <button onClick={() => { setDodajOceno(false); setOcenaNapaka('') }} className="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-50">
+                            Prekliči
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -308,9 +424,9 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                     <Phone className="w-4 h-4" />
                     Pokliči zdaj
                   </a>
-                  {user && (
+                  {user && skipper.user_id && skipper.user_id !== user.id && (
                     <Link
-                      href="/chat"
+                      href={`/chat?to=${skipper.user_id}&ime=${encodeURIComponent(skipper.ime)}`}
                       className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-semibold rounded-full transition-all hover:scale-[1.02] mb-4 text-sm"
                     >
                       <MessageCircle className="w-4 h-4" />
@@ -335,13 +451,13 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                       <span className="text-gray-500 flex items-center gap-2">
                         <Star className="w-3.5 h-3.5" /> Ocena
                       </span>
-                      <span className="font-semibold text-[#0c2340]">{skipper.ocena.toFixed(1)} / 5</span>
+                      <span className="font-semibold text-[#0c2340]">{povprecje.toFixed(1)} / 5</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500 flex items-center gap-2">
                         <Award className="w-3.5 h-3.5" /> Ocene
                       </span>
-                      <span className="font-semibold text-[#0c2340]">{skipper.st_ocen}</span>
+                      <span className="font-semibold text-[#0c2340]">{steviloOcen}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500 flex items-center gap-2">

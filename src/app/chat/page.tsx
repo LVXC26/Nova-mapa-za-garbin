@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Send, MessageCircle, Search, ArrowLeft } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -25,9 +25,12 @@ function formatCas(isoString: string): string {
   return date.toLocaleDateString('sl-SI', { day: 'numeric', month: 'short' })
 }
 
-export default function ChatPage() {
-  const { user } = useAuth()
+function ChatPageContent() {
+  const { user, demoMode } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const noviPartnerId = searchParams.get('to')
+  const noviPartnerIme = searchParams.get('ime')
   const supabase = createClient()
   const [aktivnaKonv, setAktivnaKonv] = useState<string | null>(null)
   const aktivnaKonvRef = useRef<string | null>(null)
@@ -36,6 +39,7 @@ export default function ChatPage() {
   const [novoSporocilo, setNovoSporocilo] = useState('')
   const [iskanje, setIskanje] = useState('')
   const [nalaga, setNalaga] = useState(true)
+  const [napakaPosiljanje, setNapakaPosiljanje] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,7 +52,12 @@ export default function ChatPage() {
       return
     }
 
-    naloziKonverzacije()
+    ;(async () => {
+      await naloziKonverzacije()
+      if (noviPartnerId && noviPartnerId !== user.id) {
+        await odpriKonverzacijo(noviPartnerId, noviPartnerIme)
+      }
+    })()
 
     const channel = supabase
       .channel('messages-realtime')
@@ -126,6 +135,22 @@ export default function ChatPage() {
     setNalaga(false)
   }
 
+  async function odpriKonverzacijo(partnerId: string, imeIzUrl: string | null) {
+    let ime = imeIzUrl
+    if (!ime) {
+      const { data: profil } = await supabase.from('profiles').select('ime').eq('id', partnerId).maybeSingle()
+      ime = profil?.ime ?? null
+    }
+    setKonverzacije((prev) => {
+      if (prev.some((k) => k.user_id === partnerId)) return prev
+      return [
+        { user_id: partnerId, ime: ime ?? 'Nov pogovor', zadnje_sporocilo: '', cas: '', neprebrana: 0 },
+        ...prev,
+      ]
+    })
+    handleKonverzacijaKlik(partnerId)
+  }
+
   async function naloziSporocila(partnerId: string) {
     if (!user) return
 
@@ -149,8 +174,15 @@ export default function ChatPage() {
 
   async function posljiSporocilo() {
     if (!novoSporocilo.trim() || !aktivnaKonv || !user) return
+
+    if (demoMode) {
+      setNapakaPosiljanje('Sporočila v demo načinu se ne shranijo. Prijavite se z resničnim računom, da lahko pošiljate sporočila.')
+      return
+    }
+
     const vsebina = novoSporocilo.trim()
     setNovoSporocilo('')
+    setNapakaPosiljanje('')
 
     const { data, error } = await supabase
       .from('messages')
@@ -162,11 +194,15 @@ export default function ChatPage() {
       setSporocila(prev => [...prev, data as Message])
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
       naloziKonverzacije()
+    } else {
+      setNovoSporocilo(vsebina)
+      setNapakaPosiljanje('Sporočilo ni bilo poslano. Poskusite znova.')
     }
   }
 
   function handleKonverzacijaKlik(userId: string) {
     setAktivnaKonv(userId)
+    setNapakaPosiljanje('')
     naloziSporocila(userId)
   }
 
@@ -284,6 +320,9 @@ export default function ChatPage() {
                 </div>
 
                 <div className="p-4 border-t border-gray-100">
+                  {napakaPosiljanje && (
+                    <p className="text-xs text-red-500 mb-2">{napakaPosiljanje}</p>
+                  )}
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
@@ -309,5 +348,13 @@ export default function ChatPage() {
         </div>
       </div>
     </>
+  )
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="pt-16 h-screen flex items-center justify-center"><div className="w-6 h-6 border-2 border-[#c9a84c] border-t-transparent rounded-full animate-spin" /></div>}>
+      <ChatPageContent />
+    </Suspense>
   )
 }

@@ -1,129 +1,240 @@
 'use client'
 
-import { useState } from 'react'
-import { Heart, MessageCircle, Share2, Image, Send, MoreHorizontal, MapPin, Anchor, CheckCircle, X, Clock } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor, CheckCircle, X, Clock } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
+import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
 
-type TipObjave = 'objava' | 'potovanje' | 'tuje_caka'
-
-interface FeedPost {
-  id: string
-  tip: TipObjave
-  avtor: string
-  avatar: string
-  vloga?: string
-  cas: string
-  vsebina: string
-  lokacija?: string
-  plovilo?: string
-  slike?: string[]
-  likes: number
-  komentarji: number
-  odobrena: boolean
+function LikeButton({ objavaId, stevilo, jazLajkam, onToggle }: {
+  objavaId: string
+  stevilo: number
+  jazLajkam: boolean
+  onToggle: (objavaId: string, trenutno: boolean) => void
+}) {
+  return (
+    <button onClick={() => onToggle(objavaId, jazLajkam)}
+      className={`flex items-center gap-1.5 text-sm transition-all ${jazLajkam ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}>
+      <Heart className={`w-4 h-4 ${jazLajkam ? 'fill-red-500' : ''}`} /> {stevilo}
+    </button>
+  )
 }
 
-const mockObjave: FeedPost[] = [
-  {
-    id: 'f1', tip: 'potovanje',
-    avtor: 'Adriatic Sail', avatar: '🏢', vloga: 'Charter',
-    cas: 'Pred 2 urami',
-    vsebina: 'Sezona 2024 se uradno začenja! ⛵ Bavaria C45 je ravnokar prišla iz servisnega pregleda — vse pripravljeno za prve stranke. Rezervirajte zgodaj, termini so omejeni!',
-    lokacija: 'Marina Portorož', plovilo: 'Bavaria C45',
-    likes: 24, komentarji: 3, odobrena: true,
-  },
-  {
-    id: 'f2', tip: 'potovanje',
-    avtor: 'Marko Horvat', avatar: '👨‍✈️', vloga: 'Skipper',
-    cas: 'Pred 1 dnem',
-    vsebina: 'Odlična tura včeraj — Portorož → Rovinj in nazaj. Brise de mer zvečer, mavrica nad rtom Kamenjak. To je razlog, zakaj ljubimo Jadran! 🌈',
-    lokacija: 'Rt Kamenjak, Istra', plovilo: 'Bavaria 34',
-    likes: 67, komentarji: 12, odobrena: true,
-  },
-  {
-    id: 'f3', tip: 'objava',
-    avtor: 'Adriatic Sail', avatar: '🏢', vloga: 'Charter',
-    cas: 'Pred 3 dnevi',
-    vsebina: 'Prejeli smo certifikat varnosti za celotno floto 2024. Rešilni jopiči, EPIRB, VHF — vse posodobljeno. Vaša varnost je naša prioriteta. ✅',
-    likes: 41, komentarji: 7, odobrena: true,
-  },
-  {
-    id: 'f4', tip: 'tuje_caka',
-    avtor: 'Janez K.', avatar: '👤',
-    cas: 'Pred 5 urami',
-    vsebina: 'Čudovita izkušnja s chartrom minuli mesec! Plovili super vzdrževano, posadka profesionalna. Priporočam vsem.',
-    likes: 0, komentarji: 0, odobrena: false,
-  },
-]
+function KomentarjiPanel({ objavaId }: { objavaId: string }) {
+  const { user } = useAuth()
+  const [komentarji, setKomentarji] = useState<ObjavaKomentar[]>([])
+  const [nalaga, setNalaga] = useState(true)
+  const [nov, setNov] = useState('')
+  const [posilja, setPosilja] = useState(false)
 
-function LikeButton({ initial }: { initial: number }) {
-  const [liked, setLiked] = useState(false)
-  const [n, setN] = useState(initial)
+  const nalozi = useCallback(async () => {
+    setNalaga(true)
+    const supabase = createClient()
+    const { data } = await supabase.from('objava_komentarji').select('*').eq('objava_id', objavaId).order('created_at', { ascending: true })
+    setKomentarji(data ?? [])
+    setNalaga(false)
+  }, [objavaId])
+
+  useEffect(() => {
+    ;(async () => { await nalozi() })()
+  }, [nalozi])
+
+  async function dodajKomentar() {
+    if (!user || !nov.trim()) return
+    setPosilja(true)
+    const supabase = createClient()
+    await supabase.from('objava_komentarji').insert({
+      objava_id: objavaId,
+      user_id: user.id,
+      ime: user.user_metadata?.ime ?? user.email ?? 'Uporabnik',
+      vsebina: nov.trim(),
+    })
+    setPosilja(false)
+    setNov('')
+    nalozi()
+  }
+
   return (
-    <button onClick={() => { setLiked(!liked); setN(c => liked ? c - 1 : c + 1) }}
-      className={`flex items-center gap-1.5 text-sm transition-all ${liked ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}>
-      <Heart className={`w-4 h-4 ${liked ? 'fill-red-500' : ''}`} /> {n}
-    </button>
+    <div className="mt-3 pt-3 border-t border-gray-50 space-y-3">
+      {nalaga ? (
+        <p className="text-xs text-gray-400">Nalagam komentarje...</p>
+      ) : komentarji.length === 0 ? (
+        <p className="text-xs text-gray-400">Še ni komentarjev.</p>
+      ) : (
+        komentarji.map(k => (
+          <div key={k.id} className="flex items-start gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-xs font-bold text-[#0c2340] shrink-0">{k.ime[0]}</div>
+            <div className="flex-1 bg-gray-50 rounded-xl px-3 py-2">
+              <p className="text-xs font-semibold text-[#0c2340]">{k.ime}</p>
+              <p className="text-xs text-gray-600">{k.vsebina}</p>
+            </div>
+          </div>
+        ))
+      )}
+      {user && (
+        <div className="flex items-center gap-2">
+          <input
+            value={nov}
+            onChange={e => setNov(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); dodajKomentar() } }}
+            placeholder="Dodaj komentar..."
+            className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-[#c9a84c]"
+          />
+          <button onClick={dodajKomentar} disabled={posilja || !nov.trim()} className="p-2 text-[#c9a84c] disabled:opacity-40">
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
 interface Props {
   title?: string
+  lastnikUserId?: string | null
   showAddPost?: boolean
   showModeracija?: boolean
-  avtor?: string
-  vloga?: string
 }
 
 export default function FeedObjave({
   title = 'Objave',
+  lastnikUserId = null,
   showAddPost = false,
   showModeracija = false,
-  avtor = '',
-  vloga = '',
 }: Props) {
   const { user } = useAuth()
-  const [objave, setObjave] = useState(mockObjave)
-  const [tip, setTip] = useState<'objava' | 'potovanje'>('objava')
+  const [objave, setObjave] = useState<Objava[]>([])
+  const [nalaga, setNalaga] = useState(true)
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
+  const [mojiLikes, setMojiLikes] = useState<Set<string>>(new Set())
+  const [komentarCounts, setKomentarCounts] = useState<Record<string, number>>({})
+  const [odprtiKomentarji, setOdprtiKomentarji] = useState<Set<string>>(new Set())
+  const [dovoljenoTuje, setDovoljenoTuje] = useState(true)
+
+  const [tip, setTip] = useState<TipObjave>('objava')
   const [vsebina, setVsebina] = useState('')
   const [lokacija, setLokacija] = useState('')
   const [plovilo, setPlovilo] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [posilja, setPosilja] = useState(false)
   const [filter, setFilter] = useState<'vse' | 'moje' | 'caka'>('vse')
+
+  const jeLastnik = !!user && !!lastnikUserId && user.id === lastnikUserId
+
+  const nalozi = useCallback(async () => {
+    if (!lastnikUserId) { setNalaga(false); return }
+    setNalaga(true)
+    const supabase = createClient()
+
+    const { data: objavaData } = await supabase.from('objave').select('*').eq('lastnik_user_id', lastnikUserId).order('created_at', { ascending: false })
+    const seznam = objavaData ?? []
+    setObjave(seznam)
+
+    if (!jeLastnik) {
+      const { data: profil } = await supabase.from('profiles').select('dovoli_tuje_objave').eq('id', lastnikUserId).maybeSingle()
+      setDovoljenoTuje(profil?.dovoli_tuje_objave ?? true)
+    }
+
+    const ids = seznam.map(o => o.id)
+    if (ids.length > 0) {
+      const { data: likes } = await supabase.from('objava_likes').select('objava_id, user_id').in('objava_id', ids)
+      const counts: Record<string, number> = {}
+      const moji = new Set<string>()
+      likes?.forEach(l => {
+        counts[l.objava_id] = (counts[l.objava_id] ?? 0) + 1
+        if (user && l.user_id === user.id) moji.add(l.objava_id)
+      })
+      setLikeCounts(counts)
+      setMojiLikes(moji)
+
+      const { data: komentarji } = await supabase.from('objava_komentarji').select('objava_id').in('objava_id', ids)
+      const kCounts: Record<string, number> = {}
+      komentarji?.forEach(k => { kCounts[k.objava_id] = (kCounts[k.objava_id] ?? 0) + 1 })
+      setKomentarCounts(kCounts)
+    } else {
+      setLikeCounts({})
+      setMojiLikes(new Set())
+      setKomentarCounts({})
+    }
+
+    setNalaga(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastnikUserId, jeLastnik, user?.id])
+
+  useEffect(() => {
+    ;(async () => { await nalozi() })()
+  }, [nalozi])
 
   const odobrene = objave.filter(o => o.odobrena)
   const cakajo = objave.filter(o => !o.odobrena)
 
   const prikazane = showModeracija
-    ? (filter === 'caka' ? cakajo : filter === 'moje' ? objave.filter(o => o.avtor === avtor) : odobrene)
+    ? (filter === 'caka' ? cakajo : filter === 'moje' ? objave.filter(o => o.avtor_user_id === user?.id) : odobrene)
     : odobrene
 
-  function addPost() {
-    if (!vsebina.trim()) return
-    const nova: FeedPost = {
-      id: `f${Date.now()}`,
+  async function addPost() {
+    if (!vsebina.trim() || !user || !lastnikUserId) return
+    setPosilja(true)
+    const supabase = createClient()
+    const odobrena = jeLastnik || dovoljenoTuje === false ? true : undefined
+    const { error } = await supabase.from('objave').insert({
+      lastnik_user_id: lastnikUserId,
+      avtor_user_id: user.id,
+      avtor_ime: user.user_metadata?.ime ?? user.email ?? 'Uporabnik',
+      avtor_vloga: (user.user_metadata?.vloga as string | undefined) ?? null,
       tip,
-      avtor: user?.user_metadata?.ime ?? avtor ?? 'Jaz',
-      avatar: '👤',
-      vloga,
-      cas: 'Ravnokar',
-      vsebina,
-      lokacija: lokacija || undefined,
-      plovilo: plovilo || undefined,
-      likes: 0, komentarji: 0,
-      odobrena: true,
+      vsebina: vsebina.trim(),
+      lokacija: lokacija || null,
+      plovilo: plovilo || null,
+      odobrena: jeLastnik ? true : odobrena ?? false,
+    })
+    setPosilja(false)
+    if (!error) {
+      setVsebina(''); setLokacija(''); setPlovilo('')
+      setShowForm(false)
+      nalozi()
     }
-    setObjave([nova, ...objave])
-    setVsebina(''); setLokacija(''); setPlovilo('')
-    setShowForm(false)
   }
 
-  function odobri(id: string) {
-    setObjave(prev => prev.map(o => o.id === id ? { ...o, odobrena: true } : o))
+  async function odobri(id: string) {
+    const supabase = createClient()
+    await supabase.from('objave').update({ odobrena: true }).eq('id', id)
+    nalozi()
   }
 
-  function zavrni(id: string) {
-    setObjave(prev => prev.filter(o => o.id !== id))
+  async function zavrni(id: string) {
+    const supabase = createClient()
+    await supabase.from('objave').delete().eq('id', id)
+    nalozi()
   }
+
+  async function preklopiLike(objavaId: string, trenutno: boolean) {
+    if (!user) return
+    setMojiLikes(prev => {
+      const s = new Set(prev)
+      if (trenutno) s.delete(objavaId)
+      else s.add(objavaId)
+      return s
+    })
+    setLikeCounts(prev => ({ ...prev, [objavaId]: (prev[objavaId] ?? 0) + (trenutno ? -1 : 1) }))
+    const supabase = createClient()
+    if (trenutno) {
+      await supabase.from('objava_likes').delete().eq('objava_id', objavaId).eq('user_id', user.id)
+    } else {
+      await supabase.from('objava_likes').insert({ objava_id: objavaId, user_id: user.id })
+    }
+  }
+
+  function toggleKomentarji(id: string) {
+    setOdprtiKomentarji(prev => {
+      const s = new Set(prev)
+      if (s.has(id)) s.delete(id)
+      else s.add(id)
+      return s
+    })
+  }
+
+  const lahkoObjavi = !!user && !!lastnikUserId && (jeLastnik || dovoljenoTuje)
 
   return (
     <div>
@@ -144,14 +255,20 @@ export default function FeedObjave({
               ))}
             </div>
           )}
-          {showAddPost && user && (
+          {showAddPost && lahkoObjavi && (
             <button onClick={() => setShowForm(!showForm)}
               className="flex items-center gap-1.5 px-4 py-2 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] text-xs font-semibold rounded-full transition-all hover:scale-105">
-              <Image className="w-3.5 h-3.5" /> Dodaj objavo
+              <ImageIcon className="w-3.5 h-3.5" /> Dodaj objavo
             </button>
           )}
         </div>
       </div>
+
+      {!lastnikUserId && (
+        <div className="bg-gray-50 rounded-2xl p-8 text-center mb-6">
+          <p className="text-gray-400 text-sm">Feed za ta profil trenutno ni na voljo.</p>
+        </div>
+      )}
 
       {/* Moderacija: Čaka odobritev */}
       {showModeracija && filter === 'caka' && (
@@ -166,9 +283,9 @@ export default function FeedObjave({
               <div key={o.id} className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-amber-200 flex items-center justify-center text-lg">{o.avatar}</div>
+                    <div className="w-9 h-9 rounded-full bg-amber-200 flex items-center justify-center text-sm font-bold text-[#0c2340]">{o.avtor_ime[0]}</div>
                     <div>
-                      <p className="font-semibold text-[#0c2340] text-sm">{o.avtor}</p>
+                      <p className="font-semibold text-[#0c2340] text-sm">{o.avtor_ime}</p>
                       <p className="text-xs text-amber-700 flex items-center gap-1"><Clock className="w-3 h-3" /> Čaka odobritev</p>
                     </div>
                   </div>
@@ -191,15 +308,15 @@ export default function FeedObjave({
       )}
 
       {/* Nova objava forma */}
-      {showForm && showAddPost && (
+      {showForm && showAddPost && lahkoObjavi && (
         <div className="bg-white rounded-2xl border border-[#c9a84c]/30 shadow-sm p-5 mb-5">
           {/* Tip selector */}
           <div className="flex gap-2 mb-4">
             {[
-              { v: 'objava', label: '📢 Objava' },
-              { v: 'potovanje', label: '⛵ Potovanje' },
+              { v: 'objava' as TipObjave, label: '📢 Objava' },
+              { v: 'potovanje' as TipObjave, label: '⛵ Potovanje' },
             ].map(({ v, label }) => (
-              <button key={v} type="button" onClick={() => setTip(v as typeof tip)}
+              <button key={v} type="button" onClick={() => setTip(v)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   tip === v ? 'bg-[#0c2340] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}>
@@ -210,7 +327,7 @@ export default function FeedObjave({
 
           <div className="flex items-start gap-3 mb-3">
             <div className="w-9 h-9 rounded-full bg-[#c9a84c] flex items-center justify-center text-[#0c2340] font-bold text-sm shrink-0">
-              {(user?.user_metadata?.ime ?? avtor ?? 'J')[0]}
+              {(user?.user_metadata?.ime ?? 'J')[0]}
             </div>
             <textarea value={vsebina} onChange={e => setVsebina(e.target.value)}
               placeholder={tip === 'potovanje' ? 'Opišite vaše potovanje, ruto, doživetje...' : 'Delite novosti, informacije ali obvestila...'}
@@ -235,16 +352,18 @@ export default function FeedObjave({
             </div>
           )}
 
+          {!jeLastnik && dovoljenoTuje && (
+            <p className="text-xs text-gray-400 ml-12 mb-3">Vaša objava bo vidna po odobritvi lastnika profila.</p>
+          )}
+
           <div className="flex items-center justify-between ml-12">
-            <button type="button" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#c9a84c] transition-colors">
-              <Image className="w-4 h-4" /> Dodaj sliko
-            </button>
+            <span className="text-xs text-gray-300">&nbsp;</span>
             <div className="flex gap-2">
               <button onClick={() => setShowForm(false)}
                 className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700 transition-colors">Prekliči</button>
-              <button onClick={addPost} disabled={!vsebina.trim()}
+              <button onClick={addPost} disabled={!vsebina.trim() || posilja}
                 className="flex items-center gap-1.5 px-4 py-2 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-40 text-[#0c2340] text-xs font-semibold rounded-full transition-all">
-                <Send className="w-3.5 h-3.5" /> Objavi
+                <Send className="w-3.5 h-3.5" /> {posilja ? 'Objavljam...' : 'Objavi'}
               </button>
             </div>
           </div>
@@ -254,33 +373,36 @@ export default function FeedObjave({
       {/* Feed */}
       {filter !== 'caka' && (
         <div className="space-y-4">
-          {prikazane.length === 0 ? (
+          {nalaga ? (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
-              <Image className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">Še ni objav</p>
+              <p className="text-gray-400 text-sm">Nalagam objave...</p>
             </div>
+          ) : prikazane.length === 0 ? (
+            lastnikUserId && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+                <ImageIcon className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                <p className="text-gray-400 text-sm">Še ni objav</p>
+              </div>
+            )
           ) : (
             prikazane.map(o => (
               <div key={o.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#0c2340]/8 flex items-center justify-center text-xl shrink-0">{o.avatar}</div>
+                    <div className="w-10 h-10 rounded-full bg-[#0c2340]/8 flex items-center justify-center text-lg shrink-0">{o.avtor_ime[0]}</div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-[#0c2340] text-sm">{o.avtor}</p>
-                        {o.vloga && (
-                          <span className="text-xs px-1.5 py-0.5 bg-[#0c2340]/8 text-[#0c2340] rounded-full capitalize">{o.vloga}</span>
+                        <p className="font-semibold text-[#0c2340] text-sm">{o.avtor_ime}</p>
+                        {o.avtor_vloga && (
+                          <span className="text-xs px-1.5 py-0.5 bg-[#0c2340]/8 text-[#0c2340] rounded-full capitalize">{o.avtor_vloga}</span>
                         )}
                         {o.tip === 'potovanje' && (
                           <span className="text-xs px-1.5 py-0.5 bg-[#c9a84c]/15 text-[#9a7a2e] rounded-full">⛵ Potovanje</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400">{o.cas}</p>
+                      <p className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                     </div>
                   </div>
-                  <button className="text-gray-300 hover:text-gray-500 transition-colors">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
                 </div>
 
                 {/* Lokacija + plovilo */}
@@ -301,22 +423,22 @@ export default function FeedObjave({
 
                 <p className="text-sm text-gray-700 leading-relaxed mb-4">{o.vsebina}</p>
 
-                {/* Slika placeholder */}
-                {o.slike && o.slike.length > 0 && (
-                  <div className="h-48 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] rounded-xl mb-4 flex items-center justify-center">
-                    <Image className="w-10 h-10 text-white/20" />
-                  </div>
-                )}
-
                 <div className="flex items-center gap-5 pt-3 border-t border-gray-50">
-                  <LikeButton initial={o.likes} />
-                  <button className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-[#0c2340] transition-colors">
-                    <MessageCircle className="w-4 h-4" /> {o.komentarji}
+                  <LikeButton
+                    objavaId={o.id}
+                    stevilo={likeCounts[o.id] ?? 0}
+                    jazLajkam={mojiLikes.has(o.id)}
+                    onToggle={preklopiLike}
+                  />
+                  <button onClick={() => toggleKomentarji(o.id)} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-[#0c2340] transition-colors">
+                    <MessageCircle className="w-4 h-4" /> {komentarCounts[o.id] ?? 0}
                   </button>
                   <button className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-[#c9a84c] transition-colors ml-auto">
                     <Share2 className="w-4 h-4" /> Deli
                   </button>
                 </div>
+
+                {odprtiKomentarji.has(o.id) && <KomentarjiPanel objavaId={o.id} />}
               </div>
             ))
           )}

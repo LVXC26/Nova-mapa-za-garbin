@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { PlusCircle, Ship, MapPin, Calendar, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { PlusCircle, Ship, MapPin, Calendar, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon, Star } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { mockPlovila } from '@/data/mock'
@@ -17,32 +18,37 @@ function mockOglediZaId(id: string): number {
   return (parseInt(id.replace(/\D/g, '') || '7') * 17 + 23) % 191 + 10
 }
 
-export default function MojaPlovilaPage() {
-  const { user } = useAuth()
+function MojaPlovilaContent() {
+  const { user, demoMode } = useAuth()
+  const searchParams = useSearchParams()
+  const promocijaStatus = searchParams.get('promocija')
   const [plovila, setPlovila] = useState<Plovilo[]>([])
   const [nalaga, setNalaga] = useState(true)
   const [filter, setFilter] = useState<'vse' | 'prodaja' | 'najem'>('vse')
   const [prodana, setProdana] = useState<Record<string, boolean>>({})
   const [urgentna, setUrgentna] = useState<Record<string, boolean>>({})
+  const [promoviram, setPromoviram] = useState<string | null>(null)
+  const [promoNapaka, setPromoNapaka] = useState('')
+  const [zdaj, setZdaj] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!user) { setNalaga(false); return }
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      // Demo: pokaži mock plovila
-      setPlovila(mockPlovila.slice(0, 3))
-      setProdana(Object.fromEntries(mockPlovila.slice(0, 3).map(p => [p.id, p.prodano ?? false])))
-      setUrgentna(Object.fromEntries(mockPlovila.slice(0, 3).map(p => [p.id, p.urgentno ?? false])))
-      setNalaga(false)
-      return
-    }
+    ;(async () => {
+      setZdaj(Date.now())
+      if (!user) { setNalaga(false); return }
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        // Demo: pokaži mock plovila
+        setPlovila(mockPlovila.slice(0, 3))
+        setProdana(Object.fromEntries(mockPlovila.slice(0, 3).map(p => [p.id, p.prodano ?? false])))
+        setUrgentna(Object.fromEntries(mockPlovila.slice(0, 3).map(p => [p.id, p.urgentno ?? false])))
+        setNalaga(false)
+        return
+      }
 
-    async function naloziPlovila() {
       const supabase = createClient()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('plovila')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
       const seznam = data ?? []
@@ -50,10 +56,42 @@ export default function MojaPlovilaPage() {
       setProdana(Object.fromEntries(seznam.map((p: Plovilo) => [p.id, p.prodano ?? false])))
       setUrgentna(Object.fromEntries(seznam.map((p: Plovilo) => [p.id, p.urgentno ?? false])))
       setNalaga(false)
-    }
-
-    naloziPlovila()
+    })()
   }, [user])
+
+  async function preklopiUrgentno(id: string, trenutno: boolean) {
+    setUrgentna(prev => ({ ...prev, [id]: !trenutno }))
+    const supabase = createClient()
+    const { error } = await supabase.from('plovila').update({ urgentno: !trenutno }).eq('id', id)
+    if (error) setUrgentna(prev => ({ ...prev, [id]: trenutno }))
+  }
+
+  async function preklopiProdano(id: string, trenutno: boolean) {
+    setProdana(prev => ({ ...prev, [id]: !trenutno }))
+    const supabase = createClient()
+    const { error } = await supabase.from('plovila').update({ prodano: !trenutno }).eq('id', id)
+    if (error) setProdana(prev => ({ ...prev, [id]: trenutno }))
+  }
+
+  async function promovirajOglas(id: string) {
+    if (demoMode) { setPromoNapaka('Promocija v demo načinu ni mogoča. Prijavite se z resničnim računom.'); return }
+    setPromoNapaka('')
+    setPromoviram(id)
+    const res = await fetch('/api/promocije/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plovilo_id: id }),
+    })
+    const json = await res.json()
+    setPromoviram(null)
+    if (!res.ok || !json.url) { setPromoNapaka(json.error ?? 'Napaka pri pripravi plačila.'); return }
+    window.location.assign(json.url)
+  }
+
+  function jePromovirano(p: Plovilo): boolean {
+    if (zdaj === null) return !!p.promoted
+    return !!p.promoted && (!p.promoted_do || new Date(p.promoted_do).getTime() > zdaj)
+  }
 
   const filtirana = plovila
     .filter((p) => filter === 'vse' || p.tip_oglasa === filter)
@@ -80,6 +118,22 @@ export default function MojaPlovilaPage() {
           Dodaj plovilo
         </Link>
       </div>
+
+      {promocijaStatus === 'uspesno' && (
+        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 mb-6">
+          <CheckCircle className="w-4 h-4 shrink-0" /> Plačilo je bilo uspešno. Oglas bo promoviran v nekaj trenutkih.
+        </div>
+      )}
+      {promocijaStatus === 'preklicano' && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700 mb-6">
+          Plačilo je bilo preklicano — oglas ni bil promoviran.
+        </div>
+      )}
+      {promoNapaka && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 mb-6">
+          {promoNapaka}
+        </div>
+      )}
 
       {nalaga ? (
         <div className="flex items-center justify-center py-24">
@@ -158,6 +212,11 @@ export default function MojaPlovilaPage() {
                           <Zap className="w-3 h-3" /> Nujno
                         </span>
                       )}
+                      {jePromovirano(plovilo) && !jeProdano && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#c9a84c] text-[#0c2340] shrink-0 flex items-center gap-1">
+                          <Star className="w-3 h-3" /> Promovirano
+                        </span>
+                      )}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
                         plovilo.tip_oglasa === 'najem' ? 'bg-[#c9a84c]/15 text-[#9a7a2e]' : 'bg-[#0c2340]/10 text-[#0c2340]'
                       }`}>
@@ -193,10 +252,21 @@ export default function MojaPlovilaPage() {
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Promocija */}
+                    {!jeProdano && !jePromovirano(plovilo) && (
+                      <button
+                        onClick={() => promovirajOglas(plovilo.id)}
+                        disabled={promoviram === plovilo.id}
+                        title="Promoviraj oglas"
+                        className="p-2 rounded-xl text-gray-400 hover:text-[#c9a84c] hover:bg-amber-50 transition-colors disabled:opacity-50"
+                      >
+                        {promoviram === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
+                      </button>
+                    )}
                     {/* Urgentna prodaja */}
                     {!jeProdano && (
                       <button
-                        onClick={() => setUrgentna(prev => ({ ...prev, [plovilo.id]: !jeUrgentno }))}
+                        onClick={() => preklopiUrgentno(plovilo.id, jeUrgentno)}
                         title={jeUrgentno ? 'Odstrani urgentno' : 'Označi kot urgentno'}
                         className={`p-2 rounded-xl transition-colors ${
                           jeUrgentno ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
@@ -207,7 +277,7 @@ export default function MojaPlovilaPage() {
                     )}
                     {/* Prodano */}
                     <button
-                      onClick={() => setProdana(prev => ({ ...prev, [plovilo.id]: !jeProdano }))}
+                      onClick={() => preklopiProdano(plovilo.id, jeProdano)}
                       title={jeProdano ? 'Označi kot aktivno' : 'Označi kot prodano'}
                       className={`p-2 rounded-xl transition-colors ${
                         jeProdano ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
@@ -216,19 +286,22 @@ export default function MojaPlovilaPage() {
                       <CheckCircle className="w-4 h-4" />
                     </button>
                     {/* Pregled */}
-                    <button
+                    <Link
+                      href={`/plovila/${plovilo.id}`}
+                      target="_blank"
                       className="p-2 rounded-xl text-gray-400 hover:text-[#0c2340] hover:bg-gray-100 transition-colors"
                       title="Pregled"
                     >
                       {plovilo.potrjeno ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </button>
+                    </Link>
                     {/* Uredi */}
-                    <button
+                    <Link
+                      href={`/dashboard/dodaj-plovilo?edit=${plovilo.id}`}
                       className="p-2 rounded-xl text-gray-400 hover:text-[#c9a84c] hover:bg-gray-100 transition-colors"
                       title="Uredi"
                     >
                       <Pencil className="w-4 h-4" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               )
@@ -237,5 +310,13 @@ export default function MojaPlovilaPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function MojaPlovilaPage() {
+  return (
+    <Suspense fallback={<div className="p-8 flex items-center justify-center"><Loader2 className="w-6 h-6 text-[#c9a84c] animate-spin" /></div>}>
+      <MojaPlovilaContent />
+    </Suspense>
   )
 }

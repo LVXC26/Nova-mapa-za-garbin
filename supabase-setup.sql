@@ -271,6 +271,7 @@ insert into oprema_moznosti (kategorija, naziv, ikona) values
 
 -- Admin zastavica na profilih
 alter table profiles add column if not exists is_admin boolean default false;
+alter table profiles add column if not exists notifikacije jsonb default '{}';
 
 -- Ko je Supabase aktiven, postavi admin:
 -- UPDATE profiles SET is_admin = true WHERE id = (SELECT id FROM auth.users WHERE email = 'matej.skulj10@gmail.com');
@@ -311,3 +312,332 @@ create policy "Admin posodablja narocnine" on charter_narocnine for update using
 create policy "Charter bere svojo narocnino" on charter_narocnine for select using (
   charter_id = auth.uid()::text
 );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- STORAGE — slike plovil
+-- ═══════════════════════════════════════════════════════════════════
+
+insert into storage.buckets (id, name, public)
+values ('plovila-slike', 'plovila-slike', true)
+on conflict (id) do nothing;
+
+create policy "Javni bralni dostop - slike plovil" on storage.objects
+  for select using (bucket_id = 'plovila-slike');
+
+create policy "Prijavljeni nalagajo slike v svojo mapo" on storage.objects
+  for insert with check (
+    bucket_id = 'plovila-slike'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+create policy "Prijavljeni brisejo svoje slike" on storage.objects
+  for delete using (
+    bucket_id = 'plovila-slike'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- PLOVILA — manjkajoči stolpci (uporablja jih dodaj-plovilo forma)
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table plovila add column if not exists promoted boolean default false;
+alter table plovila add column if not exists prodano boolean default false;
+alter table plovila add column if not exists cena_na_zahtevo boolean default false;
+alter table plovila add column if not exists urgentno boolean default false;
+alter table plovila add column if not exists updated_at timestamptz default now();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- SKIPERJI — dodatni stolpci za javni profil
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table skiperji add column if not exists ocena numeric not null default 0;
+alter table skiperji add column if not exists st_ocen integer not null default 0;
+alter table skiperji add column if not exists tip_skiper text check (tip_skiper in ('samostojni', 'agencija')) default 'samostojni';
+alter table skiperji add column if not exists naziv_agencije text;
+alter table skiperji add column if not exists ekipa jsonb default '[]';
+
+-- En skipper profil na uporabnika (potrebno za upsert po user_id v dashboard/profil)
+alter table skiperji add constraint skiperji_user_id_key unique (user_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- CHARTERJI — profili charter podjetij/zasebnikov
+-- ═══════════════════════════════════════════════════════════════════
+
+create table charterji (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade,
+  naziv text not null,
+  opis text,
+  tip text check (tip in ('podjetje', 'zasebnik')) not null default 'podjetje',
+  lokacija text not null,
+  kontakt_email text not null,
+  kontakt_tel text not null,
+  spletna_stran text,
+  ocena numeric not null default 0,
+  st_plovil integer not null default 0,
+  max_oseb integer not null default 0,
+  max_dolzina_m numeric not null default 0,
+  tip_plovila text[] default '{}',
+  verified boolean default false,
+  created_at timestamptz default now()
+);
+
+alter table charterji enable row level security;
+create policy "Javni bralni dostop - charterji" on charterji for select using (true);
+create policy "Uredi svoj charter profil" on charterji for update using (auth.uid() = user_id);
+create policy "Vstavi charter profil" on charterji for insert with check (auth.uid() = user_id);
+
+-- En charter profil na uporabnika (potrebno za upsert po user_id v dashboard/profil)
+alter table charterji add constraint charterji_user_id_key unique (user_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- ADMIN — dostop do nepotrjenih/neverificiranih vnosov
+-- ═══════════════════════════════════════════════════════════════════
+
+-- Plovila nimajo admin select/update politike — brez tega admin ne vidi
+-- oglasov, ki čakajo na odobritev (Javni bralni dostop kaže samo potrjeno = true)
+create policy "Admin bere vsa plovila" on plovila for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin ureja plovila" on plovila for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+-- Lastnik mora videti tudi svoje nepotrjene oglase (Javni bralni dostop
+-- kaže samo potrjeno = true, zato "Moja plovila"/urejanje brez te politike ne dela)
+create policy "Lastnik bere svoja plovila" on plovila for select using (auth.uid() = user_id);
+
+create policy "Admin ureja skiperje" on skiperji for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+create policy "Admin ureja charterje" on charterji for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- PRILJUBLJENI — shranjena plovila uporabnika
+-- ═══════════════════════════════════════════════════════════════════
+
+create table priljubljeni (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade not null,
+  plovilo_id uuid references plovila on delete cascade not null,
+  created_at timestamptz default now(),
+  unique (user_id, plovilo_id)
+);
+
+alter table priljubljeni enable row level security;
+create policy "Uporabnik bere svoje priljubljene" on priljubljeni for select using (auth.uid() = user_id);
+create policy "Uporabnik doda priljubljeno" on priljubljeni for insert with check (auth.uid() = user_id);
+create policy "Uporabnik odstrani priljubljeno" on priljubljeni for delete using (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- REZERVNI DELI — tržnica rezervnih delov
+-- ═══════════════════════════════════════════════════════════════════
+
+create table rezervni_deli (
+  id uuid primary key default gen_random_uuid(),
+  naziv text not null,
+  opis text,
+  cena decimal not null,
+  stanje text check (stanje in ('novo', 'rabljeno')) not null default 'rabljeno',
+  kategorija text check (kategorija in ('motor', 'elektronika', 'jadra', 'sidrna oprema', 'trup', 'drugo')) not null default 'drugo',
+  tip_plovila text,
+  slika_url text,
+  kontakt_email text,
+  kontakt_tel text,
+  lokacija text,
+  potrjeno boolean default false,
+  user_id uuid references auth.users on delete set null,
+  created_at timestamptz default now()
+);
+
+alter table rezervni_deli enable row level security;
+create policy "Javni bralni dostop - rezervni deli" on rezervni_deli for select using (potrjeno = true);
+create policy "Dodaj rezervni del" on rezervni_deli for insert with check (auth.uid() = user_id);
+create policy "Uredi svoj rezervni del" on rezervni_deli for update using (auth.uid() = user_id);
+create policy "Lastnik bere svoje rezervne dele" on rezervni_deli for select using (auth.uid() = user_id);
+create policy "Admin bere vse rezervne dele" on rezervni_deli for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin ureja rezervne dele" on rezervni_deli for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- PROMOCIJE — admin-urejane promocijske akcije
+-- ═══════════════════════════════════════════════════════════════════
+
+create table promocije (
+  id uuid primary key default gen_random_uuid(),
+  naziv text not null,
+  opis text,
+  slika_url text,
+  popust integer,
+  tip text check (tip in ('popust', 'featured', 'sezonska', 'paket')) not null default 'popust',
+  veljavnost_do date,
+  plovilo_id uuid references plovila on delete cascade,
+  barva text,
+  aktivna boolean default true,
+  created_at timestamptz default now()
+);
+
+alter table promocije enable row level security;
+create policy "Javni bralni dostop - promocije" on promocije for select using (aktivna = true);
+create policy "Admin bere vse promocije" on promocije for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin ureja promocije" on promocije for insert with check (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin posodablja promocije" on promocije for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin brise promocije" on promocije for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- ADMIN — dodatne politike za CMS (novice, bannerji, zemljevid, uporabniki)
+-- ═══════════════════════════════════════════════════════════════════
+
+create policy "Admin bere vse novice" on novice for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin doda novico" on novice for insert with check (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin ureja novico" on novice for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin brise novico" on novice for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+create policy "Admin bere vse bannerje" on bannerji for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin doda banner" on bannerji for insert with check (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin ureja banner" on bannerji for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin brise banner" on bannerji for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+create policy "Admin doda tocko na zemljevid" on zemljevid_tocke for insert with check (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin ureja tocko na zemljevidu" on zemljevid_tocke for update using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+create policy "Admin brise tocko z zemljevida" on zemljevid_tocke for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+create policy "Admin ureja vlogo uporabnika" on profiles for update using (
+  exists (select 1 from profiles p2 where p2.id = auth.uid() and p2.is_admin = true)
+);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POVPRASEVANJA — popravki: admin jih ni mogel prebrati (using(false)
+-- je blokiral čisto vse), tip ni dopuščal splošnega kontakta ali
+-- prijav "postani partner"/"postani skipper"
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Samo admin bere povprasevanja" on povprasevanja;
+create policy "Admin bere povprasevanja" on povprasevanja for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+alter table povprasevanja drop constraint if exists povprasevanja_tip_check;
+alter table povprasevanja add constraint povprasevanja_tip_check
+  check (tip in ('charter', 'skipper', 'plovilo', 'kontakt', 'prijava-charter', 'prijava-skipper'));
+
+-- ═══════════════════════════════════════════════════════════════════
+-- SOCIALNI FEED — objave na profilih skiperjev/charterjev
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table profiles add column if not exists dovoli_tuje_objave boolean default true;
+alter table profiles add column if not exists avto_odobritev_objav boolean default false;
+
+create table objave (
+  id uuid primary key default gen_random_uuid(),
+  lastnik_user_id uuid references auth.users on delete cascade not null,
+  avtor_user_id uuid references auth.users on delete cascade not null,
+  avtor_ime text not null,
+  avtor_vloga text,
+  tip text check (tip in ('objava', 'potovanje')) not null default 'objava',
+  vsebina text not null,
+  lokacija text,
+  plovilo text,
+  odobrena boolean not null default false,
+  created_at timestamptz default now()
+);
+
+alter table objave enable row level security;
+create policy "Javni bralni dostop - odobrene objave" on objave for select using (odobrena = true);
+create policy "Lastnik bere vse svoje objave" on objave for select using (auth.uid() = lastnik_user_id);
+create policy "Prijavljeni dodajo objavo" on objave for insert with check (auth.uid() = avtor_user_id);
+create policy "Lastnik ureja objave na svojem profilu" on objave for update using (auth.uid() = lastnik_user_id);
+create policy "Lastnik brise objave na svojem profilu" on objave for delete using (auth.uid() = lastnik_user_id);
+create policy "Avtor brise svojo objavo" on objave for delete using (auth.uid() = avtor_user_id);
+
+create table objava_likes (
+  id uuid primary key default gen_random_uuid(),
+  objava_id uuid references objave on delete cascade not null,
+  user_id uuid references auth.users on delete cascade not null,
+  created_at timestamptz default now(),
+  unique (objava_id, user_id)
+);
+
+alter table objava_likes enable row level security;
+create policy "Javni bralni dostop - likes" on objava_likes for select using (true);
+create policy "Prijavljeni dodajo like" on objava_likes for insert with check (auth.uid() = user_id);
+create policy "Prijavljeni odstranijo svoj like" on objava_likes for delete using (auth.uid() = user_id);
+
+create table objava_komentarji (
+  id uuid primary key default gen_random_uuid(),
+  objava_id uuid references objave on delete cascade not null,
+  user_id uuid references auth.users on delete cascade not null,
+  ime text not null,
+  vsebina text not null,
+  created_at timestamptz default now()
+);
+
+alter table objava_komentarji enable row level security;
+create policy "Javni bralni dostop - komentarji objav" on objava_komentarji for select using (true);
+create policy "Prijavljeni dodajo komentar" on objava_komentarji for insert with check (auth.uid() = user_id);
+create policy "Prijavljeni brisejo svoj komentar" on objava_komentarji for delete using (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- PLAČLJIVA PROMOCIJA OGLASOV — Stripe Checkout
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table plovila add column if not exists promoted_do timestamptz;
+
+create table promocija_narocila (
+  id uuid primary key default gen_random_uuid(),
+  plovilo_id uuid references plovila on delete cascade not null,
+  user_id uuid references auth.users on delete cascade not null,
+  stripe_session_id text unique not null,
+  znesek_cent integer not null,
+  valuta text not null default 'eur',
+  dni_promocije integer not null default 30,
+  status text check (status in ('pending', 'placano', 'preklicano')) not null default 'pending',
+  created_at timestamptz default now(),
+  placano_at timestamptz
+);
+
+alter table promocija_narocila enable row level security;
+create policy "Lastnik bere svoja narocila" on promocija_narocila for select using (auth.uid() = user_id);
+create policy "Admin bere vsa narocila promocij" on promocija_narocila for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+-- Uporabnik lahko ustvari svoje (pending) naročilo pred plačilom, a ga ne more
+-- sam potrditi kot plačanega — status na "placano" postavi izključno webhook
+-- (service role), ki obide RLS, zato tu ni client-side update politike.
+create policy "Uporabnik ustvari svoje narocilo" on promocija_narocila for insert with check (auth.uid() = user_id);

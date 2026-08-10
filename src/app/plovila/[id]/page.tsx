@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, MapPin, Calendar, Ruler, Phone, Mail, MessageCircle, CheckCircle, Share2, Copy, X, Printer } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
@@ -9,6 +9,8 @@ import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { mockPlovila } from '@/data/mock'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
+import { createClient } from '@/lib/supabase/client'
+import type { Plovilo } from '@/types/database'
 
 function ShareModal({ naziv, onClose }: { naziv: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false)
@@ -75,9 +77,35 @@ const tipIkone: Record<string, string> = {
 export default function PloviloDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
-  const plovilo = mockPlovila.find(p => p.id === id)
+  const mockMatch = mockPlovila.find(p => p.id === id)
+  const [realPlovilo, setRealPlovilo] = useState<Plovilo | null>(null)
+  const [nalaga, setNalaga] = useState(!mockMatch)
   const [shareOpen, setShareOpen] = useState(false)
+
+  useEffect(() => {
+    if (mockMatch) return
+    const supabase = createClient()
+    supabase.from('plovila').select('*').eq('id', id).maybeSingle().then(({ data }) => {
+      setRealPlovilo(data)
+      setNalaga(false)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  const plovilo = mockMatch ?? realPlovilo ?? undefined
   const podobna = mockPlovila.filter(p => p.id !== id && p.tip === plovilo?.tip).slice(0, 3)
+
+  if (nalaga) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 pt-16 flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 rounded-full border-4 border-[#c9a84c] border-t-transparent animate-spin" />
+        </main>
+        <Footer />
+      </>
+    )
+  }
 
   if (!plovilo) {
     return (
@@ -277,13 +305,19 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                   {/* Kontaktni gumbi */}
                   {user ? (
                     <div className="space-y-3">
-                      <Link
-                        href="/chat"
-                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.02]"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        Kontaktiraj prodajalca
-                      </Link>
+                      {plovilo.user_id && plovilo.user_id !== user.id ? (
+                        <Link
+                          href={`/chat?to=${plovilo.user_id}`}
+                          className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.02]"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          Kontaktiraj prodajalca
+                        </Link>
+                      ) : plovilo.user_id === user.id ? (
+                        <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+                          <p className="text-xs text-gray-500 font-medium">To je vaš oglas</p>
+                        </div>
+                      ) : null}
                       {plovilo.kontakt_tel && (
                         <a
                           href={`tel:${plovilo.kontakt_tel}`}

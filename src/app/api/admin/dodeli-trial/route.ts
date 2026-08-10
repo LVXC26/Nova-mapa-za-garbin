@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const konec = new Date(zdaj)
   konec.setMonth(konec.getMonth() + meseci)
 
-  const vnos: Omit<CharterNarocnina, 'id' | 'created_at'> = {
+  const vnos: Omit<CharterNarocnina, 'id' | 'created_at' | 'updated_at'> = {
     charter_id,
     plan: 'trial',
     trial_zacetek: zdaj.toISOString(),
@@ -38,11 +38,9 @@ export async function POST(req: NextRequest) {
     brezplacni_meseci: meseci,
     podelil_admin_id: userId,
     opomba: opomba || null,
-    updated_at: zdaj.toISOString(),
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (adminClient as any)
+  const { data, error } = await adminClient
     .from('charter_narocnine')
     .upsert(vnos, { onConflict: 'charter_id' })
     .select()
@@ -57,8 +55,7 @@ export async function GET() {
   if (!ok) return NextResponse.json({ error: 'Nisi admin' }, { status: 403 })
 
   const supabase = await createClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('charter_narocnine')
     .select('*')
     .order('created_at', { ascending: false })

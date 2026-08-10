@@ -7,6 +7,10 @@ import { useState, useEffect } from 'react'
 import type { Plovilo } from '@/types/database'
 import { formatCena } from '@/lib/utils'
 import { usePrimerjava } from '@/context/PrimerjaContext'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const tipLabel: Record<string, string> = {
   jadrnica: 'Jadrnica',
@@ -33,18 +37,48 @@ const tipIkone: Record<string, string> = {
 }
 
 function useFavorite(id: string) {
+  const { user, demoMode } = useAuth()
+  const jeRealnoPlovilo = UUID_REGEX.test(id)
+  const uporabiSupabase = jeRealnoPlovilo && !!user && !demoMode
   const key = `garbin_fav_${id}`
   const [isFav, setIsFav] = useState(false)
 
   useEffect(() => {
-    setIsFav(localStorage.getItem(key) === '1')
-  }, [key])
+    ;(async () => {
+      if (uporabiSupabase && user) {
+        const { data } = await createClient()
+          .from('priljubljeni')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('plovilo_id', id)
+          .maybeSingle()
+        setIsFav(!!data)
+      } else {
+        setIsFav(localStorage.getItem(key) === '1')
+      }
+    })()
+  }, [key, uporabiSupabase, user, id])
 
   function toggle(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     const next = !isFav
     setIsFav(next)
+
+    if (uporabiSupabase && user) {
+      const supabase = createClient()
+      if (next) {
+        supabase.from('priljubljeni').insert({ user_id: user.id, plovilo_id: id }).then(({ error }) => {
+          if (error) setIsFav(!next)
+        })
+      } else {
+        supabase.from('priljubljeni').delete().eq('user_id', user.id).eq('plovilo_id', id).then(({ error }) => {
+          if (error) setIsFav(!next)
+        })
+      }
+      return
+    }
+
     if (next) localStorage.setItem(key, '1')
     else localStorage.removeItem(key)
   }

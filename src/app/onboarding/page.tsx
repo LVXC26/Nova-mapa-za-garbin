@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Anchor, CheckCircle, ArrowRight, Ship, Award, Globe, MapPin, Phone } from 'lucide-react'
+import { Anchor, CheckCircle, AlertCircle, ArrowRight, Ship, Award, Globe, MapPin, Phone } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
 
 export default function OnboardingPage() {
   const { user, vloga } = useAuth()
@@ -35,10 +36,79 @@ export default function OnboardingPage() {
   })
 
   const SKUPAJ = 3
+  const [nalaga, setNalaga] = useState(false)
+  const [napaka, setNapaka] = useState('')
 
   if (!user || (!isCharter && !isSkipper)) {
     router.push('/dashboard')
     return null
+  }
+
+  async function shraniProfil(): Promise<boolean> {
+    setNapaka('')
+
+    if (isCharter && !charterForma.naziv.trim()) {
+      setNapaka('Vpišite naziv podjetja.')
+      return false
+    }
+    if (isSkipper && !skipperForma.bio.trim()) {
+      setNapaka('Vpišite kratko predstavitev.')
+      return false
+    }
+
+    setNalaga(true)
+    const supabase = createClient()
+
+    if (isCharter) {
+      const { error } = await supabase.from('charterji').upsert({
+        user_id: user!.id,
+        naziv: charterForma.naziv,
+        opis: charterForma.opis,
+        lokacija: charterForma.lokacija || '',
+        kontakt_email: user!.email ?? '',
+        kontakt_tel: charterForma.telefon || '',
+        spletna_stran: charterForma.spletna_stran || null,
+        tip: 'podjetje',
+        tip_plovila: [],
+        st_plovil: 0,
+        verified: false,
+        ocena: 0,
+        max_oseb: 0,
+        max_dolzina_m: 0,
+      }, { onConflict: 'user_id' })
+      setNalaga(false)
+      if (error) { setNapaka('Napaka pri shranjevanju profila. Poskusite znova.'); return false }
+    } else if (isSkipper) {
+      const { error } = await supabase.from('skiperji').upsert({
+        user_id: user!.id,
+        ime: user!.user_metadata?.ime ?? 'Skipper',
+        lokacija: skipperForma.obmocje || '',
+        opis: skipperForma.bio,
+        cena_dan: skipperForma.cena_dan ? Number(skipperForma.cena_dan) : 0,
+        izkusnje_let: skipperForma.izkusnje_let ? Number(skipperForma.izkusnje_let) : 0,
+        tip_plovila: skipperForma.tip_plovil,
+        jeziki: skipperForma.jeziki,
+        certifikati: skipperForma.certifikati
+          ? skipperForma.certifikati.split(',').map(c => c.trim()).filter(Boolean)
+          : [],
+        verified: false,
+        ocena: 0,
+        st_ocen: 0,
+        tip_skiper: (user!.user_metadata?.tip_skiper as 'samostojni' | 'agencija' | undefined) ?? 'samostojni',
+      }, { onConflict: 'user_id' })
+      setNalaga(false)
+      if (error) { setNapaka('Napaka pri shranjevanju profila. Poskusite znova.'); return false }
+    }
+
+    return true
+  }
+
+  async function naslednjiKorak() {
+    if (korak === 2) {
+      const uspesno = await shraniProfil()
+      if (!uspesno) return
+    }
+    setKorak(k => k + 1)
   }
 
   function toggleJezik(j: string) {
@@ -102,6 +172,12 @@ export default function OnboardingPage() {
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+          {napaka && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 mb-5">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {napaka}
+            </div>
+          )}
 
           {/* ─── CHARTER ─── */}
           {isCharter && korak === 1 && (
@@ -296,17 +372,19 @@ export default function OnboardingPage() {
             <div className="flex gap-3 mt-6">
               {korak > 1 && (
                 <button
-                  onClick={() => setKorak(k => k - 1 as 1 | 2 | 3)}
-                  className="flex-1 py-3.5 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-all"
+                  onClick={() => { setNapaka(''); setKorak(k => k - 1) }}
+                  disabled={nalaga}
+                  className="flex-1 py-3.5 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-60 transition-all"
                 >
                   ← Nazaj
                 </button>
               )}
               <button
-                onClick={() => setKorak(k => k + 1 as 1 | 2 | 3)}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-semibold rounded-xl transition-all"
+                onClick={naslednjiKorak}
+                disabled={nalaga}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-semibold rounded-xl disabled:opacity-60 transition-all"
               >
-                {korak === 2 ? 'Izberi paket' : 'Naprej'} <ArrowRight className="w-4 h-4" />
+                {nalaga ? 'Shranjujem...' : korak === 2 ? 'Izberi paket' : 'Naprej'} <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           )}

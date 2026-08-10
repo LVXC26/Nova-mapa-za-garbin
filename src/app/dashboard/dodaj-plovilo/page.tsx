@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { CheckCircle, Upload, AlertCircle, Zap } from 'lucide-react'
+import { CheckCircle, Upload, AlertCircle, Zap, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
-import type { TipPlovila } from '@/types/database'
+import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
 
 const tipiPlovila = [
   { vrednost: 'jadrnica', label: 'Jadrnica', ikona: '⛵' },
@@ -17,6 +17,9 @@ const tipiPlovila = [
 ]
 
 const stanjeOpcije = ['odlično', 'dobro', 'potrebuje popravilo']
+
+const MAX_SLIK = 8
+const MAX_VELIKOST_MB = 8
 
 const opremaKategorije = [
   {
@@ -71,7 +74,11 @@ function DodajPloviloContent() {
   const { user } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const tipOglasa = searchParams.get('tip') === 'najem' ? 'najem' : 'prodaja'
+  const editId = searchParams.get('edit')
+  const [tipOglasaUrejanje, setTipOglasaUrejanje] = useState<TipOglasa | null>(null)
+  const tipOglasa: TipOglasa = editId
+    ? (tipOglasaUrejanje ?? 'prodaja')
+    : (searchParams.get('tip') === 'najem' ? 'najem' : 'prodaja')
 
   const [forma, setForma] = useState({
     naziv: '',
@@ -90,7 +97,50 @@ function DodajPloviloContent() {
   const [urgentno, setUrgentno] = useState(false)
   const [napaka, setNapaka] = useState('')
   const [nalaga, setNalaga] = useState(false)
+  const [nalagaSlike, setNalagaSlike] = useState(false)
   const [uspesno, setUspesno] = useState(false)
+  const [obstojeceSlike, setObstojeceSlike] = useState<string[]>([])
+  const [slike, setSlike] = useState<File[]>([])
+  const [nalagaObstojece, setNalagaObstojece] = useState(!!editId)
+  const novePredogled = useMemo(() => slike.map((datoteka) => URL.createObjectURL(datoteka)), [slike])
+  const slikePredogled = useMemo(
+    () => [...obstojeceSlike, ...novePredogled],
+    [obstojeceSlike, novePredogled]
+  )
+
+  useEffect(() => {
+    return () => { novePredogled.forEach((url) => URL.revokeObjectURL(url)) }
+  }, [novePredogled])
+
+  useEffect(() => {
+    if (!editId || !user) return
+    const supabase = createClient()
+    supabase.from('plovila').select('*').eq('id', editId).maybeSingle().then(({ data }) => {
+      if (data && data.user_id === user.id) {
+        setForma({
+          naziv: data.naziv,
+          opis: data.opis ?? '',
+          tip: data.tip,
+          cena: data.cena_na_zahtevo ? '' : String(data.cena ?? ''),
+          letnik: data.letnik ? String(data.letnik) : '',
+          dolzina_m: data.dolzina_m ? String(data.dolzina_m) : '',
+          lokacija: data.lokacija ?? '',
+          stanje: data.stanje ?? 'odlično',
+          kontakt_email: data.kontakt_email ?? user.email ?? '',
+          kontakt_tel: data.kontakt_tel ?? '',
+        })
+        setOprema(data.oprema ?? {})
+        setCenaZahtevo(data.cena_na_zahtevo ?? false)
+        setUrgentno(data.urgentno ?? false)
+        setObstojeceSlike(data.slike ?? [])
+        setTipOglasaUrejanje(data.tip_oglasa)
+      } else {
+        setNapaka('Oglasa ni bilo mogoče najti ali ni vaš.')
+      }
+      setNalagaObstojece(false)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId, user?.id])
 
   function posodobiFormo(polje: string, vrednost: string) {
     setForma((f) => ({ ...f, [polje]: vrednost }))
@@ -100,15 +150,56 @@ function DodajPloviloContent() {
     setOprema((o) => ({ ...o, [kljuc]: !o[kljuc] }))
   }
 
+  function dodajSlike(datoteke: FileList | null) {
+    if (!datoteke) return
+    const nove: File[] = []
+    for (const datoteka of Array.from(datoteke)) {
+      if (!datoteka.type.startsWith('image/')) { setNapaka(`"${datoteka.name}" ni slikovna datoteka.`); continue }
+      if (datoteka.size > MAX_VELIKOST_MB * 1024 * 1024) { setNapaka(`Slika "${datoteka.name}" presega ${MAX_VELIKOST_MB} MB.`); continue }
+      nove.push(datoteka)
+    }
+    if (!nove.length) return
+    setNapaka('')
+    setSlike((s) => [...s, ...nove].slice(0, Math.max(0, MAX_SLIK - obstojeceSlike.length)))
+  }
+
+  function odstraniSliko(indeks: number) {
+    if (indeks < obstojeceSlike.length) {
+      setObstojeceSlike((s) => s.filter((_, i) => i !== indeks))
+    } else {
+      const noviIndeks = indeks - obstojeceSlike.length
+      setSlike((s) => s.filter((_, i) => i !== noviIndeks))
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!cenaZahtevo && !forma.cena) { setNapaka('Vpišite ceno ali izberite "Cena na zahtevo".'); return }
+    if (!user) { setNapaka('Za dodajanje plovila se morate prijaviti.'); return }
     setNapaka('')
     setNalaga(true)
 
     const supabase = createClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('plovila').insert({
+
+    const slikeUrls: string[] = [...obstojeceSlike]
+    if (slike.length) {
+      setNalagaSlike(true)
+      for (const datoteka of slike) {
+        const pot = `${user.id}/${crypto.randomUUID()}-${datoteka.name}`
+        const { error: uploadError } = await supabase.storage.from('plovila-slike').upload(pot, datoteka)
+        if (uploadError) {
+          setNalagaSlike(false)
+          setNalaga(false)
+          setNapaka('Napaka pri nalaganju slik: ' + uploadError.message)
+          return
+        }
+        const { data } = supabase.storage.from('plovila-slike').getPublicUrl(pot)
+        slikeUrls.push(data.publicUrl)
+      }
+      setNalagaSlike(false)
+    }
+
+    const skupnaPolja = {
       naziv: forma.naziv,
       opis: forma.opis || null,
       tip: forma.tip as TipPlovila,
@@ -119,17 +210,23 @@ function DodajPloviloContent() {
       letnik: forma.letnik ? Number(forma.letnik) : null,
       dolzina_m: forma.dolzina_m ? Number(forma.dolzina_m) : null,
       lokacija: forma.lokacija || null,
-      stanje: forma.stanje,
+      stanje: forma.stanje as StanjePlovila,
       kontakt_email: forma.kontakt_email || null,
       kontakt_tel: forma.kontakt_tel || null,
       oprema,
-      potrjeno: false,
-      promoted: false,
-      prodano: false,
-      user_id: user?.id ?? null,
-      slike: [],
-      model_3d_url: null,
-    })
+      slike: slikeUrls,
+    }
+
+    const { error } = editId
+      ? await supabase.from('plovila').update({ ...skupnaPolja, potrjeno: false }).eq('id', editId)
+      : await supabase.from('plovila').insert({
+          ...skupnaPolja,
+          potrjeno: false,
+          promoted: false,
+          prodano: false,
+          user_id: user.id,
+          model_3d_url: null,
+        })
 
     setNalaga(false)
     if (error) { setNapaka('Napaka pri shranjevanju. Preverite ali ste prijavljeni.'); return }
@@ -143,15 +240,23 @@ function DodajPloviloContent() {
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-emerald-500" />
           </div>
-          <h2 className="font-display text-2xl font-bold text-[#0c2340] mb-2">Plovilo dodano!</h2>
-          <p className="text-gray-500 mb-6">Vaš oglas je v pregledu. Ko bo potrjen, bo viden vsem obiskovalcem.</p>
+          <h2 className="font-display text-2xl font-bold text-[#0c2340] mb-2">
+            {editId ? 'Oglas posodobljen!' : 'Plovilo dodano!'}
+          </h2>
+          <p className="text-gray-500 mb-6">
+            {editId
+              ? 'Vaše spremembe so shranjene. Oglas gre ponovno v pregled pred objavo.'
+              : 'Vaš oglas je v pregledu. Ko bo potrjen, bo viden vsem obiskovalcem.'}
+          </p>
           <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => { setUspesno(false); setForma(f => ({ ...f, naziv: '', opis: '', cena: '', letnik: '', dolzina_m: '' })); setCenaZahtevo(false); setUrgentno(false) }}
-              className="px-5 py-2.5 border border-gray-200 text-gray-600 font-medium text-sm rounded-full hover:bg-gray-50"
-            >
-              Dodaj še eno
-            </button>
+            {!editId && (
+              <button
+                onClick={() => { setUspesno(false); setForma(f => ({ ...f, naziv: '', opis: '', cena: '', letnik: '', dolzina_m: '' })); setCenaZahtevo(false); setUrgentno(false); setSlike([]); setObstojeceSlike([]) }}
+                className="px-5 py-2.5 border border-gray-200 text-gray-600 font-medium text-sm rounded-full hover:bg-gray-50"
+              >
+                Dodaj še eno
+              </button>
+            )}
             <button
               onClick={() => router.push('/dashboard/moja-plovila')}
               className="px-5 py-2.5 bg-[#c9a84c] text-[#0c2340] font-semibold text-sm rounded-full hover:bg-[#e8c76d]"
@@ -164,25 +269,43 @@ function DodajPloviloContent() {
     )
   }
 
+  if (nalagaObstojece) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 rounded-full border-4 border-[#c9a84c] border-t-transparent animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div className="p-8">
       <div className="max-w-2xl">
         <div className="mb-8">
-          <div className="flex gap-2 mb-3">
-            {(['prodaja', 'najem'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => router.push(`/dashboard/dodaj-plovilo${t === 'najem' ? '?tip=najem' : ''}`)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  tipOglasa === t ? 'bg-[#0c2340] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-              >
-                {t === 'prodaja' ? '🏷️ Za prodajo' : '⛵ Za najem'}
-              </button>
-            ))}
-          </div>
+          {editId ? (
+            <div className="flex gap-2 mb-3">
+              <span className="px-4 py-1.5 rounded-full text-sm font-medium bg-[#0c2340] text-white">
+                {tipOglasa === 'prodaja' ? '🏷️ Za prodajo' : '⛵ Za najem'}
+              </span>
+            </div>
+          ) : (
+            <div className="flex gap-2 mb-3">
+              {(['prodaja', 'najem'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => router.push(`/dashboard/dodaj-plovilo${t === 'najem' ? '?tip=najem' : ''}`)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    tipOglasa === t ? 'bg-[#0c2340] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {t === 'prodaja' ? '🏷️ Za prodajo' : '⛵ Za najem'}
+                </button>
+              ))}
+            </div>
+          )}
           <h1 className="font-display text-2xl font-bold text-[#0c2340]">
-            {tipOglasa === 'prodaja' ? 'Dodaj plovilo za prodajo' : 'Dodaj plovilo za najem'}
+            {editId
+              ? 'Uredi oglas'
+              : tipOglasa === 'prodaja' ? 'Dodaj plovilo za prodajo' : 'Dodaj plovilo za najem'}
           </h1>
           <p className="text-gray-500 text-sm mt-1">Izpolnite podatke o plovilu. Oglas bo aktiven po pregledu.</p>
         </div>
@@ -414,10 +537,48 @@ function DodajPloviloContent() {
           </div>
 
           {/* Slike */}
-          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
-            <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-400">Dodajanje slik kmalu na voljo</p>
-            <p className="text-xs text-gray-300 mt-1">Upload fotografij plovila</p>
+          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6">
+            <label
+              htmlFor="slike-input"
+              className="flex flex-col items-center justify-center text-center py-4 cursor-pointer"
+            >
+              <Upload className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm font-medium text-gray-500">Naložite fotografije plovila</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Do {MAX_SLIK} slik, največ {MAX_VELIKOST_MB} MB na sliko
+              </p>
+            </label>
+            <input
+              id="slike-input"
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={slikePredogled.length >= MAX_SLIK}
+              onChange={(e) => { dodajSlike(e.target.files); e.target.value = '' }}
+              className="hidden"
+            />
+
+            {slikePredogled.length > 0 && (
+              <div className="grid grid-cols-4 gap-3 mt-4">
+                {slikePredogled.map((url, i) => (
+                  <div key={url} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group">
+                    <img src={url} alt={`Predogled ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => odstraniSliko(i)}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    {i === 0 && (
+                      <span className="absolute bottom-1 left-1 bg-[#c9a84c] text-[#0c2340] text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                        Naslovna
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <button
@@ -425,7 +586,7 @@ function DodajPloviloContent() {
             disabled={nalaga}
             className="w-full py-4 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-bold rounded-2xl transition-all hover:scale-[1.01] shadow-sm text-base"
           >
-            {nalaga ? 'Shranjujem...' : '✓ Objavi oglas'}
+            {nalagaSlike ? 'Nalagam slike...' : nalaga ? 'Shranjujem...' : editId ? '✓ Shrani spremembe' : '✓ Objavi oglas'}
           </button>
         </form>
       </div>

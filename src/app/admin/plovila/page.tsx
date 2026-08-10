@@ -1,14 +1,42 @@
 'use client'
 
-import { useState } from 'react'
-import { CheckCircle, XCircle, Eye, Search, Filter } from 'lucide-react'
-import { mockPlovila } from '@/data/mock'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { CheckCircle, XCircle, Eye, Search } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import type { Plovilo } from '@/types/database'
 
 export default function AdminPlovilaPage() {
   const [iskanje, setIskanje] = useState('')
   const [filter, setFilter] = useState<'vsi' | 'nepotrjeni' | 'potrjeni'>('vsi')
+  const [plovila, setPlovila] = useState<Plovilo[]>([])
+  const [nalaga, setNalaga] = useState(true)
 
-  const filtrirani = mockPlovila.filter(p => {
+  const supabase = createClient()
+
+  async function nalozi() {
+    setNalaga(true)
+    const { data } = await supabase.from('plovila').select('*').order('created_at', { ascending: false })
+    setPlovila(data ?? [])
+    setNalaga(false)
+  }
+
+  useEffect(() => {
+    ;(async () => { await nalozi() })()
+  }, [])
+
+  async function potrdi(id: string) {
+    await supabase.from('plovila').update({ potrjeno: true }).eq('id', id)
+    nalozi()
+  }
+
+  async function zavrni(id: string) {
+    if (!confirm('Zavrni in izbriši ta oglas?')) return
+    await supabase.from('plovila').delete().eq('id', id)
+    nalozi()
+  }
+
+  const filtrirani = plovila.filter(p => {
     if (filter === 'nepotrjeni' && p.potrjeno) return false
     if (filter === 'potrjeni' && !p.potrjeno) return false
     return p.naziv.toLowerCase().includes(iskanje.toLowerCase())
@@ -68,13 +96,15 @@ export default function AdminPlovilaPage() {
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Oglej si">
+                    <Link href={`/plovila/${p.id}`} target="_blank" className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Oglej si">
                       <Eye className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="Potrdi">
-                      <CheckCircle className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Zavrni">
+                    </Link>
+                    {!p.potrjeno && (
+                      <button onClick={() => potrdi(p.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="Potrdi">
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button onClick={() => zavrni(p.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Zavrni">
                       <XCircle className="w-4 h-4" />
                     </button>
                   </div>
@@ -83,8 +113,11 @@ export default function AdminPlovilaPage() {
             ))}
           </tbody>
         </table>
-        {filtrirani.length === 0 && (
+        {!nalaga && filtrirani.length === 0 && (
           <div className="py-12 text-center text-gray-400 text-sm">Ni zadetkov</div>
+        )}
+        {nalaga && (
+          <div className="py-12 text-center text-gray-400 text-sm">Nalagam...</div>
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import type { Plovilo, Novica, NovicaKategorija, Charter, TipCharterPlovila } from '@/types/database'
+import type { Plovilo, Novica, NovicaKategorija, Charter, TipCharterPlovila, Skipper } from '@/types/database'
 
 // IDs plovil ki so promoted (plačan oglas) — max 2-3
 export const mockPromotedIds: string[] = ['1', '5']
@@ -664,25 +664,6 @@ export const mockCharterji: Charter[] = [
     created_at: '2024-03-01T10:00:00Z',
   },
 ]
-
-export interface Skipper {
-  id: string
-  ime: string
-  lokacija: string
-  izkusnje_let: number
-  jeziki: string[]
-  certifikati: string[]
-  tip_plovila: string[]
-  opis: string
-  ocena: number
-  st_ocen: number
-  cena_dan: number
-  verified: boolean
-  tip_skiper: 'samostojni' | 'agencija'
-  naziv_agencije?: string
-  ekipa?: { ime: string; specializacija: string; ocena: number }[]
-  created_at: string
-}
 
 export const mockSkiperji: Skipper[] = [
   {

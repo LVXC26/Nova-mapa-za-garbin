@@ -5,19 +5,47 @@ import Link from 'next/link'
 import { Heart, Ship, MapPin, Calendar, Ruler, Trash2 } from 'lucide-react'
 import { mockPlovila } from '@/data/mock'
 import { formatCena } from '@/lib/utils'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
 import type { Plovilo } from '@/types/database'
 
 export default function PriljubljeniPage() {
+  const { user, demoMode } = useAuth()
   const [priljubljeni, setPriljubljeni] = useState<Plovilo[]>([])
+  const [nalaga, setNalaga] = useState(true)
 
   useEffect(() => {
-    const saved = mockPlovila.filter(p => localStorage.getItem(`garbin_fav_${p.id}`) === '1')
-    setPriljubljeni(saved)
-  }, [])
+    ;(async () => {
+      const mockSaved = mockPlovila.filter(p => localStorage.getItem(`garbin_fav_${p.id}`) === '1')
 
-  function odstrani(id: string) {
-    localStorage.removeItem(`garbin_fav_${id}`)
+      if (!user || demoMode) {
+        setPriljubljeni(mockSaved)
+        setNalaga(false)
+        return
+      }
+
+      const supabase = createClient()
+      const { data: zapisi } = await supabase.from('priljubljeni').select('plovilo_id').eq('user_id', user.id)
+      const ids = (zapisi ?? []).map(z => z.plovilo_id)
+
+      let realna: Plovilo[] = []
+      if (ids.length > 0) {
+        const { data } = await supabase.from('plovila').select('*').in('id', ids)
+        realna = data ?? []
+      }
+
+      setPriljubljeni([...realna, ...mockSaved])
+      setNalaga(false)
+    })()
+  }, [user, demoMode])
+
+  async function odstrani(id: string) {
     setPriljubljeni(prev => prev.filter(p => p.id !== id))
+    localStorage.removeItem(`garbin_fav_${id}`)
+    if (user && !demoMode) {
+      const supabase = createClient()
+      await supabase.from('priljubljeni').delete().eq('user_id', user.id).eq('plovilo_id', id)
+    }
   }
 
   return (
@@ -34,7 +62,11 @@ export default function PriljubljeniPage() {
         )}
       </div>
 
-      {priljubljeni.length === 0 ? (
+      {nalaga ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center text-sm text-gray-400">
+          Nalagam...
+        </div>
+      ) : priljubljeni.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
           <Heart className="w-12 h-12 text-gray-200 mx-auto mb-4" />
           <p className="font-medium text-gray-400 mb-1">Nimate shranjenih plovil</p>

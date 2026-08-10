@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Building2, User, CheckCircle, Send, Ship, Search, X } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import CharterKartica from '@/components/charterji/CharterKartica'
 import RangeSlider from '@/components/plovila/RangeSlider'
 import { mockCharterji } from '@/data/mock'
-import type { TipCharterja, TipCharterPlovila } from '@/types/database'
+import { createClient } from '@/lib/supabase/client'
+import type { TipCharterja, TipCharterPlovila, Charter } from '@/types/database'
 
 const OSEBE_MIN = 1
 const OSEBE_MAX = 50
@@ -32,6 +33,8 @@ export default function CharterjiPage() {
 
   // Obrazec
   const [poslano, setPoslano] = useState(false)
+  const [posilja, setPosilja] = useState(false)
+  const [obrazecNapaka, setObrazecNapaka] = useState('')
   const [form, setForm] = useState({
     naziv: '',
     tip: 'podjetje' as TipCharterja,
@@ -40,15 +43,25 @@ export default function CharterjiPage() {
     opis: '',
   })
 
+  const [realCharterji, setRealCharterji] = useState<Charter[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('charterji').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setRealCharterji(data) })
+  }, [])
+
+  const vsiCharterji = useMemo(() => [...realCharterji, ...mockCharterji], [realCharterji])
+
   const filtrirani = useMemo(() => {
-    return mockCharterji.filter((c) => {
+    return vsiCharterji.filter((c) => {
       if (filter !== 'vse' && c.tip !== filter) return false
       if (tipPlovila && !c.tip_plovila.includes(tipPlovila)) return false
       if (c.max_oseb < osebe[0]) return false
       if (c.max_dolzina_m < dolzina[0] || c.max_dolzina_m > dolzina[1]) return false
       return true
     })
-  }, [filter, tipPlovila, osebe, dolzina])
+  }, [vsiCharterji, filter, tipPlovila, osebe, dolzina])
 
   const aktivniFilter =
     tipPlovila !== '' ||
@@ -63,8 +76,24 @@ export default function CharterjiPage() {
     setDolzina([DOLZINA_MIN, DOLZINA_MAX])
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setObrazecNapaka('')
+    setPosilja(true)
+
+    const supabase = createClient()
+    const { error } = await supabase.from('povprasevanja').insert({
+      tip: 'prijava-charter',
+      target_id: form.tip,
+      ime: form.naziv,
+      email: form.email,
+      telefon: form.tel || null,
+      termin: null,
+      sporocilo: form.opis,
+    })
+
+    setPosilja(false)
+    if (error) { setObrazecNapaka('Napaka pri pošiljanju prijave. Poskusite znova.'); return }
     setPoslano(true)
   }
 
@@ -242,6 +271,9 @@ export default function CharterjiPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="bg-[#f8fafc] rounded-2xl border border-gray-100 p-8 space-y-5">
+                {obrazecNapaka && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{obrazecNapaka}</p>
+                )}
                 <div>
                   <label className="block text-sm font-semibold text-[#0c2340] mb-2">Sem</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -318,10 +350,11 @@ export default function CharterjiPage() {
 
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center gap-2 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.01] shadow-lg shadow-[#c9a84c]/20"
+                  disabled={posilja}
+                  className="w-full flex items-center justify-center gap-2 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.01] shadow-lg shadow-[#c9a84c]/20"
                 >
                   <Send className="w-4 h-4" />
-                  Pošlji prijavo
+                  {posilja ? 'Pošiljam...' : 'Pošlji prijavo'}
                 </button>
               </form>
             )}

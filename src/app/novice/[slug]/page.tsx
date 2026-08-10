@@ -1,10 +1,16 @@
-import { use } from 'react'
+'use client'
+
+import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Clock, User, Tag, Share2, ArrowRight, BookOpen } from 'lucide-react'
+import { ArrowLeft, Clock, User, Tag, Share2, ArrowRight, BookOpen, CheckCircle, AlertCircle } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { mockNovice, unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import type { Novica, NovicaKategorija, Komentar } from '@/types/database'
+
+type NovicaZKategorijo = Novica & { kategorija?: NovicaKategorija }
 
 const vsebinaMock: Record<string, string> = {
   'kako-izbrati-jadrnico': `
@@ -64,8 +70,85 @@ const vsebinaMock: Record<string, string> = {
 
 export default function NovicaDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
-  const novica = mockNovice.find(n => n.slug === slug)
+  const mockMatch = mockNovice.find(n => n.slug === slug)
+  const [realnaNovica, setRealnaNovica] = useState<NovicaZKategorijo | null>(null)
+  const [nalaga, setNalaga] = useState(!mockMatch)
+  const [komentarji, setKomentarji] = useState<Komentar[]>([])
+  const [komentarForma, setKomentarForma] = useState({ ime: '', email: '', vsebina: '' })
+  const [komentarPoslan, setKomentarPoslan] = useState(false)
+  const [komentarNapaka, setKomentarNapaka] = useState('')
+  const [posiljaKomentar, setPosiljaKomentar] = useState(false)
+
+  useEffect(() => {
+    ;(async () => {
+      const supabase = createClient()
+      let trenutnaNovica: NovicaZKategorijo | null | undefined = mockMatch
+
+      if (!mockMatch) {
+        const { data } = await supabase
+          .from('novice')
+          .select('*, kategorija:novice_kategorije(*)')
+          .eq('slug', slug)
+          .maybeSingle()
+        trenutnaNovica = data as NovicaZKategorijo | null
+        setRealnaNovica(trenutnaNovica)
+        setNalaga(false)
+      }
+
+      if (trenutnaNovica?.id) {
+        const { data: komentarjiData } = await supabase
+          .from('komentarji')
+          .select('*')
+          .eq('novica_id', trenutnaNovica.id)
+          .eq('potrjen', true)
+          .order('created_at', { ascending: false })
+        setKomentarji(komentarjiData ?? [])
+      }
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug])
+
+  const novica = mockMatch ?? realnaNovica ?? undefined
+
+  async function posljiKomentar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!novica) return
+    setKomentarNapaka('')
+
+    if (!komentarForma.ime || !komentarForma.email || !komentarForma.vsebina) {
+      setKomentarNapaka('Izpolnite vsa polja.')
+      return
+    }
+
+    setPosiljaKomentar(true)
+    const supabase = createClient()
+    const { error } = await supabase.from('komentarji').insert({
+      novica_id: novica.id,
+      ime: komentarForma.ime,
+      email: komentarForma.email,
+      vsebina: komentarForma.vsebina,
+      potrjen: false,
+    })
+    setPosiljaKomentar(false)
+
+    if (error) { setKomentarNapaka('Napaka pri pošiljanju komentarja.'); return }
+    setKomentarPoslan(true)
+    setKomentarForma({ ime: '', email: '', vsebina: '' })
+  }
+
   const druge = mockNovice.filter(n => n.slug !== slug).slice(0, 2)
+
+  if (nalaga) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 pt-16 flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 rounded-full border-4 border-[#c9a84c] border-t-transparent animate-spin" />
+        </main>
+        <Footer />
+      </>
+    )
+  }
 
   if (!novica) {
     return (
@@ -87,9 +170,11 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
   }
 
   const ikone = ['⛵', '📈', '🔧', '⚓', '🌊']
-  const ikona = ikone[mockNovice.indexOf(novica) % ikone.length]
-  const vsebina = vsebinaMock[novica.slug] ?? `<p>${novica.povzetek ?? 'Vsebina novice je v pripravi.'}</p>`
-  const berucasMin = Math.ceil(vsebina.replace(/<[^>]+>/g, '').split(' ').length / 200)
+  const mockIndeks = mockNovice.indexOf(novica as typeof mockNovice[number])
+  const ikona = ikone[(mockIndeks >= 0 ? mockIndeks : 0) % ikone.length]
+  const vsebinaHtml = vsebinaMock[novica.slug]
+  const navadnoBesedilo = vsebinaHtml ? null : (novica.vsebina || novica.povzetek || 'Vsebina novice je v pripravi.')
+  const berucasMin = Math.ceil((vsebinaHtml ?? navadnoBesedilo ?? '').replace(/<[^>]+>/g, '').split(' ').length / 200)
 
   return (
     <>
@@ -148,8 +233,8 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
         <section className="bg-[#0c2340] pb-0">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="h-64 sm:h-96 rounded-t-3xl overflow-hidden relative bg-gradient-to-br from-[#1e3a5f] to-[#2e6b9e]">
-              {unsplashNovice[novica.slug] ? (
-                <img src={unsplashNovice[novica.slug]} alt={novica.naslov} className="w-full h-full object-cover" />
+              {novica.slika_url || unsplashNovice[novica.slug] ? (
+                <img src={novica.slika_url ?? unsplashNovice[novica.slug]} alt={novica.naslov} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <span className="text-8xl opacity-20">{ikona}</span>
@@ -168,14 +253,18 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
               {/* CLANEK */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 sm:p-10">
-                  <div
-                    className="prose prose-lg prose-slate max-w-none
-                      prose-headings:font-display prose-headings:text-[#0c2340]
-                      prose-p:text-gray-600 prose-p:leading-relaxed
-                      prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-4
-                      prose-a:text-[#c9a84c] prose-a:no-underline hover:prose-a:underline"
-                    dangerouslySetInnerHTML={{ __html: vsebina }}
-                  />
+                  {vsebinaHtml ? (
+                    <div
+                      className="prose prose-lg prose-slate max-w-none
+                        prose-headings:font-display prose-headings:text-[#0c2340]
+                        prose-p:text-gray-600 prose-p:leading-relaxed
+                        prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-4
+                        prose-a:text-[#c9a84c] prose-a:no-underline hover:prose-a:underline"
+                      dangerouslySetInnerHTML={{ __html: vsebinaHtml }}
+                    />
+                  ) : (
+                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">{navadnoBesedilo}</p>
+                  )}
                 </div>
 
                 {/* Share section */}
@@ -228,33 +317,65 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
               </div>
             </div>
 
+            {/* Obstoječi komentarji */}
+            {komentarji.length > 0 && (
+              <div className="mt-10 bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+                <h2 className="font-display text-xl font-bold text-[#0c2340] mb-6">{komentarji.length} {komentarji.length === 1 ? 'komentar' : 'komentarjev'}</h2>
+                <div className="space-y-5">
+                  {komentarji.map(k => (
+                    <div key={k.id} className="flex gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-sm font-bold text-[#0c2340] shrink-0">
+                        {k.ime[0]}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-[#0c2340] text-sm">{k.ime}</p>
+                        <p className="text-sm text-gray-600 mt-0.5">{k.vsebina}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Komentar forma */}
             <div className="mt-10 bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
               <h2 className="font-display text-xl font-bold text-[#0c2340] mb-6">Pustite komentar</h2>
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Ime *</label>
-                    <input required placeholder="Janez Novak"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors" />
+              {komentarPoslan ? (
+                <div className="flex items-center gap-2 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  Hvala za komentar! Viden bo po moderatorski odobritvi.
+                </div>
+              ) : (
+                <form onSubmit={posljiKomentar} className="space-y-4">
+                  {komentarNapaka && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                      <AlertCircle className="w-4 h-4 shrink-0" /> {komentarNapaka}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Ime *</label>
+                      <input required value={komentarForma.ime} onChange={e => setKomentarForma(f => ({ ...f, ime: e.target.value }))} placeholder="Janez Novak"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">E-mail *</label>
+                      <input required type="email" value={komentarForma.email} onChange={e => setKomentarForma(f => ({ ...f, email: e.target.value }))} placeholder="ime@primer.si"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">E-mail *</label>
-                    <input required type="email" placeholder="ime@primer.si"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors" />
+                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Komentar *</label>
+                    <textarea required rows={4} value={komentarForma.vsebina} onChange={e => setKomentarForma(f => ({ ...f, vsebina: e.target.value }))} placeholder="Vaše mnenje o prispevku..."
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none transition-colors" />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Komentar *</label>
-                  <textarea required rows={4} placeholder="Vaše mnenje o prispevku..."
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none transition-colors" />
-                </div>
-                <p className="text-xs text-gray-400">Komentar bo viden po moderatorski odobritvi.</p>
-                <button type="submit"
-                  className="px-6 py-3 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-[1.02]">
-                  Pošlji komentar
-                </button>
-              </form>
+                  <p className="text-xs text-gray-400">Komentar bo viden po moderatorski odobritvi.</p>
+                  <button type="submit" disabled={posiljaKomentar}
+                    className="px-6 py-3 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-[1.02]">
+                    {posiljaKomentar ? 'Pošiljam...' : 'Pošlji komentar'}
+                  </button>
+                </form>
+              )}
             </div>
 
             {/* Podobne novice */}

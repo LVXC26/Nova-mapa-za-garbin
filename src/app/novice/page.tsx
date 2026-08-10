@@ -1,11 +1,31 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Clock } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { mockNovice, unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import type { Novica, NovicaKategorija } from '@/types/database'
+
+type NovicaZKategorijo = Novica & { kategorija?: NovicaKategorija }
 
 export default function NovicePage() {
+  const [realneNovice, setRealneNovice] = useState<NovicaZKategorijo[]>([])
+
+  useEffect(() => {
+    createClient()
+      .from('novice')
+      .select('*, kategorija:novice_kategorije(*)')
+      .not('published_at', 'is', null)
+      .order('published_at', { ascending: false })
+      .then(({ data }) => { if (data) setRealneNovice(data as NovicaZKategorijo[]) })
+  }, [])
+
+  const vseNovice = [...realneNovice, ...mockNovice]
+
   return (
     <>
       <Navbar />
@@ -19,12 +39,12 @@ export default function NovicePage() {
         <section className="py-12 bg-[#f8fafc]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {mockNovice.map((novica, i) => (
+              {vseNovice.map((novica, i) => (
                 <Link key={novica.id} href={`/novice/${novica.slug}`} className="group block">
                   <article className="h-full bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
                     <div className="h-44 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] flex items-center justify-center relative overflow-hidden">
-                      {unsplashNovice[novica.slug] ? (
-                        <img src={unsplashNovice[novica.slug]} alt={novica.naslov} className="w-full h-full object-cover absolute inset-0" />
+                      {novica.slika_url || unsplashNovice[novica.slug] ? (
+                        <img src={novica.slika_url ?? unsplashNovice[novica.slug]} alt={novica.naslov} className="w-full h-full object-cover absolute inset-0" />
                       ) : (
                         <span className="text-5xl opacity-20">{i === 0 ? '⛵' : i === 1 ? '📈' : '🔧'}</span>
                       )}

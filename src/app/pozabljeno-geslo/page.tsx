@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Anchor, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
-export default function PozabljenoGesloPage() {
+function PozabljenoGesloContent() {
+  const searchParams = useSearchParams()
+  const povezavaPotekla = searchParams.get('napaka') === 'povezava_potekla'
   const [email, setEmail] = useState('')
   const [napaka, setNapaka] = useState('')
   const [poslano, setPoslano] = useState(false)
@@ -15,9 +19,13 @@ export default function PozabljenoGesloPage() {
     setNapaka('')
     setNalaga(true)
 
-    // Ko bo Supabase: supabase.auth.resetPasswordForEmail(email)
-    await new Promise(r => setTimeout(r, 800))
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/confirm?next=/ponastavi-geslo`,
+    })
+
     setNalaga(false)
+    if (error) { setNapaka('Napaka pri pošiljanju. Preverite e-mail naslov in poskusite znova.'); return }
     setPoslano(true)
   }
 
@@ -67,6 +75,13 @@ export default function PozabljenoGesloPage() {
                 </p>
               </div>
 
+              {povezavaPotekla && !napaka && (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700 mb-5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  Povezava za ponastavitev gesla je potekla. Zahtevajte nov e-mail spodaj.
+                </div>
+              )}
+
               {napaka && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 mb-5">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -109,5 +124,13 @@ export default function PozabljenoGesloPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PozabljenoGesloPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f8fafc] flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-[#c9a84c] border-t-transparent animate-spin" /></div>}>
+      <PozabljenoGesloContent />
+    </Suspense>
   )
 }

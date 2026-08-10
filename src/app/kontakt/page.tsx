@@ -3,9 +3,10 @@
 import type { Metadata } from 'next'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Mail, Phone, MapPin, Send, CheckCircle, MessageSquare, Clock, HelpCircle } from 'lucide-react'
+import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, MessageSquare, Clock, HelpCircle } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import { createClient } from '@/lib/supabase/client'
 
 const teme = [
   'Splošno vprašanje',
@@ -20,12 +21,26 @@ export default function KontaktPage() {
   const [forma, setForma] = useState({ ime: '', email: '', tema: teme[0], sporocilo: '' })
   const [poslano, setPoslano] = useState(false)
   const [nalaga, setNalaga] = useState(false)
+  const [napaka, setNapaka] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setNapaka('')
     setNalaga(true)
-    await new Promise(r => setTimeout(r, 800))
+
+    const supabase = createClient()
+    const { error } = await supabase.from('povprasevanja').insert({
+      tip: 'kontakt',
+      target_id: forma.tema,
+      ime: forma.ime,
+      email: forma.email,
+      telefon: null,
+      termin: null,
+      sporocilo: forma.sporocilo,
+    })
+
     setNalaga(false)
+    if (error) { setNapaka('Napaka pri pošiljanju. Poskusite znova ali nas kontaktirajte po e-pošti.'); return }
     setPoslano(true)
   }
 
@@ -129,6 +144,11 @@ export default function KontaktPage() {
                       <h2 className="font-display text-xl font-bold text-[#0c2340] mb-6 flex items-center gap-2">
                         <MessageSquare className="w-5 h-5 text-[#c9a84c]" /> Pošljite sporočilo
                       </h2>
+                      {napaka && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 mb-5">
+                          <AlertCircle className="w-4 h-4 shrink-0" /> {napaka}
+                        </div>
+                      )}
                       <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                           <div>

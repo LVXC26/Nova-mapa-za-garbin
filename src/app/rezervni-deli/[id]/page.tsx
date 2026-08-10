@@ -5,6 +5,16 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { mockRezervniDeli } from '@/data/mock'
 import { formatCena } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/server'
+import type { RezervniDel } from '@/types/database'
+
+async function najdiDel(id: string): Promise<RezervniDel | typeof mockRezervniDeli[number] | undefined> {
+  const mockMatch = mockRezervniDeli.find(d => d.id === id)
+  if (mockMatch) return mockMatch
+  const supabase = await createClient()
+  const { data } = await supabase.from('rezervni_deli').select('*').eq('id', id).maybeSingle()
+  return data ?? undefined
+}
 
 const kategorijaIkone: Record<string, string> = {
   motor: '⚙️', elektronika: '📡', jadra: '⛵', trup: '🚢',
@@ -18,17 +28,17 @@ const stanjeKlasa: Record<string, string> = {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const del = mockRezervniDeli.find(d => d.id === id)
+  const del = await najdiDel(id)
   if (!del) return { title: 'Del ni najden | Garbin' }
   return {
     title: `${del.naziv} | Rezervni deli | Garbin`,
-    description: del.opis,
+    description: del.opis ?? undefined,
   }
 }
 
 export default async function RezervniDelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const del = mockRezervniDeli.find(d => d.id === id)
+  const del = await najdiDel(id)
   const podobni = mockRezervniDeli.filter(d => d.id !== id && d.kategorija === del?.kategorija).slice(0, 3)
 
   if (!del) {

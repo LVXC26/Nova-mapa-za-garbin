@@ -9,6 +9,8 @@ import Footer from '@/components/layout/Footer'
 import { mockPlovila, mockCharterji, mockSkiperji, mockNovice } from '@/data/mock'
 import { forumNiti } from '@/data/forum'
 import { formatCena } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import type { Plovilo, Charter, Skipper, Novica } from '@/types/database'
 
 function IskanjeContent() {
   const params = useSearchParams()
@@ -28,16 +30,50 @@ function IskanjeContent() {
 
   const qL = initQ.toLowerCase()
 
+  const [realnaPlovila, setRealnaPlovila] = useState<Plovilo[]>([])
+  const [realniCharterji, setRealniCharterji] = useState<Charter[]>([])
+  const [realniSkiperji, setRealniSkiperji] = useState<Skipper[]>([])
+  const [realneNovice, setRealneNovice] = useState<Novica[]>([])
+
+  useEffect(() => {
+    ;(async () => {
+      if (!qL) { setRealnaPlovila([]); setRealniCharterji([]); setRealniSkiperji([]); setRealneNovice([]); return }
+      const supabase = createClient()
+      const [plovilaRes, charterjiRes, skiperjiRes, noviceRes] = await Promise.all([
+        supabase.from('plovila').select('*').eq('potrjeno', true).ilike('naziv', `%${initQ}%`),
+        supabase.from('charterji').select('*').ilike('naziv', `%${initQ}%`),
+        supabase.from('skiperji').select('*').ilike('ime', `%${initQ}%`),
+        supabase.from('novice').select('*').not('published_at', 'is', null).ilike('naslov', `%${initQ}%`),
+      ])
+      setRealnaPlovila(plovilaRes.data ?? [])
+      setRealniCharterji(charterjiRes.data ?? [])
+      setRealniSkiperji(skiperjiRes.data ?? [])
+      setRealneNovice(noviceRes.data ?? [])
+    })()
+  }, [qL, initQ])
+
   const results = useMemo(() => {
     if (!qL) return { plovila: [], charterji: [], skiperji: [], novice: [], forum: [] }
     return {
-      plovila: mockPlovila.filter(p => p.naziv.toLowerCase().includes(qL) || p.opis?.toLowerCase().includes(qL) || p.lokacija?.toLowerCase().includes(qL)),
-      charterji: mockCharterji.filter(c => c.naziv.toLowerCase().includes(qL) || c.opis.toLowerCase().includes(qL) || c.lokacija.toLowerCase().includes(qL)),
-      skiperji: mockSkiperji.filter(s => s.ime.toLowerCase().includes(qL) || s.opis.toLowerCase().includes(qL) || s.lokacija.toLowerCase().includes(qL)),
-      novice: mockNovice.filter(n => n.naslov.toLowerCase().includes(qL) || n.povzetek?.toLowerCase().includes(qL)),
+      plovila: [
+        ...realnaPlovila,
+        ...mockPlovila.filter(p => p.naziv.toLowerCase().includes(qL) || p.opis?.toLowerCase().includes(qL) || p.lokacija?.toLowerCase().includes(qL)),
+      ],
+      charterji: [
+        ...realniCharterji,
+        ...mockCharterji.filter(c => c.naziv.toLowerCase().includes(qL) || c.opis.toLowerCase().includes(qL) || c.lokacija.toLowerCase().includes(qL)),
+      ],
+      skiperji: [
+        ...realniSkiperji,
+        ...mockSkiperji.filter(s => s.ime.toLowerCase().includes(qL) || s.opis.toLowerCase().includes(qL) || s.lokacija.toLowerCase().includes(qL)),
+      ],
+      novice: [
+        ...realneNovice,
+        ...mockNovice.filter(n => n.naslov.toLowerCase().includes(qL) || n.povzetek?.toLowerCase().includes(qL)),
+      ],
       forum: forumNiti.filter(f => f.naslov.toLowerCase().includes(qL) || f.vsebina.toLowerCase().includes(qL)),
     }
-  }, [qL])
+  }, [qL, realnaPlovila, realniCharterji, realniSkiperji, realneNovice])
 
   const skupaj = results.plovila.length + results.charterji.length + results.skiperji.length + results.novice.length + results.forum.length
 

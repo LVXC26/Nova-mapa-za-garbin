@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { Star, MapPin, CheckCircle, Send, Compass, Search, X, ChevronDown } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { mockSkiperji, unsplashSkipperji } from '@/data/mock'
+import { createClient } from '@/lib/supabase/client'
+import type { Skipper } from '@/types/database'
 
 const lokacije = ['Vse', 'Portorož', 'Izola', 'Koper', 'Piran', 'Split']
 const tipiPlovil = ['Vse', 'jadrnica', 'motorni', 'katamaran', 'gumenjak', 'jahta']
@@ -22,13 +24,25 @@ export default function SkiperjiPage() {
 
   // Registracijski obrazec
   const [poslano, setPoslano] = useState(false)
+  const [posilja, setPosilja] = useState(false)
+  const [obrazecNapaka, setObrazecNapaka] = useState('')
   const [forma, setForma] = useState({
     ime: '', email: '', tel: '', lokacija: '',
     izkusnje: '', certifikati: '', plovila: '', cena: '', opis: '',
   })
 
+  const [realSkiperji, setRealSkiperji] = useState<Skipper[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('skiperji').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setRealSkiperji(data) })
+  }, [])
+
+  const vsiSkiperji = useMemo(() => [...realSkiperji, ...mockSkiperji], [realSkiperji])
+
   const filtrirani = useMemo(() => {
-    return mockSkiperji.filter((s) => {
+    return vsiSkiperji.filter((s) => {
       if (lokacija !== 'Vse' && s.lokacija !== lokacija) return false
       if (tipPlovila !== 'Vse' && !s.tip_plovila.includes(tipPlovila)) return false
       if (jeziki.length > 0 && !jeziki.some(j => s.jeziki.includes(j))) return false
@@ -36,14 +50,38 @@ export default function SkiperjiPage() {
       if (tipSkiper !== 'vse' && s.tip_skiper !== tipSkiper) return false
       return true
     })
-  }, [lokacija, tipPlovila, jeziki, minIzkusnje, tipSkiper])
+  }, [vsiSkiperji, lokacija, tipPlovila, jeziki, minIzkusnje, tipSkiper])
 
   function toggleJezik(j: string) {
     setJeziki(prev => prev.includes(j) ? prev.filter(x => x !== j) : [...prev, j])
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setObrazecNapaka('')
+    setPosilja(true)
+
+    const sporocilo = [
+      forma.opis,
+      forma.izkusnje && `Leta izkušenj: ${forma.izkusnje}`,
+      forma.certifikati && `Certifikati: ${forma.certifikati}`,
+      forma.plovila && `Plovila: ${forma.plovila}`,
+      forma.cena && `Cena/dan: ${forma.cena} €`,
+    ].filter(Boolean).join('\n')
+
+    const supabase = createClient()
+    const { error } = await supabase.from('povprasevanja').insert({
+      tip: 'prijava-skipper',
+      target_id: forma.lokacija || 'skipper',
+      ime: forma.ime,
+      email: forma.email,
+      telefon: forma.tel || null,
+      termin: null,
+      sporocilo,
+    })
+
+    setPosilja(false)
+    if (error) { setObrazecNapaka('Napaka pri pošiljanju vloge. Poskusite znova.'); return }
     setPoslano(true)
   }
 
@@ -292,6 +330,9 @@ export default function SkiperjiPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="bg-[#f8fafc] rounded-2xl border border-gray-100 p-8 space-y-4">
+                {obrazecNapaka && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{obrazecNapaka}</p>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Ime in priimek</label>
@@ -348,8 +389,8 @@ export default function SkiperjiPage() {
                     placeholder="Opišite vaše izkušnje, specializacijo in območje plovbe..."
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white resize-none" />
                 </div>
-                <button type="submit" className="w-full flex items-center justify-center gap-2 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.01]">
-                  <Send className="w-4 h-4" /> Pošlji vlogo
+                <button type="submit" disabled={posilja} className="w-full flex items-center justify-center gap-2 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.01]">
+                  <Send className="w-4 h-4" /> {posilja ? 'Pošiljam...' : 'Pošlji vlogo'}
                 </button>
               </form>
             )}
