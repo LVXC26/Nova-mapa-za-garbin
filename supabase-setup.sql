@@ -641,3 +641,20 @@ create policy "Admin bere vsa narocila promocij" on promocija_narocila for selec
 -- sam potrditi kot plačanega — status na "placano" postavi izključno webhook
 -- (service role), ki obide RLS, zato tu ni client-side update politike.
 create policy "Uporabnik ustvari svoje narocilo" on promocija_narocila for insert with check (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- LASTNIKI BEREJO SVOJA POVPRAŠEVANJA (dashboard šteje samo svoja, ne vsa)
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Charter bere svoja povprasevanja" on povprasevanja;
+create policy "Charter bere svoja povprasevanja" on povprasevanja for select using (
+  tip = 'charter' and target_id in (select id::text from charterji where user_id = auth.uid())
+);
+drop policy if exists "Skipper bere svoja povprasevanja" on povprasevanja;
+create policy "Skipper bere svoja povprasevanja" on povprasevanja for select using (
+  tip = 'skipper' and target_id in (select id::text from skiperji where user_id = auth.uid())
+);
+drop policy if exists "Prodajalec bere povprasevanja za svoja plovila" on povprasevanja;
+create policy "Prodajalec bere povprasevanja za svoja plovila" on povprasevanja for select using (
+  tip = 'plovilo' and target_id in (select id::text from plovila where user_id = auth.uid())
+);
