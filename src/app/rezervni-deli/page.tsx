@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Search, Filter, MapPin, Phone, Mail, Tag, ChevronRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockRezervniDeli } from '@/data/mock'
 import { formatCena } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { RezervniDel } from '@/types/database'
@@ -43,7 +42,7 @@ export default function RezervniDeliPage() {
       .then(({ data }) => { if (data) setRealniDeli(data) })
   }, [])
 
-  const vsiDeli = [...realniDeli, ...mockRezervniDeli]
+  const vsiDeli = realniDeli
 
   const filtrirani = vsiDeli.filter((del) => {
     if (kategorija !== 'vse' && del.kategorija !== kategorija) return false

@@ -1,22 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const ADMIN_DEMO_KEY = 'garbin_admin_demo'
-
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   let supabaseResponse = NextResponse.next({ request })
 
-  // Admin demo bypass (samo za razvoj — cookie nastavi /prijava admin gumb)
-  const adminDemo = request.cookies.get(ADMIN_DEMO_KEY)?.value === '1'
-
   // Admin zaščita — vedno preveri
   if (pathname.startsWith('/admin')) {
-    // Supabase ni konfiguriran
+    // Supabase ni konfiguriran — brez seje ni mogoče preveriti is_admin, zato zavrni dostop
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      // V development mode dovoli z demo cookie
-      if (adminDemo) return supabaseResponse
-      // Sicer redirect na prijavo
       return NextResponse.redirect(new URL('/prijava?admin=1', request.url))
     }
 

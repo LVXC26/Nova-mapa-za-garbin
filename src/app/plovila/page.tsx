@@ -8,7 +8,6 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import RangeSlider from '@/components/plovila/RangeSlider'
-import { mockPlovila } from '@/data/mock'
 import { CENA_VALUES, cenaValueToIdx, formatCena } from '@/lib/cenaSlider'
 import { usePrimerjava } from '@/context/PrimerjaContext'
 import { createClient } from '@/lib/supabase/client'
@@ -67,7 +66,7 @@ function PlovilaContent() {
       .then(({ data }) => { if (data) setRealPlovila(data) })
   }, [])
 
-  const vsaPlovila = useMemo(() => [...realPlovila, ...mockPlovila], [realPlovila])
+  const vsaPlovila = realPlovila
 
   const cenaMin = CENA_VALUES[cenaIdx[0]]
   const cenaMax = CENA_VALUES[cenaIdx[1]]

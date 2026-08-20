@@ -3,23 +3,20 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Heart, Ship, MapPin, Calendar, Ruler, Trash2 } from 'lucide-react'
-import { mockPlovila } from '@/data/mock'
 import { formatCena } from '@/lib/utils'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import type { Plovilo } from '@/types/database'
 
 export default function PriljubljeniPage() {
-  const { user, demoMode } = useAuth()
+  const { user } = useAuth()
   const [priljubljeni, setPriljubljeni] = useState<Plovilo[]>([])
   const [nalaga, setNalaga] = useState(true)
 
   useEffect(() => {
     ;(async () => {
-      const mockSaved = mockPlovila.filter(p => localStorage.getItem(`garbin_fav_${p.id}`) === '1')
-
-      if (!user || demoMode) {
-        setPriljubljeni(mockSaved)
+      if (!user) {
+        setPriljubljeni([])
         setNalaga(false)
         return
       }
@@ -34,15 +31,14 @@ export default function PriljubljeniPage() {
         realna = data ?? []
       }
 
-      setPriljubljeni([...realna, ...mockSaved])
+      setPriljubljeni(realna)
       setNalaga(false)
     })()
-  }, [user, demoMode])
+  }, [user])
 
   async function odstrani(id: string) {
     setPriljubljeni(prev => prev.filter(p => p.id !== id))
-    localStorage.removeItem(`garbin_fav_${id}`)
-    if (user && !demoMode) {
+    if (user) {
       const supabase = createClient()
       await supabase.from('priljubljeni').delete().eq('user_id', user.id).eq('plovilo_id', id)
     }

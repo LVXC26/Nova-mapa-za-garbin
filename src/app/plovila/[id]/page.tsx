@@ -6,7 +6,6 @@ import { ArrowLeft, MapPin, Calendar, Ruler, Phone, Mail, MessageCircle, CheckCi
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
-import { mockPlovila } from '@/data/mock'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import { createClient } from '@/lib/supabase/client'
@@ -77,23 +76,24 @@ const tipIkone: Record<string, string> = {
 export default function PloviloDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
-  const mockMatch = mockPlovila.find(p => p.id === id)
   const [realPlovilo, setRealPlovilo] = useState<Plovilo | null>(null)
-  const [nalaga, setNalaga] = useState(!mockMatch)
+  const [podobna, setPodobna] = useState<Plovilo[]>([])
+  const [nalaga, setNalaga] = useState(true)
   const [shareOpen, setShareOpen] = useState(false)
 
   useEffect(() => {
-    if (mockMatch) return
     const supabase = createClient()
     supabase.from('plovila').select('*').eq('id', id).maybeSingle().then(({ data }) => {
       setRealPlovilo(data)
       setNalaga(false)
+      if (data) {
+        supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip', data.tip).neq('id', id).limit(3)
+          .then(({ data: sorodna }) => { if (sorodna) setPodobna(sorodna) })
+      }
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  const plovilo = mockMatch ?? realPlovilo ?? undefined
-  const podobna = mockPlovila.filter(p => p.id !== id && p.tip === plovilo?.tip).slice(0, 3)
+  const plovilo = realPlovilo ?? undefined
 
   if (nalaga) {
     return (

@@ -2,10 +2,10 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, MapPin, Star, CheckCircle, Phone, Mail, MessageCircle, Calendar, Award, Globe, Ship, Users, Building2 } from 'lucide-react'
+import { ArrowLeft, MapPin, Star, CheckCircle, Phone, Mail, Calendar, Award, Globe, Ship, Users, Building2 } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockSkiperji, unsplashSkipperji } from '@/data/mock'
+import { unsplashSkipperji } from '@/data/mock'
 import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
@@ -28,9 +28,8 @@ const tipIkone: Record<string, string> = {
 export default function SkipperDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
-  const mockMatch = mockSkiperji.find(s => s.id === id)
   const [realSkipper, setRealSkipper] = useState<Skipper | null>(null)
-  const [nalaga, setNalaga] = useState(!mockMatch)
+  const [nalaga, setNalaga] = useState(true)
   const [tab, setTab] = useState<'objave' | 'o_meni' | 'ocene' | 'ekipa'>('o_meni')
   const [ocene, setOcene] = useState<OcenaZImenom[]>([])
   const [nalagaOcen, setNalagaOcen] = useState(true)
@@ -41,13 +40,11 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
   const [ocenaNapaka, setOcenaNapaka] = useState('')
 
   useEffect(() => {
-    if (mockMatch) return
     const supabase = createClient()
     supabase.from('skiperji').select('*').eq('id', id).maybeSingle().then(({ data }) => {
       setRealSkipper(data)
       setNalaga(false)
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   async function nalozOcene() {
@@ -93,7 +90,7 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
     nalozOcene()
   }
 
-  const skipper = mockMatch ?? realSkipper ?? undefined
+  const skipper = realSkipper ?? undefined
   const povprecje = ocene.length ? ocene.reduce((a, o) => a + o.score, 0) / ocene.length : (skipper?.ocena ?? 0)
   const steviloOcen = ocene.length || (skipper?.st_ocen ?? 0)
 
@@ -424,16 +421,7 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                     <Phone className="w-4 h-4" />
                     Pokliči zdaj
                   </a>
-                  {user && skipper.user_id && skipper.user_id !== user.id && (
-                    <Link
-                      href={`/chat?to=${skipper.user_id}&ime=${encodeURIComponent(skipper.ime)}`}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-semibold rounded-full transition-all hover:scale-[1.02] mb-4 text-sm"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Pošlji sporočilo
-                    </Link>
-                  )}
-                  <p className="text-xs font-semibold text-[#0c2340] mb-3">Pošlji povpraševanje</p>
+                  <p className="text-xs font-semibold text-[#0c2340] mb-3 mt-3">Pošlji povpraševanje</p>
                   <PovprasevanjeForma tip="skipper" targetId={String(skipper.id)} />
                 </div>
 

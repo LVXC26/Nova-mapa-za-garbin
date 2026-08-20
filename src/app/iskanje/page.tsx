@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { Search, Ship, Anchor, Compass, BookOpen, MessageSquare, ArrowRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockPlovila, mockCharterji, mockSkiperji, mockNovice } from '@/data/mock'
 import { forumNiti } from '@/data/forum'
 import { formatCena } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -55,22 +54,10 @@ function IskanjeContent() {
   const results = useMemo(() => {
     if (!qL) return { plovila: [], charterji: [], skiperji: [], novice: [], forum: [] }
     return {
-      plovila: [
-        ...realnaPlovila,
-        ...mockPlovila.filter(p => p.naziv.toLowerCase().includes(qL) || p.opis?.toLowerCase().includes(qL) || p.lokacija?.toLowerCase().includes(qL)),
-      ],
-      charterji: [
-        ...realniCharterji,
-        ...mockCharterji.filter(c => c.naziv.toLowerCase().includes(qL) || c.opis.toLowerCase().includes(qL) || c.lokacija.toLowerCase().includes(qL)),
-      ],
-      skiperji: [
-        ...realniSkiperji,
-        ...mockSkiperji.filter(s => s.ime.toLowerCase().includes(qL) || s.opis.toLowerCase().includes(qL) || s.lokacija.toLowerCase().includes(qL)),
-      ],
-      novice: [
-        ...realneNovice,
-        ...mockNovice.filter(n => n.naslov.toLowerCase().includes(qL) || n.povzetek?.toLowerCase().includes(qL)),
-      ],
+      plovila: realnaPlovila,
+      charterji: realniCharterji,
+      skiperji: realniSkiperji,
+      novice: realneNovice,
       forum: forumNiti.filter(f => f.naslov.toLowerCase().includes(qL) || f.vsebina.toLowerCase().includes(qL)),
     }
   }, [qL, realnaPlovila, realniCharterji, realniSkiperji, realneNovice])

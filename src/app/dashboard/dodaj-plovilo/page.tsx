@@ -218,10 +218,10 @@ function DodajPloviloContent() {
     }
 
     const { error } = editId
-      ? await supabase.from('plovila').update({ ...skupnaPolja, potrjeno: false }).eq('id', editId)
+      ? await supabase.from('plovila').update(skupnaPolja).eq('id', editId)
       : await supabase.from('plovila').insert({
           ...skupnaPolja,
-          potrjeno: false,
+          potrjeno: true,
           promoted: false,
           prodano: false,
           user_id: user.id,
@@ -245,8 +245,8 @@ function DodajPloviloContent() {
           </h2>
           <p className="text-gray-500 mb-6">
             {editId
-              ? 'Vaše spremembe so shranjene. Oglas gre ponovno v pregled pred objavo.'
-              : 'Vaš oglas je v pregledu. Ko bo potrjen, bo viden vsem obiskovalcem.'}
+              ? 'Vaše spremembe so shranjene in takoj vidne vsem obiskovalcem.'
+              : 'Vaš oglas je objavljen in takoj viden vsem obiskovalcem.'}
           </p>
           <div className="flex gap-3 justify-center">
             {!editId && (
@@ -307,7 +307,7 @@ function DodajPloviloContent() {
               ? 'Uredi oglas'
               : tipOglasa === 'prodaja' ? 'Dodaj plovilo za prodajo' : 'Dodaj plovilo za najem'}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Izpolnite podatke o plovilu. Oglas bo aktiven po pregledu.</p>
+          <p className="text-gray-500 text-sm mt-1">Izpolnite podatke o plovilu. Oglas bo takoj aktiven po objavi.</p>
         </div>
 
         {napaka && (

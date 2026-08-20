@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, MessageSquare, Clock, HelpCircle } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { createClient } from '@/lib/supabase/client'
+import { oddajPovprasevanje } from '@/app/actions/povprasevanje'
 
 const teme = [
   'Splošno vprašanje',
@@ -28,19 +28,18 @@ export default function KontaktPage() {
     setNapaka('')
     setNalaga(true)
 
-    const supabase = createClient()
-    const { error } = await supabase.from('povprasevanja').insert({
+    const rezultat = await oddajPovprasevanje({
       tip: 'kontakt',
       target_id: forma.tema,
       ime: forma.ime,
       email: forma.email,
-      telefon: null,
-      termin: null,
+      telefon: '',
+      termin: '',
       sporocilo: forma.sporocilo,
     })
 
     setNalaga(false)
-    if (error) { setNapaka('Napaka pri pošiljanju. Poskusite znova ali nas kontaktirajte po e-pošti.'); return }
+    if (!rezultat.uspeh) { setNapaka(rezultat.napaka ?? 'Napaka pri pošiljanju. Poskusite znova ali nas kontaktirajte po e-pošti.'); return }
     setPoslano(true)
   }
 

@@ -1,11 +1,11 @@
 import type { MetadataRoute } from 'next'
-import { mockPlovila, mockCharterji, mockSkiperji } from '@/data/mock'
-import { mockNovice } from '@/data/mock'
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
 import { forumKategorije } from '@/data/forum'
 
 const BASE = 'https://garbin.si'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = [
     { url: BASE, priority: 1.0, changeFrequency: 'daily' as const },
     { url: `${BASE}/plovila`, priority: 0.9, changeFrequency: 'daily' as const },
@@ -22,25 +22,45 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/faq`, priority: 0.6, changeFrequency: 'monthly' as const },
   ]
 
-  const plovila = mockPlovila.map(p => ({
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return [...staticPages, ...forumKategorije.map(k => ({
+      url: `${BASE}/forum/${k.slug}`,
+      priority: 0.6,
+      changeFrequency: 'daily' as const,
+    }))]
+  }
+
+  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+
+  const [{ data: plovilaData }, { data: charterjiData }, { data: skiperjiData }, { data: noviceData }] = await Promise.all([
+    supabase.from('plovila').select('id').eq('potrjeno', true),
+    supabase.from('charterji').select('id'),
+    supabase.from('skiperji').select('id'),
+    supabase.from('novice').select('slug').not('published_at', 'is', null),
+  ])
+
+  const plovila = (plovilaData ?? []).map(p => ({
     url: `${BASE}/plovila/${p.id}`,
     priority: 0.8,
     changeFrequency: 'weekly' as const,
   }))
 
-  const charterji = mockCharterji.map(c => ({
+  const charterji = (charterjiData ?? []).map(c => ({
     url: `${BASE}/charterji/${c.id}`,
     priority: 0.8,
     changeFrequency: 'weekly' as const,
   }))
 
-  const skiperji = mockSkiperji.map(s => ({
+  const skiperji = (skiperjiData ?? []).map(s => ({
     url: `${BASE}/skiperji/${s.id}`,
     priority: 0.7,
     changeFrequency: 'weekly' as const,
   }))
 
-  const novice = mockNovice.map(n => ({
+  const novice = (noviceData ?? []).map(n => ({
     url: `${BASE}/novice/${n.slug}`,
     priority: 0.7,
     changeFrequency: 'weekly' as const,

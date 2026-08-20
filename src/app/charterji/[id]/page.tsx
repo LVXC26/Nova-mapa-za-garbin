@@ -2,15 +2,14 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MapPin, Ship, Star, CheckCircle, Phone, Mail, MessageCircle, ExternalLink, ArrowLeft, Calendar, Users, Ruler } from 'lucide-react'
+import { MapPin, Ship, Star, CheckCircle, Phone, Mail, ExternalLink, ArrowLeft, Calendar, Users, Ruler } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockCharterji, mockNajemPlovila } from '@/data/mock'
 import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import { createClient } from '@/lib/supabase/client'
-import type { Charter } from '@/types/database'
+import type { Charter, Plovilo } from '@/types/database'
 
 const opremaLabele: Record<string, string> = {
   gps: 'GPS / Chartplotter',
@@ -36,21 +35,23 @@ const tipIkone: Record<string, string> = {
 export default function CharterDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
-  const mockMatch = mockCharterji.find((c) => String(c.id) === id)
   const [realCharter, setRealCharter] = useState<Charter | null>(null)
-  const [nalaga, setNalaga] = useState(!mockMatch)
+  const [plovila, setPlovila] = useState<Plovilo[]>([])
+  const [nalaga, setNalaga] = useState(true)
 
   useEffect(() => {
-    if (mockMatch) return
     const supabase = createClient()
     supabase.from('charterji').select('*').eq('id', id).maybeSingle().then(({ data }) => {
       setRealCharter(data)
       setNalaga(false)
+      if (data?.user_id) {
+        supabase.from('plovila').select('*').eq('user_id', data.user_id).eq('tip_oglasa', 'najem').eq('potrjeno', true)
+          .then(({ data: flota }) => { if (flota) setPlovila(flota) })
+      }
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  const charter = mockMatch ?? realCharter ?? undefined
+  const charter = realCharter ?? undefined
 
   if (nalaga) {
     return (
@@ -86,7 +87,6 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
     )
   }
 
-  const plovila = mockNajemPlovila.filter((p) => p.user_id === charter.id)
   const zvezdice = Array.from({ length: 5 }, (_, i) => i < Math.round(charter.ocena))
 
   return (
@@ -271,15 +271,6 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                       <Phone className="w-4 h-4" />
                       Pokliči zdaj
                     </a>
-                  )}
-                  {user && charter.user_id && charter.user_id !== user.id && (
-                    <Link
-                      href={`/chat?to=${charter.user_id}&ime=${encodeURIComponent(charter.naziv)}`}
-                      className="flex items-center justify-center gap-2 w-full py-3.5 mb-4 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-semibold rounded-full transition-all hover:scale-[1.02]"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Pošlji sporočilo
-                    </Link>
                   )}
                   <div className="space-y-3 mb-6">
                     <a

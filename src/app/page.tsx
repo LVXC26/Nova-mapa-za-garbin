@@ -8,7 +8,7 @@ import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import CharterKartica from '@/components/charterji/CharterKartica'
 import HeroSearch from '@/components/home/HeroSearch'
-import { mockPlovila, mockPromocije, mockNovice, mockCharterji, mockPromotedIds, unsplashNovice } from '@/data/mock'
+import { unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Plovilo, Charter, Promocija, Novica, NovicaKategorija } from '@/types/database'
@@ -64,10 +64,10 @@ export default function HomePage() {
       .then(({ data }) => { if (data) setRealneNovice(data as NovicaZKategorijo[]) })
   }, [])
 
-  const plovilaZaProdajo = [...realnaPlovila, ...mockPlovila.filter(p => p.tip_oglasa === 'prodaja')].slice(0, 6)
-  const novice = [...realneNovice, ...mockNovice].slice(0, 3)
-  const promocije = [...realnePromocije, ...mockPromocije].slice(0, 4)
-  const charterji = [...realniCharterji, ...mockCharterji].slice(0, 3)
+  const plovilaZaProdajo = realnaPlovila.slice(0, 6)
+  const novice = realneNovice.slice(0, 3)
+  const promocije = realnePromocije.slice(0, 4)
+  const charterji = realniCharterji.slice(0, 3)
 
   return (
     <>
@@ -156,7 +156,7 @@ export default function HomePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {plovilaZaProdajo.map((plovilo) => (
-                <PloviloKartica key={plovilo.id} plovilo={plovilo} promoted={mockPromotedIds.includes(plovilo.id)} />
+                <PloviloKartica key={plovilo.id} plovilo={plovilo} promoted={!!plovilo.promoted} />
               ))}
             </div>
             <div className="mt-8 text-center sm:hidden">

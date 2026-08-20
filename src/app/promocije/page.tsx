@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Calendar, ArrowRight, ChevronRight, Tag, Star, Flame, Package, Anchor } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockPromocije, mockPlovila } from '@/data/mock'
 import { formatCena } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Promocija, Plovilo } from '@/types/database'
@@ -37,8 +36,8 @@ export default function PromoPage() {
     })()
   }, [])
 
-  const vsePromocije = [...realnePromocije, ...mockPromocije]
-  const vsaPlovila = [...realnaPlovila, ...mockPlovila]
+  const vsePromocije = realnePromocije
+  const vsaPlovila = realnaPlovila
   const aktivne = vsePromocije.filter((p) => !p.veljavnost_do || zdaj === null || new Date(p.veljavnost_do).getTime() >= zdaj)
 
   return (

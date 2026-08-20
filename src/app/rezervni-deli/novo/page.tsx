@@ -53,7 +53,7 @@ export default function NovRezervniDelPage() {
       kontakt_email: forma.kontakt_email || null,
       kontakt_tel: forma.kontakt_tel || null,
       lokacija: forma.lokacija || null,
-      potrjeno: false,
+      potrjeno: true,
       user_id: user.id,
     })
 
@@ -73,7 +73,7 @@ export default function NovRezervniDelPage() {
                 <CheckCircle className="w-8 h-8 text-emerald-500" />
               </div>
               <h2 className="font-display text-2xl font-bold text-[#0c2340] mb-2">Oglas dodan!</h2>
-              <p className="text-gray-500 mb-6">Vaš oglas je v pregledu. Ko bo potrjen, bo viden vsem obiskovalcem.</p>
+              <p className="text-gray-500 mb-6">Vaš oglas je objavljen in takoj viden vsem obiskovalcem.</p>
               <Link href="/rezervni-deli" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] text-[#0c2340] font-semibold text-sm rounded-full hover:bg-[#e8c76d]">
                 Vsi rezervni deli
               </Link>

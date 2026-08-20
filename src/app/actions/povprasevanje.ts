@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 
 export type PovprasevanjeInput = {
-  tip: 'charter' | 'skipper' | 'plovilo'
+  tip: 'charter' | 'skipper' | 'plovilo' | 'kontakt' | 'prijava-charter' | 'prijava-skipper'
   target_id: string
   ime: string
   email: string
@@ -16,7 +16,7 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
   const supabase = await createClient()
 
   const insertData: {
-    tip: 'charter' | 'skipper' | 'plovilo'
+    tip: 'charter' | 'skipper' | 'plovilo' | 'kontakt' | 'prijava-charter' | 'prijava-skipper'
     target_id: string
     ime: string
     email: string
@@ -45,7 +45,15 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
   const obvestiloEmail = process.env.OBVESTILO_EMAIL ?? 'matej.skulj10@gmail.com'
 
   if (resendKey) {
-    const tipLabel = data.tip === 'charter' ? 'Charter' : data.tip === 'skipper' ? 'Skipper' : 'Plovilo'
+    const tipLabele: Record<PovprasevanjeInput['tip'], string> = {
+      charter: 'Charter',
+      skipper: 'Skipper',
+      plovilo: 'Plovilo',
+      kontakt: 'Kontakt obrazec',
+      'prijava-charter': 'Prijava novega charter podjetja',
+      'prijava-skipper': 'Prijava novega skiperja',
+    }
+    const tipLabel = tipLabele[data.tip]
     await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {

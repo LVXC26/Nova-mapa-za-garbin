@@ -5,74 +5,18 @@ import Link from 'next/link'
 import { ArrowLeft, Clock, User, Tag, Share2, ArrowRight, BookOpen, CheckCircle, AlertCircle } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockNovice, unsplashNovice } from '@/data/mock'
+import { unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Novica, NovicaKategorija, Komentar } from '@/types/database'
 
 type NovicaZKategorijo = Novica & { kategorija?: NovicaKategorija }
 
-const vsebinaMock: Record<string, string> = {
-  'kako-izbrati-jadrnico': `
-    <p>Nakup prve jadrnice je vznemirljiv, a zahteven korak. Pred odločitvijo je ključno razumeti vaše potrebe, izkušnje in proračun.</p>
-
-    <h2>Velikost plovila</h2>
-    <p>Za začetnike priporočamo jadrnice dolžine 8–11 metrov. Takšne jadrnice so dovolj prostorne za udobno potovanje, hkrati pa dovolj majhne za enostavno upravljanje. Večje jadrnice zahtevajo več posadke in izkušenj.</p>
-
-    <h2>Starost in stanje</h2>
-    <p>Rabljene jadrnice so pogosto odlična vrednost za denar. Jadrnice iz 90-ih in 2000-ih let so pogosto dobro vzdrževano in imajo dober izkoristek. Ključno je opraviti temeljit pregled pred nakupom — priporočamo najeti poklicnega inšpektorja.</p>
-
-    <h2>Oprema</h2>
-    <p>Preverite stanje jader, trupa, motorja in elektronike. GPS, VHF radio in AIS oddajnik so danes standardna oprema za varno plovbo. Autopilot je priporočljiv za dolge rute.</p>
-
-    <h2>Proračun</h2>
-    <p>Poleg nakupne cene upoštevajte letne stroške vzdrževanja (5–10% vrednosti plovila), mariniranje, zavarovanje in gorivo. Za dobro jadrnico v vrednosti 50.000 € pričakujte letne stroške 5.000–8.000 €.</p>
-
-    <h2>Priporočeni modeli za začetnike</h2>
-    <p>Bavaria 30 Cruiser, Jeanneau Sun Odyssey 34, Beneteau Oceanis 323 — vse so zanesljive in dostopne jadrnice z dobrim razmerjem cena/kakovost.</p>
-
-    <p>Ne pozabite — najboljša jadrnica je tista, ki jo redno uporabljate. Bolje manjša in vedno na morju, kot velika in v marini.</p>
-  `,
-  'trg-plovil-2024': `
-    <p>Leto 2024 prinaša rekordne cene jadrnic in motornih čolnov na slovenskem trgu. Analiza prvega četrtletja kaže 23% rast cen v primerjavi z enakim obdobjem lani.</p>
-
-    <h2>Vzroki za rast cen</h2>
-    <p>Glavni vzroki so pomanjkanje novih plovil (dobavne verige se še vedno normalizirajo po pandemiji), povečano povpraševanje po aktivnem preživljanju prostega časa na morju in inflacija, ki je dvignila stroške proizvodnje.</p>
-
-    <h2>Kategorije s prvo rastjo</h2>
-    <p>Jadrnice dolžine 10–14 m so zabeležile 28% rast, motorni čolni pa 19%. Gumenjaki ostajajo relativno stabilni (+8%).</p>
-
-    <h2>Napoved za preostali del leta</h2>
-    <p>Analitiki pričakujejo umiritev rasti cen v drugi polovici leta, ko bodo novi modeli izpolnili povpraševanje. Kljub temu ostajajo cene bistveno višje kot pred pandemijo.</p>
-
-    <h2>Priložnosti za kupce</h2>
-    <p>Kljub visokim cenam ostajajo plovila letnikov 2010–2016 relativno dostopna. Trg najema se razvija hitreje kot prodajni trg, kar odpira priložnosti za investitorje.</p>
-  `,
-  'vzdrzevanje-plovila-pomlad': `
-    <p>Po zimski sezoni je temeljit pregled plovila ključen za varno in udobno plovbo. Sledite našemu praktičnemu kontrolnemu seznamu.</p>
-
-    <h2>Trup in paluba</h2>
-    <p>Preglejte trup za razpoke, mehurje in poškodbe. Preverite tesnila lukov, vetrnikov in prehodov skozi trup. Nanesite svežo antifouling barvo pred spustom v vodo.</p>
-
-    <h2>Motor in pogon</h2>
-    <p>Zamenjajte olje in filter, preverite hladilni sistem, impeler in transmisijo. Preglejte gumijaste veze in anodo. Motor zaženite in preverite za nenavadne zvoke ali vibracije.</p>
-
-    <h2>Jadra in takelija</h2>
-    <p>Preglejte jadra za obrabo in poškodbe. Preverite vse vrvi, šrope in zaponke. Zamenjajte vse sumljive dele — varnost na morju je ključna.</p>
-
-    <h2>Varnostna oprema</h2>
-    <p>Preverite datum poteka rešilnih jopičev, pirotehnike in CO2 bombonke v splavu. Preverite EPIRB baterijo in datum kalibracije. Dopolnite komplet prve pomoči.</p>
-
-    <h2>Elektronika in navigacija</h2>
-    <p>Testirajte vse navigacijske naprave, posodobite karte, preverite baterije in polnilni sistem. Preverite VHF radio in DSC register.</p>
-  `,
-}
-
 export default function NovicaDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
-  const mockMatch = mockNovice.find(n => n.slug === slug)
   const [realnaNovica, setRealnaNovica] = useState<NovicaZKategorijo | null>(null)
-  const [nalaga, setNalaga] = useState(!mockMatch)
+  const [druge, setDruge] = useState<Novica[]>([])
+  const [nalaga, setNalaga] = useState(true)
   const [komentarji, setKomentarji] = useState<Komentar[]>([])
   const [komentarForma, setKomentarForma] = useState({ ime: '', email: '', vsebina: '' })
   const [komentarPoslan, setKomentarPoslan] = useState(false)
@@ -82,18 +26,14 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
   useEffect(() => {
     ;(async () => {
       const supabase = createClient()
-      let trenutnaNovica: NovicaZKategorijo | null | undefined = mockMatch
-
-      if (!mockMatch) {
-        const { data } = await supabase
-          .from('novice')
-          .select('*, kategorija:novice_kategorije(*)')
-          .eq('slug', slug)
-          .maybeSingle()
-        trenutnaNovica = data as NovicaZKategorijo | null
-        setRealnaNovica(trenutnaNovica)
-        setNalaga(false)
-      }
+      const { data } = await supabase
+        .from('novice')
+        .select('*, kategorija:novice_kategorije(*)')
+        .eq('slug', slug)
+        .maybeSingle()
+      const trenutnaNovica = data as NovicaZKategorijo | null
+      setRealnaNovica(trenutnaNovica)
+      setNalaga(false)
 
       if (trenutnaNovica?.id) {
         const { data: komentarjiData } = await supabase
@@ -103,12 +43,20 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
           .eq('potrjen', true)
           .order('created_at', { ascending: false })
         setKomentarji(komentarjiData ?? [])
+
+        const { data: drugeData } = await supabase
+          .from('novice')
+          .select('*')
+          .not('published_at', 'is', null)
+          .neq('slug', slug)
+          .order('published_at', { ascending: false })
+          .limit(2)
+        setDruge(drugeData ?? [])
       }
     })()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
-  const novica = mockMatch ?? realnaNovica ?? undefined
+  const novica = realnaNovica ?? undefined
 
   async function posljiKomentar(e: React.FormEvent) {
     e.preventDefault()
@@ -135,8 +83,6 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
     setKomentarPoslan(true)
     setKomentarForma({ ime: '', email: '', vsebina: '' })
   }
-
-  const druge = mockNovice.filter(n => n.slug !== slug).slice(0, 2)
 
   if (nalaga) {
     return (
@@ -170,11 +116,10 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
   }
 
   const ikone = ['⛵', '📈', '🔧', '⚓', '🌊']
-  const mockIndeks = mockNovice.indexOf(novica as typeof mockNovice[number])
-  const ikona = ikone[(mockIndeks >= 0 ? mockIndeks : 0) % ikone.length]
-  const vsebinaHtml = vsebinaMock[novica.slug]
-  const navadnoBesedilo = vsebinaHtml ? null : (novica.vsebina || novica.povzetek || 'Vsebina novice je v pripravi.')
-  const berucasMin = Math.ceil((vsebinaHtml ?? navadnoBesedilo ?? '').replace(/<[^>]+>/g, '').split(' ').length / 200)
+  const ikonaIndeks = novica.slug.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  const ikona = ikone[ikonaIndeks % ikone.length]
+  const navadnoBesedilo = novica.vsebina || novica.povzetek || 'Vsebina novice je v pripravi.'
+  const berucasMin = Math.ceil(navadnoBesedilo.replace(/<[^>]+>/g, '').split(' ').length / 200)
 
   return (
     <>
@@ -253,18 +198,7 @@ export default function NovicaDetailPage({ params }: { params: Promise<{ slug: s
               {/* CLANEK */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 sm:p-10">
-                  {vsebinaHtml ? (
-                    <div
-                      className="prose prose-lg prose-slate max-w-none
-                        prose-headings:font-display prose-headings:text-[#0c2340]
-                        prose-p:text-gray-600 prose-p:leading-relaxed
-                        prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-4
-                        prose-a:text-[#c9a84c] prose-a:no-underline hover:prose-a:underline"
-                      dangerouslySetInnerHTML={{ __html: vsebinaHtml }}
-                    />
-                  ) : (
-                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">{navadnoBesedilo}</p>
-                  )}
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">{navadnoBesedilo}</p>
                 </div>
 
                 {/* Share section */}

@@ -8,21 +8,47 @@ import {
   CheckCircle, Activity, Star, TrendingUp
 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { mockSkiperji } from '@/data/mock'
 import { createClient } from '@/lib/supabase/client'
-import type { Plovilo, Skipper } from '@/types/database'
+import type { Plovilo, Skipper, Charter } from '@/types/database'
 
-function usePovprasevanjaCount() {
+function usePovprasevanjaCount(tip: 'charter' | 'skipper' | 'plovilo', targetIds: string[]) {
   const [count, setCount] = useState<number | null>(null)
+  const kljucIds = targetIds.join(',')
 
   useEffect(() => {
-    createClient()
-      .from('povprasevanja')
-      .select('*', { count: 'exact', head: true })
-      .then(({ count: c }) => setCount(c ?? 0))
-  }, [])
+    ;(async () => {
+      if (targetIds.length === 0) { setCount(0); return }
+      const { count: c } = await createClient()
+        .from('povprasevanja')
+        .select('*', { count: 'exact', head: true })
+        .eq('tip', tip)
+        .in('target_id', targetIds)
+      setCount(c ?? 0)
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tip, kljucIds])
 
   return count
+}
+
+function useLastniCharter(userId: string | undefined) {
+  const [charter, setCharter] = useState<Charter | null>(null)
+  const [nalaga, setNalaga] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      if (!userId) { setNalaga(false); return }
+      const { data } = await createClient()
+        .from('charterji')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+      setCharter(data)
+      setNalaga(false)
+    })()
+  }, [userId])
+
+  return { charter, nalaga }
 }
 
 function useNeprebranaCount(userId: string | undefined) {
@@ -78,8 +104,8 @@ function usePriljubljeniCount(userId: string | undefined) {
 
 // ─── CHARTER DASHBOARD ───────────────────────────────────────────────
 function CharterDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
-  const povprasevanjaCount = usePovprasevanjaCount()
-  const neprebrana = useNeprebranaCount(userId)
+  const { charter: lastniCharter } = useLastniCharter(userId)
+  const povprasevanjaCount = usePovprasevanjaCount('charter', lastniCharter ? [lastniCharter.id] : [])
   const priljubljeniCount = usePriljubljeniCount(userId)
   const { plovila, nalaga } = useLastnaPlovila(userId)
 
@@ -109,11 +135,10 @@ function CharterDashboard({ ime, userId }: { ime: string; userId: string | undef
 
       {/* Hiter dostop */}
       <h2 className="font-semibold text-[#0c2340] mb-4">Hitri dostop</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {[
           { href: '/dashboard/dodaj-plovilo', label: 'Dodaj plovilo', opis: 'Razširi svojo floto', ikona: PlusCircle, cls: 'bg-[#0c2340] text-white' },
           { href: '/dashboard/moja-plovila', label: 'Moja plovila', opis: `${plovila.length} aktivnih`, ikona: Ship, cls: 'bg-[#c9a84c] text-[#0c2340]' },
-          { href: '/chat', label: 'Sporočila', opis: neprebrana ? `${neprebrana} neprebranih` : 'Ni neprebranih', ikona: MessageCircle, cls: 'bg-white border border-gray-200 text-[#0c2340]' },
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md group ${cls}`}>
@@ -183,9 +208,7 @@ function useLastniSkipper(userId: string | undefined) {
 
 function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
   const { skipper: lastniSkipper, nalaga: nalagaSkipper } = useLastniSkipper(userId)
-  const skipper = lastniSkipper ?? mockSkiperji[0]
-  const povprasevanjaCount = usePovprasevanjaCount()
-  const neprebrana = useNeprebranaCount(userId)
+  const povprasevanjaCount = usePovprasevanjaCount('skipper', lastniSkipper ? [lastniSkipper.id] : [])
 
   return (
     <div className="p-8">
@@ -215,7 +238,7 @@ function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undef
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {[
           { href: '/dashboard/profil', label: 'Uredi profil', opis: 'Posodobi certifikate in bio', ikona: Compass, cls: 'bg-[#0c2340] text-white' },
-          { href: '/chat', label: 'Sporočila', opis: neprebrana ? `${neprebrana} neprebranih` : 'Ni neprebranih', ikona: MessageCircle, cls: 'bg-[#c9a84c] text-[#0c2340]' },
+          { href: '/dashboard/ocene', label: 'Ocene', opis: 'Poglej prejete ocene', ikona: Star, cls: 'bg-[#c9a84c] text-[#0c2340]' },
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>
@@ -248,17 +271,17 @@ function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undef
             <div className="flex items-center gap-4 mb-4">
               <div className="w-16 h-16 rounded-2xl bg-[#0c2340]/10 flex items-center justify-center text-3xl">👨‍✈️</div>
               <div>
-                <p className="font-bold text-[#0c2340]">{skipper.ime}</p>
-                <p className="text-sm text-gray-500">{skipper.lokacija} · {skipper.izkusnje_let} let izkušenj</p>
+                <p className="font-bold text-[#0c2340]">{lastniSkipper.ime}</p>
+                <p className="text-sm text-gray-500">{lastniSkipper.lokacija} · {lastniSkipper.izkusnje_let} let izkušenj</p>
                 <div className="flex items-center gap-1 mt-1">
                   {Array.from({length: 5}).map((_, i) => (
-                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(skipper.ocena) ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(lastniSkipper.ocena) ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
                   ))}
-                  <span className="text-xs text-gray-500 ml-1">{skipper.ocena.toFixed(1)} ({skipper.st_ocen} ocen)</span>
+                  <span className="text-xs text-gray-500 ml-1">{lastniSkipper.ocena.toFixed(1)} ({lastniSkipper.st_ocen} ocen)</span>
                 </div>
               </div>
               <div className="ml-auto">
-                {skipper.verified && (
+                {lastniSkipper.verified && (
                   <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-1.5 rounded-full">
                     <CheckCircle className="w-3.5 h-3.5" /> Verificiran
                   </span>
@@ -266,13 +289,13 @@ function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undef
               </div>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {skipper.certifikati.map(c => (
+              {lastniSkipper.certifikati.map(c => (
                 <span key={c} className="text-xs px-2.5 py-1 bg-[#0c2340]/5 text-[#0c2340] rounded-full font-medium">{c}</span>
               ))}
             </div>
             <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-              <p className="text-sm text-gray-500">Cena: <span className="font-bold text-[#0c2340]">{skipper.cena_dan} € / dan</span></p>
-              <Link href={`/skiperji/${skipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline">
+              <p className="text-sm text-gray-500">Cena: <span className="font-bold text-[#0c2340]">{lastniSkipper.cena_dan} € / dan</span></p>
+              <Link href={`/skiperji/${lastniSkipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline">
                 Oglej profil →
               </Link>
             </div>
@@ -365,8 +388,9 @@ function useShranjenoPriKupcih(plovilaIds: string[]) {
 }
 
 function ProdajalecDashboard({ ime, vloga, userId }: { ime: string; vloga: string | null; userId: string | undefined }) {
-  const povprasevanjaCount = usePovprasevanjaCount()
+  const neprebrana = useNeprebranaCount(userId)
   const { plovila, nalaga } = useLastnaPlovila(userId)
+  const povprasevanjaCount = usePovprasevanjaCount('plovilo', plovila.map(p => p.id))
   const shranjenaCount = useShranjenoPriKupcih(plovila.map(p => p.id))
 
   return (
@@ -401,6 +425,7 @@ function ProdajalecDashboard({ ime, vloga, userId }: { ime: string; vloga: strin
         {[
           { href: '/dashboard/dodaj-plovilo', label: 'Dodaj plovilo za prodajo', opis: 'Objavi oglas v manj kot 5 minutah', ikona: PlusCircle, cls: 'bg-[#0c2340] text-white' },
           { href: '/dashboard/moja-plovila', label: 'Moji oglasi', opis: 'Upravljajte obstoječe oglase', ikona: List, cls: 'bg-white border border-gray-200 text-[#0c2340]' },
+          { href: '/chat', label: 'Sporočila', opis: neprebrana ? `${neprebrana} neprebranih` : 'Ni neprebranih', ikona: MessageCircle, cls: 'bg-[#c9a84c] text-[#0c2340]' },
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>

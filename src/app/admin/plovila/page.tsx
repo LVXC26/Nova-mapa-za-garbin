@@ -46,7 +46,7 @@ export default function AdminPlovilaPage() {
     <div className="p-8">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-gray-900">Plovila</h1>
-        <p className="text-gray-500 text-sm mt-1">Pregled in odobritev oglasov plovil</p>
+        <p className="text-gray-500 text-sm mt-1">Pregled objavljenih oglasov plovil — nova plovila so vidna takoj, tu jih lahko po potrebi umaknete.</p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">

@@ -11,9 +11,9 @@ type Kategorija = 'kupci' | 'charterji' | 'skiperji' | 'splosno'
 
 const faqData: Record<Kategorija, { v: string; o: string }[]> = {
   kupci: [
-    { v: 'Kako poiščem plovilo?', o: 'Obiščite /plovila in uporabite filtre po tipu, ceni in dolžini. Vsak oglas ima kontaktne podatke prodajalca — pišite direktno ali pa se prijavite za chat.' },
+    { v: 'Kako poiščem plovilo?', o: 'Obiščite /plovila in uporabite filtre po tipu, ceni in dolžini. Vsak oglas ima kontaktne podatke prodajalca — pišite direktno, oddajte povpraševanje prek obrazca ali se prijavite za chat s prodajalcem.' },
     { v: 'Ali je objava oglasa brezplačna?', o: 'Osnovna objava je brezplačna. Za promoted/featured oglas in dodatne ugodnosti so na voljo plačljivi paketi. Cene bodo objavljene ob zagonu platforme.' },
-    { v: 'Kako kontaktiram prodajalca?', o: 'Na vsaki detail strani plovila so kontaktni podatki (email, telefon). Za chat morate biti prijavljeni. Charter podjetja imajo javne kontakte, zasebniki prav tako.' },
+    { v: 'Kako kontaktiram prodajalca?', o: 'Na vsaki detail strani plovila so kontaktni podatki (email, telefon), obrazec za povpraševanje in gumb za neposredni chat s prodajalcem (zahteva prijavo).' },
     { v: 'Ali je platforma varna?', o: 'Plovila pregledujemo pred objavo. Priporočamo ogled plovila v živo pred nakupom. Garbin ne izvaja finančnih transakcij — dogovor je direktno med kupcem in prodajalcem.' },
     { v: 'Kako dodam plovilo v priljubljene?', o: 'Kliknite ❤️ ikono na kartici plovila. Priljubljenike najdete v svojem dashboardu pod "Priljubljena plovila". Zahteva registracijo in prijavo.' },
     { v: 'Ali lahko primerjam več plovil?', o: 'Da! Kliknite ikono "Primerjaj" na karticah (do 3 plovil). Ko imate izbrano vsaj 2, se prikaže gumb za primerjavo, ki odpre side-by-side pregled.' },
@@ -22,7 +22,7 @@ const faqData: Record<Kategorija, { v: string; o: string }[]> = {
     { v: 'Kako se registriram kot charter podjetje?', o: 'Obiščite /registracija in izberite vlogo "Charter". Po registraciji sledite onboarding procesu: profil → plovila → paket.' },
     { v: 'Koliko plovil lahko dodam?', o: 'Z Charter paketom neomejeno plovil v floti. Cene paketa bodo objavljene ob zagonu.' },
     { v: 'Kaj je "Verified badge"?', o: 'Verified badge potrjuje pristnost in zaupanje profila. Dodelimo ga po pregledu vašega profila in dokumentacije. Pospešuje zaupanje potencialnih strank.' },
-    { v: 'Kako prejmem povpraševanja?', o: 'Stranke vas kontaktirajo direktno prek email/telefona ali prek chat sistema v aplikaciji (zahteva prijavo stranke).' },
+    { v: 'Kako prejmem povpraševanja?', o: 'Stranka odda povpraševanje prek obrazca na vašem profilu. Garbin ekipa ga prejme in vam ga posreduje na vaš e-mail.' },
     { v: 'Ali lahko objavim promocije?', o: 'Da. Pišite nam na info@garbin.si in skupaj pripravimo promocijsko kampanjo. Promocije so prikazane na /promocije in homepage-u.' },
   ],
   skiperji: [

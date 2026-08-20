@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Clock } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockNovice, unsplashNovice } from '@/data/mock'
+import { unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Novica, NovicaKategorija } from '@/types/database'
@@ -24,7 +24,7 @@ export default function NovicePage() {
       .then(({ data }) => { if (data) setRealneNovice(data as NovicaZKategorijo[]) })
   }, [])
 
-  const vseNovice = [...realneNovice, ...mockNovice]
+  const vseNovice = realneNovice
 
   return (
     <>

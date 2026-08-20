@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { Star, MapPin, CheckCircle, Send, Compass, Search, X, ChevronDown } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockSkiperji, unsplashSkipperji } from '@/data/mock'
+import { unsplashSkipperji } from '@/data/mock'
 import { createClient } from '@/lib/supabase/client'
+import { oddajPovprasevanje } from '@/app/actions/povprasevanje'
 import type { Skipper } from '@/types/database'
 
 const lokacije = ['Vse', 'Portorož', 'Izola', 'Koper', 'Piran', 'Split']
@@ -39,7 +40,7 @@ export default function SkiperjiPage() {
       .then(({ data }) => { if (data) setRealSkiperji(data) })
   }, [])
 
-  const vsiSkiperji = useMemo(() => [...realSkiperji, ...mockSkiperji], [realSkiperji])
+  const vsiSkiperji = realSkiperji
 
   const filtrirani = useMemo(() => {
     return vsiSkiperji.filter((s) => {
@@ -69,19 +70,18 @@ export default function SkiperjiPage() {
       forma.cena && `Cena/dan: ${forma.cena} €`,
     ].filter(Boolean).join('\n')
 
-    const supabase = createClient()
-    const { error } = await supabase.from('povprasevanja').insert({
+    const rezultat = await oddajPovprasevanje({
       tip: 'prijava-skipper',
       target_id: forma.lokacija || 'skipper',
       ime: forma.ime,
       email: forma.email,
-      telefon: forma.tel || null,
-      termin: null,
+      telefon: forma.tel,
+      termin: '',
       sporocilo,
     })
 
     setPosilja(false)
-    if (error) { setObrazecNapaka('Napaka pri pošiljanju vloge. Poskusite znova.'); return }
+    if (!rezultat.uspeh) { setObrazecNapaka(rezultat.napaka ?? 'Napaka pri pošiljanju vloge. Poskusite znova.'); return }
     setPoslano(true)
   }
 
@@ -311,7 +311,7 @@ export default function SkiperjiPage() {
               {[
                 { ikona: '👤', besedilo: 'Brezplačen profil' },
                 { ikona: '⭐', besedilo: 'Rating sistem' },
-                { ikona: '💬', besedilo: 'Direkten chat' },
+                { ikona: '📩', besedilo: 'Povpraševanja na mail' },
               ].map(({ ikona, besedilo }) => (
                 <div key={besedilo} className="flex flex-col items-center gap-2 p-4 bg-[#f8fafc] rounded-2xl text-center">
                   <span className="text-2xl">{ikona}</span>

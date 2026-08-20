@@ -3,14 +3,11 @@ import Link from 'next/link'
 import { ArrowLeft, MapPin, Mail, Phone, Tag, ChevronRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { mockRezervniDeli } from '@/data/mock'
 import { formatCena } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/server'
 import type { RezervniDel } from '@/types/database'
 
-async function najdiDel(id: string): Promise<RezervniDel | typeof mockRezervniDeli[number] | undefined> {
-  const mockMatch = mockRezervniDeli.find(d => d.id === id)
-  if (mockMatch) return mockMatch
+async function najdiDel(id: string): Promise<RezervniDel | undefined> {
   const supabase = await createClient()
   const { data } = await supabase.from('rezervni_deli').select('*').eq('id', id).maybeSingle()
   return data ?? undefined
@@ -39,7 +36,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function RezervniDelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const del = await najdiDel(id)
-  const podobni = mockRezervniDeli.filter(d => d.id !== id && d.kategorija === del?.kategorija).slice(0, 3)
+
+  let podobni: RezervniDel[] = []
+  if (del) {
+    const supabase = await createClient()
+    const { data } = await supabase.from('rezervni_deli').select('*')
+      .eq('potrjeno', true).eq('kategorija', del.kategorija).neq('id', id).limit(3)
+    podobni = data ?? []
+  }
 
   if (!del) {
     return (

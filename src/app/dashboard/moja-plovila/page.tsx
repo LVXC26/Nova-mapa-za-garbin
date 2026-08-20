@@ -6,7 +6,6 @@ import { useSearchParams } from 'next/navigation'
 import { PlusCircle, Ship, MapPin, Calendar, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon, Star } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import { mockPlovila } from '@/data/mock'
 import type { Plovilo } from '@/types/database'
 import { formatCena } from '@/lib/utils'
 
@@ -35,14 +34,6 @@ function MojaPlovilaContent() {
     ;(async () => {
       setZdaj(Date.now())
       if (!user) { setNalaga(false); return }
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        // Demo: pokaži mock plovila
-        setPlovila(mockPlovila.slice(0, 3))
-        setProdana(Object.fromEntries(mockPlovila.slice(0, 3).map(p => [p.id, p.prodano ?? false])))
-        setUrgentna(Object.fromEntries(mockPlovila.slice(0, 3).map(p => [p.id, p.urgentno ?? false])))
-        setNalaga(false)
-        return
-      }
 
       const supabase = createClient()
       const { data } = await supabase

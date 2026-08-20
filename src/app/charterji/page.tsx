@@ -6,8 +6,8 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import CharterKartica from '@/components/charterji/CharterKartica'
 import RangeSlider from '@/components/plovila/RangeSlider'
-import { mockCharterji } from '@/data/mock'
 import { createClient } from '@/lib/supabase/client'
+import { oddajPovprasevanje } from '@/app/actions/povprasevanje'
 import type { TipCharterja, TipCharterPlovila, Charter } from '@/types/database'
 
 const OSEBE_MIN = 1
@@ -51,7 +51,7 @@ export default function CharterjiPage() {
       .then(({ data }) => { if (data) setRealCharterji(data) })
   }, [])
 
-  const vsiCharterji = useMemo(() => [...realCharterji, ...mockCharterji], [realCharterji])
+  const vsiCharterji = realCharterji
 
   const filtrirani = useMemo(() => {
     return vsiCharterji.filter((c) => {
@@ -81,19 +81,18 @@ export default function CharterjiPage() {
     setObrazecNapaka('')
     setPosilja(true)
 
-    const supabase = createClient()
-    const { error } = await supabase.from('povprasevanja').insert({
+    const rezultat = await oddajPovprasevanje({
       tip: 'prijava-charter',
       target_id: form.tip,
       ime: form.naziv,
       email: form.email,
-      telefon: form.tel || null,
-      termin: null,
+      telefon: form.tel,
+      termin: '',
       sporocilo: form.opis,
     })
 
     setPosilja(false)
-    if (error) { setObrazecNapaka('Napaka pri pošiljanju prijave. Poskusite znova.'); return }
+    if (!rezultat.uspeh) { setObrazecNapaka(rezultat.napaka ?? 'Napaka pri pošiljanju prijave. Poskusite znova.'); return }
     setPoslano(true)
   }
 
