@@ -658,3 +658,10 @@ drop policy if exists "Prodajalec bere povprasevanja za svoja plovila" on povpra
 create policy "Prodajalec bere povprasevanja za svoja plovila" on povprasevanja for select using (
   tip = 'plovilo' and target_id in (select id::text from plovila where user_id = auth.uid())
 );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- LASTNIK LAHKO IZBRIŠE SVOJE PLOVILO (prej ni obstajala nobena delete politika)
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Lastnik brise svoje plovilo" on plovila;
+create policy "Lastnik brise svoje plovilo" on plovila for delete using (auth.uid() = user_id);
