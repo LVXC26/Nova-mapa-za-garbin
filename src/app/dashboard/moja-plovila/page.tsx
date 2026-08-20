@@ -1,313 +1,491 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { PlusCircle, Ship, MapPin, Calendar, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon, Star } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import {
+  PlusCircle, List, Ship, Heart, ArrowRight,
+  MessageCircle, Compass, Calendar,
+  CheckCircle, Activity, Star, TrendingUp
+} from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import type { Plovilo } from '@/types/database'
-import { formatCena } from '@/lib/utils'
+import type { Plovilo, Skipper, Charter } from '@/types/database'
 
-const tipIkone: Record<string, string> = {
-  jadrnica: '⛵', motorni: '🚤', gumenjak: '🛟', katamaran: '⛵', jet: '💨', drugo: '⚓',
-}
-
-function mockOglediZaId(id: string): number {
-  return (parseInt(id.replace(/\D/g, '') || '7') * 17 + 23) % 191 + 10
-}
-
-function MojaPlovilaContent() {
-  const { user, demoMode } = useAuth()
-  const searchParams = useSearchParams()
-  const promocijaStatus = searchParams.get('promocija')
-  const [plovila, setPlovila] = useState<Plovilo[]>([])
-  const [nalaga, setNalaga] = useState(true)
-  const [filter, setFilter] = useState<'vse' | 'prodaja' | 'najem'>('vse')
-  const [prodana, setProdana] = useState<Record<string, boolean>>({})
-  const [urgentna, setUrgentna] = useState<Record<string, boolean>>({})
-  const [promoviram, setPromoviram] = useState<string | null>(null)
-  const [promoNapaka, setPromoNapaka] = useState('')
-  const [zdaj, setZdaj] = useState<number | null>(null)
+function usePovprasevanjaCount(tip: 'charter' | 'skipper' | 'plovilo', targetIds: string[]) {
+  const [count, setCount] = useState<number | null>(null)
+  const kljucIds = targetIds.join(',')
 
   useEffect(() => {
     ;(async () => {
-      setZdaj(Date.now())
-      if (!user) { setNalaga(false); return }
+      if (targetIds.length === 0) { setCount(0); return }
+      const { count: c } = await createClient()
+        .from('povprasevanja')
+        .select('*', { count: 'exact', head: true })
+        .eq('tip', tip)
+        .in('target_id', targetIds)
+      setCount(c ?? 0)
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tip, kljucIds])
 
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('plovila')
+  return count
+}
+
+function useLastniCharter(userId: string | undefined) {
+  const [charter, setCharter] = useState<Charter | null>(null)
+  const [nalaga, setNalaga] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      if (!userId) { setNalaga(false); return }
+      const { data } = await createClient()
+        .from('charterji')
         .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      const seznam = data ?? []
-      setPlovila(seznam)
-      setProdana(Object.fromEntries(seznam.map((p: Plovilo) => [p.id, p.prodano ?? false])))
-      setUrgentna(Object.fromEntries(seznam.map((p: Plovilo) => [p.id, p.urgentno ?? false])))
+        .eq('user_id', userId)
+        .maybeSingle()
+      setCharter(data)
       setNalaga(false)
     })()
-  }, [user])
+  }, [userId])
 
-  async function preklopiUrgentno(id: string, trenutno: boolean) {
-    setUrgentna(prev => ({ ...prev, [id]: !trenutno }))
-    const supabase = createClient()
-    const { error } = await supabase.from('plovila').update({ urgentno: !trenutno }).eq('id', id)
-    if (error) setUrgentna(prev => ({ ...prev, [id]: trenutno }))
-  }
+  return { charter, nalaga }
+}
 
-  async function preklopiProdano(id: string, trenutno: boolean) {
-    setProdana(prev => ({ ...prev, [id]: !trenutno }))
-    const supabase = createClient()
-    const { error } = await supabase.from('plovila').update({ prodano: !trenutno }).eq('id', id)
-    if (error) setProdana(prev => ({ ...prev, [id]: trenutno }))
-  }
+function useNeprebranaCount(userId: string | undefined) {
+  const [count, setCount] = useState<number | null>(null)
 
-  async function promovirajOglas(id: string) {
-    if (demoMode) { setPromoNapaka('Promocija v demo načinu ni mogoča. Prijavite se z resničnim računom.'); return }
-    setPromoNapaka('')
-    setPromoviram(id)
-    const res = await fetch('/api/promocije/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plovilo_id: id }),
-    })
-    const json = await res.json()
-    setPromoviram(null)
-    if (!res.ok || !json.url) { setPromoNapaka(json.error ?? 'Napaka pri pripravi plačila.'); return }
-    window.location.assign(json.url)
-  }
+  useEffect(() => {
+    if (!userId) return
+    createClient()
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', userId)
+      .eq('read', false)
+      .then(({ count: c }) => setCount(c ?? 0))
+  }, [userId])
 
-  function jePromovirano(p: Plovilo): boolean {
-    if (zdaj === null) return !!p.promoted
-    return !!p.promoted && (!p.promoted_do || new Date(p.promoted_do).getTime() > zdaj)
-  }
+  return count
+}
 
-  const filtirana = plovila
-    .filter((p) => filter === 'vse' || p.tip_oglasa === filter)
-    .sort((a, b) => {
-      const aProdano = prodana[a.id] ?? false
-      const bProdano = prodana[b.id] ?? false
-      if (aProdano && !bProdano) return 1
-      if (!aProdano && bProdano) return -1
-      return 0
-    })
+function useLastnaPlovila(userId: string | undefined) {
+  const [plovila, setPlovila] = useState<Plovilo[]>([])
+  const [nalaga, setNalaga] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      if (!userId) { setNalaga(false); return }
+      const { data } = await createClient()
+        .from('plovila')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      setPlovila(data ?? [])
+      setNalaga(false)
+    })()
+  }, [userId])
+
+  return { plovila, nalaga }
+}
+
+function usePriljubljeniCount(userId: string | undefined) {
+  const [count, setCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+    createClient()
+      .from('priljubljeni')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .then(({ count: c }) => setCount(c ?? 0))
+  }, [userId])
+
+  return count
+}
+
+// ─── CHARTER DASHBOARD ───────────────────────────────────────────────
+function CharterDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
+  const { charter: lastniCharter } = useLastniCharter(userId)
+  const povprasevanjaCount = usePovprasevanjaCount('charter', lastniCharter ? [lastniCharter.id] : [])
+  const priljubljeniCount = usePriljubljeniCount(userId)
+  const { plovila, nalaga } = useLastnaPlovila(userId)
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-[#0c2340]">Moja plovila</h1>
-          <p className="text-gray-500 text-sm mt-1">Vsi vaši aktivni in nepotrjeni oglasi</p>
-        </div>
-        <Link
-          href="/dashboard/dodaj-plovilo"
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-105"
-        >
-          <PlusCircle className="w-4 h-4" />
-          Dodaj plovilo
-        </Link>
+      <div className="mb-8">
+        <h1 className="font-display text-3xl font-bold text-[#0c2340] mb-1">Dober dan! 👋</h1>
+        <p className="text-gray-500">{ime} · Charter podjetje</p>
       </div>
 
-      {promocijaStatus === 'uspesno' && (
-        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 mb-6">
-          <CheckCircle className="w-4 h-4 shrink-0" /> Plačilo je bilo uspešno. Oglas bo promoviran v nekaj trenutkih.
-        </div>
-      )}
-      {promocijaStatus === 'preklicano' && (
-        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700 mb-6">
-          Plačilo je bilo preklicano — oglas ni bil promoviran.
-        </div>
-      )}
-      {promoNapaka && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 mb-6">
-          {promoNapaka}
-        </div>
-      )}
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {[
+          { label: 'Prejetih povpraševanj', vrednost: povprasevanjaCount ?? '…', ikona: MessageCircle, barva: 'bg-emerald-50 text-emerald-600' },
+          { label: 'Priljubljenosti', vrednost: priljubljeniCount ?? '…', ikona: Heart, barva: 'bg-rose-50 text-rose-500' },
+          { label: 'Status profila', vrednost: 'Aktivno', ikona: Activity, barva: 'bg-blue-50 text-blue-600', zelena: true },
+        ].map(({ label, vrednost, ikona: Ikona, barva, zelena }) => (
+          <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${barva}`}>
+              <Ikona className="w-5 h-5" />
+            </div>
+            <p className={`font-display text-2xl font-bold ${zelena ? 'text-emerald-600' : 'text-[#0c2340]'}`}>{vrednost}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+          </div>
+        ))}
+      </div>
 
-      {nalaga ? (
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="w-6 h-6 text-[#c9a84c] animate-spin" />
+      {/* Hiter dostop */}
+      <h2 className="font-semibold text-[#0c2340] mb-4">Hitri dostop</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        {[
+          { href: '/dashboard/dodaj-plovilo', label: 'Dodaj plovilo', opis: 'Razširi svojo floto', ikona: PlusCircle, cls: 'bg-[#0c2340] text-white' },
+          { href: '/dashboard/moja-plovila', label: 'Moja plovila', opis: `${plovila.length} aktivnih`, ikona: Ship, cls: 'bg-[#c9a84c] text-[#0c2340]' },
+        ].map(({ href, label, opis, ikona: Ikona, cls }) => (
+          <Link key={href} href={href}
+            className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md group ${cls}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.includes('white') ? 'bg-gray-100' : 'bg-white/20'}`}>
+              <Ikona className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">{label}</p>
+              <p className={`text-xs mt-0.5 ${cls.includes('white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
+            </div>
+            <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+        ))}
+      </div>
+
+      {/* Moja plovila preview */}
+      <h2 className="font-semibold text-[#0c2340] mb-4">Vaša plovila</h2>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {nalaga ? (
+          <div className="p-8 text-center text-sm text-gray-400">Nalagam...</div>
+        ) : plovila.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">Nimate še nobenega plovila.</div>
+        ) : (
+          plovila.slice(0, 3).map((p, i) => (
+            <div key={p.id} className={`flex items-center gap-4 p-4 ${i < Math.min(plovila.length, 3) - 1 ? 'border-b border-gray-50' : ''}`}>
+              <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0">⛵</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[#0c2340] text-sm truncate">{p.naziv}</p>
+                <p className="text-xs text-gray-500">{p.lokacija} · {p.letnik}</p>
+              </div>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${p.potrjeno ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {p.potrjeno ? 'Aktivno' : 'V pregledu'}
+              </span>
+            </div>
+          ))
+        )}
+        <div className="p-4 border-t border-gray-50">
+          <Link href="/dashboard/moja-plovila" className="text-sm text-[#c9a84c] font-medium hover:underline">
+            Vsa plovila →
+          </Link>
         </div>
-      ) : plovila.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
-          <Ship className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-          <p className="font-medium text-gray-400 mb-1">Nimate še nobenih oglasov</p>
-          <p className="text-sm text-gray-300 mb-6">Dodajte svoje prvo plovilo na trg.</p>
-          <Link
-            href="/dashboard/dodaj-plovilo"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0c2340] text-white font-medium text-sm rounded-full hover:bg-[#1e3a5f] transition-all"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Dodaj prvo plovilo
+      </div>
+    </div>
+  )
+}
+
+// ─── SKIPPER DASHBOARD ────────────────────────────────────────────────
+function useLastniSkipper(userId: string | undefined) {
+  const [skipper, setSkipper] = useState<Skipper | null>(null)
+  const [nalaga, setNalaga] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      if (!userId) { setNalaga(false); return }
+      const { data } = await createClient()
+        .from('skiperji')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+      setSkipper(data)
+      setNalaga(false)
+    })()
+  }, [userId])
+
+  return { skipper, nalaga }
+}
+
+function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
+  const { skipper: lastniSkipper, nalaga: nalagaSkipper } = useLastniSkipper(userId)
+  const povprasevanjaCount = usePovprasevanjaCount('skipper', lastniSkipper ? [lastniSkipper.id] : [])
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="font-display text-3xl font-bold text-[#0c2340] mb-1">Dober dan! 🧭</h1>
+        <p className="text-gray-500">{ime} · Skipper</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {[
+          { label: 'Prejetih povpraševanj', vrednost: povprasevanjaCount ?? '…', ikona: MessageCircle, barva: 'bg-purple-50 text-purple-600', zelena: false },
+          { label: 'Ocena', vrednost: lastniSkipper ? lastniSkipper.ocena.toFixed(1) : '—', ikona: Heart, barva: 'bg-rose-50 text-rose-500', zelena: false },
+          { label: 'Status profila', vrednost: lastniSkipper ? 'Aktivno' : 'Ni izpolnjen', ikona: Activity, barva: 'bg-blue-50 text-blue-600', zelena: !!lastniSkipper },
+        ].map(({ label, vrednost, ikona: Ikona, barva, zelena }) => (
+          <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${barva}`}>
+              <Ikona className="w-5 h-5" />
+            </div>
+            <p className={`font-display text-2xl font-bold ${zelena ? 'text-emerald-600' : 'text-[#0c2340]'}`}>{vrednost}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Hiter dostop */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        {[
+          { href: '/dashboard/profil', label: 'Uredi profil', opis: 'Posodobi certifikate in bio', ikona: Compass, cls: 'bg-[#0c2340] text-white' },
+          { href: '/dashboard/ocene', label: 'Ocene', opis: 'Poglej prejete ocene', ikona: Star, cls: 'bg-[#c9a84c] text-[#0c2340]' },
+        ].map(({ href, label, opis, ikona: Ikona, cls }) => (
+          <Link key={href} href={href}
+            className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.includes('white') ? 'bg-gray-100' : 'bg-white/20'}`}>
+              <Ikona className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-sm">{label}</p>
+              <p className="text-xs mt-0.5 opacity-70">{opis}</p>
+            </div>
+            <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+        ))}
+      </div>
+
+      {/* Profil povzetek */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 className="font-semibold text-[#0c2340] mb-4">Vaš skipper profil</h2>
+        {nalagaSkipper ? (
+          <p className="text-sm text-gray-400 py-4 text-center">Nalagam...</p>
+        ) : !lastniSkipper ? (
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-500 mb-4">Vaš skipper profil še ni izpolnjen — dokler ga ne dopolnite, vas kupci ne vidijo na strani skiperjev.</p>
+            <Link href="/dashboard/profil" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] text-[#0c2340] font-semibold text-sm rounded-full hover:bg-[#e8c76d] transition-all">
+              Izpolni profil
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-[#0c2340]/10 flex items-center justify-center text-3xl">👨‍✈️</div>
+              <div>
+                <p className="font-bold text-[#0c2340]">{lastniSkipper.ime}</p>
+                <p className="text-sm text-gray-500">{lastniSkipper.lokacija} · {lastniSkipper.izkusnje_let} let izkušenj</p>
+                <div className="flex items-center gap-1 mt-1">
+                  {Array.from({length: 5}).map((_, i) => (
+                    <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(lastniSkipper.ocena) ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                  ))}
+                  <span className="text-xs text-gray-500 ml-1">{lastniSkipper.ocena.toFixed(1)} ({lastniSkipper.st_ocen} ocen)</span>
+                </div>
+              </div>
+              <div className="ml-auto">
+                {lastniSkipper.verified && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-1.5 rounded-full">
+                    <CheckCircle className="w-3.5 h-3.5" /> Verificiran
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {lastniSkipper.certifikati.map(c => (
+                <span key={c} className="text-xs px-2.5 py-1 bg-[#0c2340]/5 text-[#0c2340] rounded-full font-medium">{c}</span>
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
+              <p className="text-sm text-gray-500">Cena: <span className="font-bold text-[#0c2340]">{lastniSkipper.cena_dan} € / dan</span></p>
+              <Link href={`/skiperji/${lastniSkipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline">
+                Oglej profil →
+              </Link>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── KUPEC DASHBOARD ──────────────────────────────────────────────────
+function KupecDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
+  const priljubljeniCount = usePriljubljeniCount(userId)
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="font-display text-3xl font-bold text-[#0c2340] mb-1">Dober dan! 🚢</h1>
+        <p className="text-gray-500">{ime} · Kupec</p>
+      </div>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {[
+          { href: '/plovila', label: 'Išči plovila', opis: 'Poiščite svojo jadrnico', ikona: Ship, cls: 'bg-[#0c2340] text-white' },
+          { href: '/charterji', label: 'Charter ponudbe', opis: 'Prevereni ponudniki najema', ikona: Calendar, cls: 'bg-[#c9a84c] text-[#0c2340]' },
+          { href: '/skiperji', label: 'Najdi skipperja', opis: 'Profesionalni vodniki plovil', ikona: Compass, cls: 'bg-white border border-gray-200 text-[#0c2340]' },
+        ].map(({ href, label, opis, ikona: Ikona, cls }) => (
+          <Link key={href} href={href}
+            className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.includes('white') ? 'bg-gray-100' : 'bg-white/20'}`}>
+              <Ikona className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-sm">{label}</p>
+              <p className={`text-xs mt-0.5 ${cls.includes('white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
+            </div>
+            <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+        ))}
+      </div>
+
+      {/* Priljubljena plovila */}
+      <h2 className="font-semibold text-[#0c2340] mb-4">Priljubljena plovila</h2>
+      {priljubljeniCount ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Heart className="w-8 h-8 text-rose-400" />
+            <div>
+              <p className="font-semibold text-[#0c2340]">{priljubljeniCount} shranjenih plovil</p>
+              <p className="text-sm text-gray-500">Poglejte si jih na vašem seznamu priljubljenih.</p>
+            </div>
+          </div>
+          <Link href="/dashboard/priljubljeni"
+            className="px-4 py-2.5 bg-[#0c2340] text-white font-medium text-sm rounded-full hover:bg-[#1e3a5f] transition-all whitespace-nowrap">
+            Poglej vse
           </Link>
         </div>
       ) : (
-        <>
-          <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-full w-fit">
-            {([
-              { vrednost: 'vse', label: 'Vse' },
-              { vrednost: 'prodaja', label: 'Za prodajo' },
-              { vrednost: 'najem', label: 'Za najem' },
-            ] as { vrednost: typeof filter; label: string }[]).map(({ vrednost, label }) => (
-              <button
-                key={vrednost}
-                onClick={() => setFilter(vrednost)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  filter === vrednost ? 'bg-white text-[#0c2340] shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {label}
-                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                  filter === vrednost ? 'bg-[#0c2340]/10 text-[#0c2340]' : 'bg-gray-200 text-gray-500'
-                }`}>
-                  {vrednost === 'vse' ? plovila.length : plovila.filter(p => p.tip_oglasa === vrednost).length}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            {filtirana.map((plovilo) => {
-              const jeProdano = prodana[plovilo.id] ?? false
-              const jeUrgentno = urgentna[plovilo.id] ?? false
-              const ogledi = mockOglediZaId(plovilo.id)
-
-              return (
-                <div
-                  key={plovilo.id}
-                  className={`bg-white rounded-2xl border shadow-sm p-5 flex items-center gap-5 transition-all ${
-                    jeProdano ? 'border-gray-200 opacity-60' : 'border-gray-100'
-                  }`}
-                >
-                  <div className="w-12 h-12 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-2xl shrink-0 relative">
-                    {tipIkone[plovilo.tip] ?? '⚓'}
-                    {jeProdano && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <h3 className={`font-semibold truncate ${jeProdano ? 'text-gray-400 line-through' : 'text-[#0c2340]'}`}>
-                        {plovilo.naziv}
-                      </h3>
-                      {jeProdano && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#0c2340] text-white shrink-0">PRODANO</span>
-                      )}
-                      {jeUrgentno && !jeProdano && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-red-600 text-white shrink-0 flex items-center gap-1">
-                          <Zap className="w-3 h-3" /> Nujno
-                        </span>
-                      )}
-                      {jePromovirano(plovilo) && !jeProdano && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#c9a84c] text-[#0c2340] shrink-0 flex items-center gap-1">
-                          <Star className="w-3 h-3" /> Promovirano
-                        </span>
-                      )}
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                        plovilo.tip_oglasa === 'najem' ? 'bg-[#c9a84c]/15 text-[#9a7a2e]' : 'bg-[#0c2340]/10 text-[#0c2340]'
-                      }`}>
-                        {plovilo.tip_oglasa === 'najem' ? 'Najem' : 'Prodaja'}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                        plovilo.potrjeno ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                      }`}>
-                        {plovilo.potrjeno ? 'Aktivno' : 'V pregledu'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
-                      {plovilo.lokacija && (
-                        <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {plovilo.lokacija}</span>
-                      )}
-                      {plovilo.letnik && (
-                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {plovilo.letnik}</span>
-                      )}
-                      {/* Ogledi — samo za prodajalca, nikoli javno */}
-                      <span className="flex items-center gap-1 text-xs text-gray-400">
-                        <EyeIcon className="w-3 h-3" /> {ogledi} ogledov
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    {plovilo.cena_na_zahtevo ? (
-                      <p className="text-sm font-semibold text-gray-500 italic">Cena na zahtevo</p>
-                    ) : (
-                      <p className="font-bold text-[#0c2340]">{formatCena(plovilo.cena)}</p>
-                    )}
-                    {plovilo.tip_oglasa === 'najem' && <p className="text-xs text-gray-400">/ teden</p>}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* Promocija */}
-                    {!jeProdano && !jePromovirano(plovilo) && (
-                      <button
-                        onClick={() => promovirajOglas(plovilo.id)}
-                        disabled={promoviram === plovilo.id}
-                        title="Promoviraj oglas"
-                        className="p-2 rounded-xl text-gray-400 hover:text-[#c9a84c] hover:bg-amber-50 transition-colors disabled:opacity-50"
-                      >
-                        {promoviram === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
-                      </button>
-                    )}
-                    {/* Urgentna prodaja */}
-                    {!jeProdano && (
-                      <button
-                        onClick={() => preklopiUrgentno(plovilo.id, jeUrgentno)}
-                        title={jeUrgentno ? 'Odstrani urgentno' : 'Označi kot urgentno'}
-                        className={`p-2 rounded-xl transition-colors ${
-                          jeUrgentno ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
-                        }`}
-                      >
-                        <Zap className="w-4 h-4" />
-                      </button>
-                    )}
-                    {/* Prodano */}
-                    <button
-                      onClick={() => preklopiProdano(plovilo.id, jeProdano)}
-                      title={jeProdano ? 'Označi kot aktivno' : 'Označi kot prodano'}
-                      className={`p-2 rounded-xl transition-colors ${
-                        jeProdano ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
-                      }`}
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                    </button>
-                    {/* Pregled */}
-                    <Link
-                      href={`/plovila/${plovilo.id}`}
-                      target="_blank"
-                      className="p-2 rounded-xl text-gray-400 hover:text-[#0c2340] hover:bg-gray-100 transition-colors"
-                      title="Pregled"
-                    >
-                      {plovilo.potrjeno ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </Link>
-                    {/* Uredi */}
-                    <Link
-                      href={`/dashboard/dodaj-plovilo?edit=${plovilo.id}`}
-                      className="p-2 rounded-xl text-gray-400 hover:text-[#c9a84c] hover:bg-gray-100 transition-colors"
-                      title="Uredi"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+          <Heart className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+          <p className="font-medium text-gray-400 mb-1">Nimate shranjenih plovil</p>
+          <p className="text-sm text-gray-300 mb-5">Kliknite ❤ na katerikoli kartici plovila.</p>
+          <Link href="/plovila"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] text-[#0c2340] font-semibold text-sm rounded-full hover:bg-[#e8c76d] transition-all hover:scale-105">
+            <Ship className="w-4 h-4" /> Išči plovila
+          </Link>
+        </div>
       )}
     </div>
   )
 }
 
-export default function MojaPlovilaPage() {
+// ─── PRODAJALEC DASHBOARD ─────────────────────────────────────────────
+function useShranjenoPriKupcih(plovilaIds: string[]) {
+  const [count, setCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    ;(async () => {
+      if (plovilaIds.length === 0) { setCount(0); return }
+      const { count: c } = await createClient()
+        .from('priljubljeni')
+        .select('*', { count: 'exact', head: true })
+        .in('plovilo_id', plovilaIds)
+      setCount(c ?? 0)
+    })()
+  }, [plovilaIds])
+
+  return count
+}
+
+function ProdajalecDashboard({ ime, vloga, userId }: { ime: string; vloga: string | null; userId: string | undefined }) {
+  const neprebrana = useNeprebranaCount(userId)
+  const { plovila, nalaga } = useLastnaPlovila(userId)
+  const povprasevanjaCount = usePovprasevanjaCount('plovilo', plovila.map(p => p.id))
+  const shranjenaCount = useShranjenoPriKupcih(plovila.map(p => p.id))
+
   return (
-    <Suspense fallback={<div className="p-8 flex items-center justify-center"><Loader2 className="w-6 h-6 text-[#c9a84c] animate-spin" /></div>}>
-      <MojaPlovilaContent />
-    </Suspense>
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="font-display text-3xl font-bold text-[#0c2340] mb-1">
+          Dober dan, {ime.split(' ')[0]} 👋
+        </h1>
+        <p className="text-gray-500">
+          {vloga === 'charter' || vloga === 'oba' ? 'Upravljajte svoje oglase in charter ponudbo.' : 'Upravljajte svoje oglase na Garbin.'}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {[
+          { label: 'Aktivnih oglasov', vrednost: String(plovila.filter(p => p.potrjeno).length), ikona: List, barva: 'bg-blue-50 text-blue-600' },
+          { label: 'Prejetih povpraševanj', vrednost: povprasevanjaCount ?? '…', ikona: MessageCircle, barva: 'bg-emerald-50 text-emerald-600' },
+          { label: 'Shranjenih s strani kupcev', vrednost: shranjenaCount ?? '…', ikona: TrendingUp, barva: 'bg-amber-50 text-amber-600' },
+        ].map(({ label, vrednost, ikona: Ikona, barva }) => (
+          <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${barva}`}>
+              <Ikona className="w-5 h-5" />
+            </div>
+            <p className="font-display text-2xl font-bold text-[#0c2340]">{vrednost}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="font-semibold text-[#0c2340] mb-4">Hitri dostop</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {[
+          { href: '/dashboard/dodaj-plovilo', label: 'Dodaj plovilo za prodajo', opis: 'Objavi oglas v manj kot 5 minutah', ikona: PlusCircle, cls: 'bg-[#0c2340] text-white' },
+          { href: '/dashboard/moja-plovila', label: 'Moji oglasi', opis: 'Upravljajte obstoječe oglase', ikona: List, cls: 'bg-white border border-gray-200 text-[#0c2340]' },
+          { href: '/chat', label: 'Sporočila', opis: neprebrana ? `${neprebrana} neprebranih` : 'Ni neprebranih', ikona: MessageCircle, cls: 'bg-[#c9a84c] text-[#0c2340]' },
+        ].map(({ href, label, opis, ikona: Ikona, cls }) => (
+          <Link key={href} href={href}
+            className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.includes('white') ? 'bg-gray-100' : 'bg-white/20'}`}>
+              <Ikona className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">{label}</p>
+              <p className={`text-xs mt-0.5 ${cls.includes('white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
+            </div>
+            <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+        ))}
+      </div>
+
+      <h2 className="font-semibold text-[#0c2340] mb-4">Vaši oglasi</h2>
+      {nalaga ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center text-sm text-gray-400">Nalagam...</div>
+      ) : plovila.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+          <div className="text-4xl mb-3">⚓</div>
+          <p className="font-medium text-gray-500 mb-1">Nimate še nobenih oglasov</p>
+          <p className="text-sm text-gray-400 mb-5">Dodajte svoje prvo plovilo in začnite prodajati.</p>
+          <Link href="/dashboard/dodaj-plovilo"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-105">
+            <PlusCircle className="w-4 h-4" /> Dodaj plovilo
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          {plovila.slice(0, 5).map((p, i) => (
+            <div key={p.id} className={`flex items-center gap-4 p-4 ${i < Math.min(plovila.length, 5) - 1 ? 'border-b border-gray-50' : ''}`}>
+              <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0">⚓</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[#0c2340] text-sm truncate">{p.naziv}</p>
+                <p className="text-xs text-gray-500">{p.lokacija}</p>
+              </div>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${p.potrjeno ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {p.potrjeno ? 'Aktivno' : 'V pregledu'}
+              </span>
+            </div>
+          ))}
+          <div className="p-4 border-t border-gray-50">
+            <Link href="/dashboard/moja-plovila" className="text-sm text-[#c9a84c] font-medium hover:underline">
+              Vsi oglasi →
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
   )
+}
+
+// ─── MAIN ─────────────────────────────────────────────────────────────
+export default function DashboardPage() {
+  const { user, vloga } = useAuth()
+  const ime = user?.user_metadata?.ime ?? 'Uporabnik'
+
+  if (vloga === 'charter') return <CharterDashboard ime={ime} userId={user?.id} />
+  if (vloga === 'skipper') return <SkipperDashboard ime={ime} userId={user?.id} />
+  if (vloga === 'kupec') return <KupecDashboard ime={ime} userId={user?.id} />
+  return <ProdajalecDashboard ime={ime} vloga={vloga} userId={user?.id} />
 }
