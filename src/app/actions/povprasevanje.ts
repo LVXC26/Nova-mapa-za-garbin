@@ -54,29 +54,36 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
       'prijava-skipper': 'Prijava novega skiperja',
     }
     const tipLabel = tipLabele[data.tip]
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${resendKey}`,
-      },
-      body: JSON.stringify({
-        from: 'Garbin <noreply@garbin.si>',
-        to: obvestiloEmail,
-        subject: `Novo povpraševanje — ${tipLabel}`,
-        html: `
-          <h2 style="color:#0c2340;">Novo povpraševanje na Garbin</h2>
-          <table style="border-collapse:collapse;width:100%;font-family:sans-serif;font-size:14px;">
-            <tr><td style="padding:8px;color:#666;">Ime:</td><td style="padding:8px;font-weight:600;">${data.ime}</td></tr>
-            <tr><td style="padding:8px;color:#666;">E-mail:</td><td style="padding:8px;"><a href="mailto:${data.email}">${data.email}</a></td></tr>
-            <tr><td style="padding:8px;color:#666;">Telefon:</td><td style="padding:8px;">${data.telefon || '—'}</td></tr>
-            <tr><td style="padding:8px;color:#666;">Termin:</td><td style="padding:8px;">${data.termin || '—'}</td></tr>
-            <tr><td style="padding:8px;color:#666;">Sporočilo:</td><td style="padding:8px;">${data.sporocilo}</td></tr>
-            <tr><td style="padding:8px;color:#666;">Tip / ID:</td><td style="padding:8px;">${tipLabel} / ${data.target_id}</td></tr>
-          </table>
-        `,
-      }),
-    }).catch(err => console.error('Email send error:', err))
+    try {
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${resendKey}`,
+        },
+        body: JSON.stringify({
+          from: 'Garbin <onboarding@resend.dev>',
+          to: obvestiloEmail,
+          subject: `Novo povpraševanje — ${tipLabel}`,
+          html: `
+            <h2 style="color:#0c2340;">Novo povpraševanje na Garbin</h2>
+            <table style="border-collapse:collapse;width:100%;font-family:sans-serif;font-size:14px;">
+              <tr><td style="padding:8px;color:#666;">Ime:</td><td style="padding:8px;font-weight:600;">${data.ime}</td></tr>
+              <tr><td style="padding:8px;color:#666;">E-mail:</td><td style="padding:8px;"><a href="mailto:${data.email}">${data.email}</a></td></tr>
+              <tr><td style="padding:8px;color:#666;">Telefon:</td><td style="padding:8px;">${data.telefon || '—'}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Termin:</td><td style="padding:8px;">${data.termin || '—'}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Sporočilo:</td><td style="padding:8px;">${data.sporocilo}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Tip / ID:</td><td style="padding:8px;">${tipLabel} / ${data.target_id}</td></tr>
+            </table>
+          `,
+        }),
+      })
+      if (!resendRes.ok) {
+        console.error('Resend API error:', resendRes.status, await resendRes.text())
+      }
+    } catch (err) {
+      console.error('Email send error:', err)
+    }
   }
 
   return { uspeh: true }
