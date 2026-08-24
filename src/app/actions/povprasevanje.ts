@@ -64,6 +64,7 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
         body: JSON.stringify({
           from: 'Garbin <onboarding@resend.dev>',
           to: obvestiloEmail,
+          reply_to: data.email,
           subject: `Novo povpraševanje — ${tipLabel}`,
           html: `
             <h2 style="color:#0c2340;">Novo povpraševanje na Garbin</h2>
