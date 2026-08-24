@@ -73,7 +73,7 @@ function ChatPageContent() {
 
         const currentKonv = aktivnaKonvRef.current
         if (currentKonv && (msg.sender_id === currentKonv || msg.receiver_id === currentKonv)) {
-          setSporocila(prev => [...prev, msg])
+          setSporocila(prev => prev.some(s => s.id === msg.id) ? prev : [...prev, msg])
           setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
           if (msg.receiver_id === user.id) {
             await supabase.from('messages').update({ read: true }).eq('id', msg.id)
