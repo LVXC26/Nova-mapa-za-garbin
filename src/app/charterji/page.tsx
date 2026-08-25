@@ -266,7 +266,7 @@ export default function CharterjiPage() {
                   <CheckCircle className="w-8 h-8 text-emerald-500" />
                 </div>
                 <h3 className="font-display text-2xl font-semibold text-[#0c2340]">Prijava poslana!</h3>
-                <p className="text-gray-500">Kontaktirali vas bomo v 1–2 delovnih dneh.</p>
+                <p className="text-gray-500">Kontaktirali vas bomo v 12 urah.</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="bg-[#f8fafc] rounded-2xl border border-gray-100 p-8 space-y-5">
