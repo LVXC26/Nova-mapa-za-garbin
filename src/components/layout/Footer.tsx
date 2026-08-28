@@ -64,8 +64,8 @@ export default function Footer() {
               Slovensko tržišče plovil. Kupite ali prodajte jadrnico, motorni čoln ali gumenjak z zaupanjem.
             </p>
             <div className="flex flex-col gap-2.5 text-sm mb-6">
-              <a href="mailto:info@garbin.si" className="flex items-center gap-2 hover:text-[#c9a84c] transition-colors">
-                <Mail className="w-4 h-4 text-[#c9a84c]" /> info@garbin.si
+              <a href="mailto:onboarding@resend.dev" className="flex items-center gap-2 hover:text-[#c9a84c] transition-colors">
+                <Mail className="w-4 h-4 text-[#c9a84c]" /> onboarding@resend.dev
               </a>
               <a href="tel:+38651234567" className="flex items-center gap-2 hover:text-[#c9a84c] transition-colors">
                 <Phone className="w-4 h-4 text-[#c9a84c]" /> +386 5 123 45 67
