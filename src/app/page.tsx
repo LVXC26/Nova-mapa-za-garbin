@@ -281,7 +281,7 @@ export default function HomePage() {
                   {[
                     { ikona: '👤', naslov: 'Profil na platformi', opis: 'Vaši certifikati, izkušnje in plovila v enem profilu' },
                     { ikona: '⭐', naslov: 'Rating sistem', opis: 'Zgradite reputacijo z ocenami strank' },
-                    { ikona: '📞', naslov: 'Direkten kontakt', opis: 'Stranke vas kontaktirajo neposredno prek chata' },
+                    { ikona: '📞', naslov: 'Direkten kontakt', opis: 'Stranke vas kontaktirajo prek povpraševanja, ki pride naravnost na vaš e-mail' },
                   ].map(({ ikona, naslov, opis }) => (
                     <div key={naslov} className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-[#0c2340]/8 flex items-center justify-center text-xl shrink-0">{ikona}</div>

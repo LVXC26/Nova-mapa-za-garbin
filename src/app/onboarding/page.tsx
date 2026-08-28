@@ -342,12 +342,12 @@ export default function OnboardingPage() {
                     'Neomejeno plovil v floti',
                     'Verified badge na profilu',
                     'Prioritetni prikaz v iskanju',
-                    'Real-time chat s strankami',
+                    'Povpraševanja neposredno na e-mail',
                   ] : [
                     'Profesionalni skipper profil',
                     'Rating in reviews sistem',
                     'Prioriteta v iskalnih rezultatih',
-                    'Real-time chat s strankami',
+                    'Povpraševanja neposredno na e-mail',
                   ]).map(b => (
                     <li key={b} className="flex items-center gap-2 text-white/80 text-sm">
                       <CheckCircle className="w-4 h-4 text-[#c9a84c] shrink-0" /> {b}

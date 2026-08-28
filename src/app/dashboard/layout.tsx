@@ -21,7 +21,6 @@ function getNavLinks(vloga: string | null): NavItem[] {
         { href: '/dashboard/dodaj-plovilo', label: 'Dodaj plovilo', ikona: PlusCircle },
         { href: '/dashboard/profil', label: 'Moj profil', ikona: UserCircle },
         { href: '/dashboard/feed', label: 'Feed & objave', ikona: Image },
-        { href: '/chat', label: 'Sporočila', ikona: MessageCircle },
         { href: '/dashboard/paket', label: 'Paket', ikona: Zap },
         { href: '/dashboard/nastavitve', label: 'Nastavitve', ikona: Settings },
       ]
@@ -31,7 +30,6 @@ function getNavLinks(vloga: string | null): NavItem[] {
         { href: '/dashboard/profil', label: 'Moj profil', ikona: UserCircle },
         { href: '/dashboard/feed', label: 'Feed & objave', ikona: Image },
         { href: '/dashboard/ocene', label: 'Moje ocene', ikona: Star },
-        { href: '/chat', label: 'Sporočila', ikona: MessageCircle },
         { href: '/dashboard/paket', label: 'Paket', ikona: Zap },
         { href: '/dashboard/nastavitve', label: 'Nastavitve', ikona: Settings },
       ]
