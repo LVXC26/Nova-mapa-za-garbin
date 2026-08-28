@@ -119,6 +119,7 @@ export interface Charter {
   kontakt_tel: string
   spletna_stran: string | null
   ocena: number
+  st_ocen: number
   st_plovil: number
   max_oseb: number
   max_dolzina_m: number

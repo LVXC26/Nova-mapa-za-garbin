@@ -73,6 +73,7 @@ export default function OnboardingPage() {
         st_plovil: 0,
         verified: false,
         ocena: 0,
+        st_ocen: 0,
         max_oseb: 0,
         max_dolzina_m: 0,
       }, { onConflict: 'user_id' })

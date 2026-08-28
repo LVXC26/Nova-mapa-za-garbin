@@ -144,6 +144,7 @@ export default function ProfilPage() {
             tip: 'podjetje',
             verified: false,
             ocena: 0,
+            st_ocen: 0,
             max_oseb: 0,
             max_dolzina_m: 0,
           })

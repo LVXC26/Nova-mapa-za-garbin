@@ -910,3 +910,57 @@ where id = 'plovila-slike';
 alter table profiles drop constraint if exists profiles_vloga_check;
 alter table profiles add constraint profiles_vloga_check
   check (vloga in ('prodajalec', 'charter', 'skipper', 'kupec', 'oba'));
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POPRAVEK: skiperji.ocena / st_ocen (in charterji.ocena / st_ocen) se
+-- ob oddaji ocene nikoli nista posodobila. Stran s podrobnostmi
+-- skiperja si oceno izračuna sama iz "ratings" tabele, zato je tam
+-- videti pravilno — a seznam /skiperji in vsa druga mesta, ki berejo
+-- neposredno stolpec skiperji.ocena, so vedno prikazovala 0.0 ★ (0),
+-- ne glede na to, koliko resničnih ocen je skipper prejel.
+-- Trigger zdaj po vsaki spremembi v "ratings" preračuna in shrani
+-- pravo povprečje + število ocen na ciljni skiperji/charterji vrstici.
+-- UPDATE spodaj enkratno "poravna" že obstoječe ocene za nazaj.
+-- ═══════════════════════════════════════════════════════════════════
+
+-- charterji nikoli ni dobil st_ocen stolpca (skiperji ga je dobil prej
+-- v tej datoteki) — brez njega bi spodnji trigger padel na prvi oceni
+-- tipa 'charter'.
+alter table charterji add column if not exists st_ocen integer not null default 0;
+
+create or replace function posodobi_oceno_po_oceni()
+returns trigger as $$
+declare
+  ciljni_id uuid := coalesce(new.rated_id, old.rated_id);
+  ciljni_tip text := coalesce(new.rated_type, old.rated_type);
+  povprecje numeric;
+  stevilo integer;
+begin
+  select coalesce(avg(score), 0), count(*) into povprecje, stevilo
+  from ratings
+  where rated_id = ciljni_id and rated_type = ciljni_tip;
+
+  if ciljni_tip = 'skipper' then
+    update skiperji set ocena = round(povprecje, 2), st_ocen = stevilo where id = ciljni_id;
+  elsif ciljni_tip = 'charter' then
+    update charterji set ocena = round(povprecje, 2), st_ocen = stevilo where id = ciljni_id;
+  end if;
+
+  return coalesce(new, old);
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_posodobi_oceno_po_oceni on ratings;
+create trigger trg_posodobi_oceno_po_oceni
+after insert or update or delete on ratings
+for each row execute function posodobi_oceno_po_oceni();
+
+-- Enkratna poravnava za nazaj (varno za ponovni zagon — vedno samo
+-- prepiše na trenutno pravilno vrednost, izračunano iz ratings).
+update skiperji s set
+  ocena = coalesce((select round(avg(r.score), 2) from ratings r where r.rated_id = s.id and r.rated_type = 'skipper'), 0),
+  st_ocen = coalesce((select count(*) from ratings r where r.rated_id = s.id and r.rated_type = 'skipper'), 0);
+
+update charterji c set
+  ocena = coalesce((select round(avg(r.score), 2) from ratings r where r.rated_id = c.id and r.rated_type = 'charter'), 0),
+  st_ocen = coalesce((select count(*) from ratings r where r.rated_id = c.id and r.rated_type = 'charter'), 0);

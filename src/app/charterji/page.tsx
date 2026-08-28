@@ -57,7 +57,7 @@ export default function CharterjiPage() {
     return vsiCharterji.filter((c) => {
       if (filter !== 'vse' && c.tip !== filter) return false
       if (tipPlovila && !c.tip_plovila.includes(tipPlovila)) return false
-      if (c.max_oseb < osebe[0]) return false
+      if (c.max_oseb < osebe[0] || c.max_oseb > osebe[1]) return false
       if (c.max_dolzina_m < dolzina[0] || c.max_dolzina_m > dolzina[1]) return false
       return true
     })
