@@ -23,13 +23,13 @@ const faqData: Record<Kategorija, { v: string; o: string }[]> = {
     { v: 'Koliko plovil lahko dodam?', o: 'Z Charter paketom neomejeno plovil v floti. Cene paketa bodo objavljene ob zagonu.' },
     { v: 'Kaj je "Verified badge"?', o: 'Verified badge potrjuje pristnost in zaupanje profila. Dodelimo ga po pregledu vašega profila in dokumentacije. Pospešuje zaupanje potencialnih strank.' },
     { v: 'Kako prejmem povpraševanja?', o: 'Stranka odda povpraševanje prek obrazca na vašem profilu. Garbin ekipa ga prejme in vam ga posreduje na vaš e-mail.' },
-    { v: 'Ali lahko objavim promocije?', o: 'Da. Pišite nam na info@garbin.si in skupaj pripravimo promocijsko kampanjo. Promocije so prikazane na /promocije in homepage-u.' },
+    { v: 'Ali lahko objavim promocije?', o: 'Da. Pišite nam na matej@lumavx.com in skupaj pripravimo promocijsko kampanjo. Promocije so prikazane na /promocije in homepage-u.' },
   ],
   skiperji: [
     { v: 'Kako se registriram kot skipper?', o: 'Obiščite /registracija → "Skipper" → izberite tip (Samostojni skipper / Skipper agencija) → izpolnite profil.' },
     { v: 'Kaj je razlika med Samostojnim skipperjem in Skipper agencijo?', o: 'Samostojni skipper ima osebni profil z bio in feed-om. Skipper agencija ima firmski profil z ekipo skiperjev, JAVNIM kontaktom in broader presence. Kontakt Samostojnega je dostopen samo prijavljenim.' },
     { v: 'Kako objavim sliko v moj feed?', o: 'V dashboardu pod "Social feed" dodajte sliko in opis. Objava je vidna na vašem javnem profilu. Tuje objave na vašem profilu morate najprej odobriti.' },
-    { v: 'Kako pridem do "Verified" statusa?', o: 'Po registraciji pošljite kopijo certifikatov (ICC, VHF, STCW...) na info@garbin.si. Preverimo in dodelimo badge v 2 delovnih dneh.' },
+    { v: 'Kako pridem do "Verified" statusa?', o: 'Po registraciji pošljite kopijo certifikatov (ICC, VHF, STCW...) na matej@lumavx.com. Preverimo in dodelimo badge v 2 delovnih dneh.' },
     { v: 'Ali je kontakt z mano javen?', o: 'Odvisno od tipa: Samostojni skipper — kontakt viden SAMO prijavljenim. Skipper agencija — kontakt JAVEN (email + telefon).' },
   ],
   splosno: [
@@ -37,7 +37,7 @@ const faqData: Record<Kategorija, { v: string; o: string }[]> = {
     { v: 'Ali ima Garbin mobilno aplikacijo?', o: 'Spletna stran je optimizirana za mobilne naprave. PWA (Progressive Web App) podpora pride kmalu — namestljiva na telefon brez App Store.' },
     { v: 'Kako prijavim napačen oglas?', o: 'Na vsaki detail strani je gumb za prijavo. Vse prijave pregledamo v 24 urah.' },
     { v: 'Kako izbrišem račun?', o: 'V nastavitvah računa (/dashboard/nastavitve) je opcija "Izbriši račun". Vse vaše podatke izbrišemo v skladu z GDPR v 30 dneh.' },
-    { v: 'Kako ste v skladu z GDPR?', o: 'Hranimo samo nujne podatke. Nikoli ne prodajamo podatkov tretjim. Naša privacy policy je dostopna na dnu strani. Za vprašanja: info@garbin.si.' },
+    { v: 'Kako ste v skladu z GDPR?', o: 'Hranimo samo nujne podatke. Nikoli ne prodajamo podatkov tretjim. Naša privacy policy je dostopna na dnu strani. Za vprašanja: matej@lumavx.com.' },
   ],
 }
 
