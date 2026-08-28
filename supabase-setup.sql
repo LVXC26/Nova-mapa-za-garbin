@@ -665,3 +665,94 @@ create policy "Prodajalec bere povprasevanja za svoja plovila" on povprasevanja 
 
 drop policy if exists "Lastnik brise svoje plovilo" on plovila;
 create policy "Lastnik brise svoje plovilo" on plovila for delete using (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK: prepreči, da bi si uporabnik sam podelil admin
+-- dostop ali "verified" značko prek "Uredi svoj profil" politike.
+-- RLS politika sama po sebi ne omeji, KATERE stolpce sme uporabnik
+-- spremeniti — brez tega bi lahko vsak prijavljen uporabnik prek
+-- Supabase klienta v konzoli brskalnika pognal:
+--   supabase.from('profiles').update({ is_admin: true }).eq('id', svoj_id)
+-- in si tako podelil admin dostop. Ta sprožilec to zavrne na nivoju baze,
+-- ne glede na to, kaj odjemalec pošlje.
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function prevent_self_privilege_escalation()
+returns trigger as $$
+begin
+  -- auth.uid() je NULL pri service-role klicih (npr. /api/admin/uporabniki, ki
+  -- admin status že preveri v aplikacijski kodi) — te vedno spustimo skozi.
+  -- Za vsako zahtevo z resnično prijavljenim uporabnikom (auth.uid() ni null)
+  -- pa dovolimo spremembo teh dveh polj samo, če je ta uporabnik že admin.
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    new.is_admin := old.is_admin;
+    new.verified := old.verified;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_self_privilege_escalation on profiles;
+create trigger trg_prevent_self_privilege_escalation
+before update on profiles
+for each row execute function prevent_self_privilege_escalation();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- ISTI VARNOSTNI POPRAVEK ZA CHARTERJI IN SKIPERJI: lastnik lahko ureja
+-- svoj profil (naziv, opis, kontakt ...), ne sme pa si sam podeliti
+-- "verified" značke ali ponarediti svoje ocene (ocena/st_ocen) — to
+-- sme spremeniti samo admin (RLS "Admin ureja charterje/skiperje" ali
+-- service-role klici, kjer je auth.uid() prazen).
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function prevent_charter_self_escalation()
+returns trigger as $$
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    new.verified := old.verified;
+    new.ocena := old.ocena;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_charter_self_escalation on charterji;
+create trigger trg_prevent_charter_self_escalation
+before update on charterji
+for each row execute function prevent_charter_self_escalation();
+
+create or replace function prevent_skipper_self_escalation()
+returns trigger as $$
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    new.verified := old.verified;
+    new.ocena := old.ocena;
+    new.st_ocen := old.st_ocen;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_skipper_self_escalation on skiperji;
+create trigger trg_prevent_skipper_self_escalation
+before update on skiperji
+for each row execute function prevent_skipper_self_escalation();
+
+-- Isto za plovila: lastnik ne sme sam sebi vklopiti plačljive promocije
+-- (promoted/promoted_do) mimo Stripe plačila — to sme nastaviti samo
+-- Stripe webhook (service-role, auth.uid() prazen) ali admin.
+create or replace function prevent_plovilo_self_promotion()
+returns trigger as $$
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    new.promoted := old.promoted;
+    new.promoted_do := old.promoted_do;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_plovilo_self_promotion on plovila;
+create trigger trg_prevent_plovilo_self_promotion
+before update on plovila
+for each row execute function prevent_plovilo_self_promotion();
