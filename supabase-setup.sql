@@ -928,6 +928,54 @@ alter table profiles add constraint profiles_vloga_check
 -- tipa 'charter'.
 alter table charterji add column if not exists st_ocen integer not null default 0;
 
+-- ═══════════════════════════════════════════════════════════════════
+-- KRITIČEN POPRAVEK: trigger spodaj (posodobi_oceno_po_oceni) ob vsaki
+-- oddani oceni poskusi posodobiti skiperji/charterji.ocena+st_ocen —
+-- ampak to UPDATE ujameta prevent_skipper_self_escalation in
+-- prevent_charter_self_escalation (zaščita pred samo-ocenjevanjem), ki
+-- ne ločita "napadalec ročno spreminja svojo oceno prek konzole" od
+-- "to je notranji preračun po pravi oceni stranke" — obakrat prepišeta
+-- nazaj na staro vrednost. Ocene bi se torej NIKOLI ne posodobile za
+-- normalno stranko, ki odda oceno. Popravimo obe funkciji, da s
+-- pg_trigger_depth() prepoznata razliko: neposreden UPDATE od zunaj se
+-- zgodi na globini 1, medtem ko update, sprožen ZNOTRAJ drugega
+-- triggerja (ravno naš primer), teče na globini 2+.
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function prevent_charter_self_escalation()
+returns trigger as $$
+begin
+  if pg_trigger_depth() <= 1 and auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    if TG_OP = 'INSERT' then
+      new.verified := false;
+      new.ocena := 0;
+    else
+      new.verified := old.verified;
+      new.ocena := old.ocena;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create or replace function prevent_skipper_self_escalation()
+returns trigger as $$
+begin
+  if pg_trigger_depth() <= 1 and auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    if TG_OP = 'INSERT' then
+      new.verified := false;
+      new.ocena := 0;
+      new.st_ocen := 0;
+    else
+      new.verified := old.verified;
+      new.ocena := old.ocena;
+      new.st_ocen := old.st_ocen;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
 create or replace function posodobi_oceno_po_oceni()
 returns trigger as $$
 declare
@@ -1023,3 +1071,97 @@ drop trigger if exists trg_prevent_plovilo_self_boost on plovila;
 create trigger trg_prevent_plovilo_self_boost
 before insert or update on plovila
 for each row execute function prevent_plovilo_self_boost();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- KRITIČEN POPRAVEK: "objave" (Feed) — frontend sam izračuna in pošlje
+-- vrednost "odobrena" znotraj insert klica. RLS "Prijavljeni dodajo
+-- objavo" preveri samo auth.uid() = avtor_user_id, ne preveri pa niti
+-- vrednosti odobrena niti tega, ali lastnik profila sploh dovoljuje
+-- tuje objave (dovoli_tuje_objave). Kdorkoli bi torej lahko prek
+-- konzole v brskalniku:
+--   supabase.from('objave').insert({ lastnik_user_id: '<tuj-profil>',
+--     avtor_user_id: '<moj-id>', avtor_ime: 'x', vsebina: 'spam',
+--     odobrena: true })
+-- objavil karkoli na TUJEM profilu, takoj vidno vsem (odobrena=true),
+-- popolnoma mimo lastnikove moderacije — tudi če je lastnik tuje
+-- objave popolnoma izklopil. Spodnji trigger prezre, kar pošlje
+-- odjemalec, in "odobrena" vedno preračuna iz resničnih podatkov v
+-- profiles; ob izklopljenih tujih objavah insert zavrne. Mimogrede
+-- popravi tudi to, da "avto_odobritev_objav" nastavitev ni bila nikoli
+-- dejansko upoštevana nikjer v kodi (frontend je tuje objave vedno
+-- pošiljal kot odobrena=false, ne glede na to nastavitev).
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function nastavi_odobritev_objave()
+returns trigger as $$
+declare
+  dovoljeno boolean;
+  avto_odobri boolean;
+begin
+  if new.avtor_user_id = new.lastnik_user_id then
+    new.odobrena := true;
+    return new;
+  end if;
+
+  select coalesce(dovoli_tuje_objave, true), coalesce(avto_odobritev_objav, false)
+    into dovoljeno, avto_odobri
+    from profiles where id = new.lastnik_user_id;
+
+  if dovoljeno is false then
+    raise exception 'Lastnik profila ne dovoljuje objav drugih uporabnikov.';
+  end if;
+
+  new.odobrena := coalesce(avto_odobri, false);
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_nastavi_odobritev_objave on objave;
+create trigger trg_nastavi_odobritev_objave
+before insert on objave
+for each row execute function nastavi_odobritev_objave();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- Ista vrsta popravka, dve manjši mesti:
+--
+-- 1) "komentarji" (komentarji pod novicami) — insert dovoljen popolnoma
+--    vsem ("with check (true)"), aplikacija sicer vedno pošlje
+--    potrjen:false, a nič ne prepreči, da bi kdo prek konzole poslal
+--    potrjen:true in dobil takoj javno viden, neodobren komentar.
+--
+-- 2) "promocija_narocila" — lastnik lahko vstavi svojo vrstico
+--    (insert with check auth.uid()=user_id), polje "status" pa ni
+--    zaščiteno. To NE omogoča zastonj urgentno/promoted (to ščiti
+--    prevent_plovilo_self_boost na plovila), lahko pa nekdo vstavi
+--    lažno "placano" naročilo, ki v adminovem pregledu izgleda kot
+--    resnično plačilo, ki ni bilo nikoli obdelano prek Stripe/webhooka.
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function prisili_nepotrjen_komentar()
+returns trigger as $$
+begin
+  new.potrjen := false;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prisili_nepotrjen_komentar on komentarji;
+create trigger trg_prisili_nepotrjen_komentar
+before insert on komentarji
+for each row execute function prisili_nepotrjen_komentar();
+
+create or replace function prisili_pending_narocilo()
+returns trigger as $$
+begin
+  -- Naročilo lahko na "placano" preklopi samo webhook, in to z UPDATE,
+  -- ne INSERT — zato je vsak nov INSERT vedno "pending", brez izjeme.
+  new.status := 'pending';
+  new.placano_at := null;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prisili_pending_narocilo on promocija_narocila;
+create trigger trg_prisili_pending_narocilo
+before insert on promocija_narocila
+for each row execute function prisili_pending_narocilo();
