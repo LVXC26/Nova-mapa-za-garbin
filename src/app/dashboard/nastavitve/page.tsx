@@ -71,6 +71,13 @@ export default function NastavitveProfilaPage() {
       spletna_stran: forma.spletna_stran || null,
     }).eq('id', user.id)
 
+    // Ime se povsod drugod po strani (navigacija, forum, feed ...) bere iz
+    // user_metadata, ne iz profiles tabele — brez tega bi ostalo prikazano
+    // staro ime kljub uspešnemu shranjevanju zgoraj.
+    if (!profilError && forma.ime && forma.ime !== user.user_metadata?.ime) {
+      await supabase.auth.updateUser({ data: { ime: forma.ime } })
+    }
+
     let emailError: string | null = null
     if (forma.email && forma.email !== user.email) {
       const { error } = await supabase.auth.updateUser({ email: forma.email })
