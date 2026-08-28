@@ -898,3 +898,15 @@ update storage.buckets
 set file_size_limit = 8388608, -- 8 MB, usklajeno z MAX_VELIKOST_MB v kodi
     allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 where id = 'plovila-slike';
+
+-- ═══════════════════════════════════════════════════════════════════
+-- KRITIČEN POPRAVEK: profiles_vloga_check je dovoljeval samo
+-- 'prodajalec', 'charter', 'oba' — 'skipper' in 'kupec' (obe možnosti
+-- na registracijskem obrazcu) sta bila torej OD NEKDAJ blokirana.
+-- Vsak, ki se je poskusil registrirati kot Skipper ali Kupec/Najemnik,
+-- je dobil "Database error saving new user" in registracija ni uspela.
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table profiles drop constraint if exists profiles_vloga_check;
+alter table profiles add constraint profiles_vloga_check
+  check (vloga in ('prodajalec', 'charter', 'skipper', 'kupec', 'oba'));
