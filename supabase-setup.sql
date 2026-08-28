@@ -884,3 +884,16 @@ drop trigger if exists trg_prevent_self_rating on ratings;
 create trigger trg_prevent_self_rating
 before insert on ratings
 for each row execute function prevent_self_rating();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK: omejitev tipa/velikosti slike (8 MB, samo slike)
+-- je obstajala samo v JavaScript kodi obrazca — kdorkoli bi lahko prek
+-- konzole poklical storage upload neposredno in naložil poljubno
+-- (izvršljivo/ogromno) datoteko. To zdaj uveljavimo na nivoju bucketa,
+-- česar odjemalec ne more zaobiti.
+-- ═══════════════════════════════════════════════════════════════════
+
+update storage.buckets
+set file_size_limit = 8388608, -- 8 MB, usklajeno z MAX_VELIKOST_MB v kodi
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+where id = 'plovila-slike';
