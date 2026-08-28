@@ -981,3 +981,45 @@ alter table plovila add column if not exists urgentno_do timestamptz;
 
 alter table promocija_narocila add column if not exists tip text
   check (tip in ('promocija', 'urgentno')) not null default 'promocija';
+
+-- ═══════════════════════════════════════════════════════════════════
+-- KRITIČEN VARNOSTNI POPRAVEK: "Uredi svoje plovilo" RLS pravilo
+-- preverja samo lastništvo VRSTICE (auth.uid() = user_id), ne pa
+-- katerih STOLPCEV se sme dotakniti. "promoted"/"promoted_do" je to
+-- od nekdaj ščitil trg_prevent_plovilo_self_promotion — ampak
+-- "urgentno"/"urgentno_do" NE, ker je bil urgentno prej brezplačen
+-- checkbox. Zdaj ko je urgentno plačljiv (30 €), bi lahko kdorkoli
+-- prek konzole v brskalniku pognal npr.
+--   supabase.from('plovila').update({ urgentno: true }).eq('id', ...)
+-- in dobil "Nujno" značko popolnoma brezplačno, mimo Stripe plačila.
+-- Star trigger nadomestimo z razširjenim, ki ščiti oba para stolpcev.
+-- Webhook (service-role klient) to obide, ker auth.uid() je tam null.
+-- ═══════════════════════════════════════════════════════════════════
+
+drop trigger if exists trg_prevent_plovilo_self_promotion on plovila;
+drop function if exists prevent_plovilo_self_promotion();
+
+create or replace function prevent_plovilo_self_boost()
+returns trigger as $$
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    if TG_OP = 'INSERT' then
+      new.promoted := false;
+      new.promoted_do := null;
+      new.urgentno := false;
+      new.urgentno_do := null;
+    else
+      new.promoted := old.promoted;
+      new.promoted_do := old.promoted_do;
+      new.urgentno := old.urgentno;
+      new.urgentno_do := old.urgentno_do;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_plovilo_self_boost on plovila;
+create trigger trg_prevent_plovilo_self_boost
+before insert or update on plovila
+for each row execute function prevent_plovilo_self_boost();
