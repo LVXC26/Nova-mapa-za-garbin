@@ -228,7 +228,7 @@ function ChatPageContent() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Išči konverzacije..."
+                  placeholder="Išči pogovore..."
                   value={iskanje}
                   onChange={e => setIskanje(e.target.value)}
                   className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]"
@@ -244,7 +244,7 @@ function ChatPageContent() {
               ) : filtrirane.length === 0 ? (
                 <div className="p-8 text-center">
                   <MessageCircle className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400">Ni konverzacij</p>
+                  <p className="text-sm text-gray-400">{iskanje.trim() ? 'Ni sporočil' : 'Ni konverzacij'}</p>
                 </div>
               ) : (
                 filtrirane.map((k) => (
