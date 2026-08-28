@@ -52,7 +52,7 @@ export default function OcenePage() {
       const raterIds = Array.from(new Set(seznam.map(r => r.rater_id)))
       const profileMap = new Map<string, string>()
       if (raterIds.length > 0) {
-        const { data: profili } = await supabase.from('profiles').select('id, ime').in('id', raterIds)
+        const { data: profili } = await supabase.from('public_profiles').select('id, ime').in('id', raterIds)
         profili?.forEach(p => profileMap.set(p.id, p.ime ?? 'Uporabnik'))
       }
 

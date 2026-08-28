@@ -131,7 +131,7 @@ export default function FeedObjave({
     setObjave(seznam)
 
     if (!jeLastnik) {
-      const { data: profil } = await supabase.from('profiles').select('dovoli_tuje_objave').eq('id', lastnikUserId).maybeSingle()
+      const { data: profil } = await supabase.from('public_profiles').select('dovoli_tuje_objave').eq('id', lastnikUserId).maybeSingle()
       setDovoljenoTuje(profil?.dovoli_tuje_objave ?? true)
     }
 

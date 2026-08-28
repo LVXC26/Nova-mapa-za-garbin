@@ -317,7 +317,14 @@ export interface Database {
       objava_komentarji: { Row: Pick<ObjavaKomentar, keyof ObjavaKomentar>; Insert: Omit<ObjavaKomentar, 'id' | 'created_at'>; Update: Partial<ObjavaKomentar>; Relationships: [] }
       promocija_narocila: { Row: Pick<PromocijaNarocilo, keyof PromocijaNarocilo>; Insert: Omit<PromocijaNarocilo, 'id' | 'created_at'>; Update: Partial<PromocijaNarocilo>; Relationships: [] }
     }
-    Views: Record<string, never>
+    Views: {
+      public_profiles: {
+        Row: Pick<Profil, 'id' | 'ime' | 'vloga' | 'verified' | 'dovoli_tuje_objave' | 'created_at'>
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+    }
     Functions: Record<string, never>
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

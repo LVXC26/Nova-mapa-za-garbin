@@ -114,7 +114,7 @@ function ChatPageContent() {
 
     const partnerIds = Array.from(konvMap.keys())
     const { data: profiles } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('id, ime')
       .in('id', partnerIds)
 
@@ -138,7 +138,7 @@ function ChatPageContent() {
   async function odpriKonverzacijo(partnerId: string, imeIzUrl: string | null) {
     let ime = imeIzUrl
     if (!ime) {
-      const { data: profil } = await supabase.from('profiles').select('ime').eq('id', partnerId).maybeSingle()
+      const { data: profil } = await supabase.from('public_profiles').select('ime').eq('id', partnerId).maybeSingle()
       ime = profil?.ime ?? null
     }
     setKonverzacije((prev) => {

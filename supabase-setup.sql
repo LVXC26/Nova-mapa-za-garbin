@@ -756,3 +756,107 @@ drop trigger if exists trg_prevent_plovilo_self_promotion on plovila;
 create trigger trg_prevent_plovilo_self_promotion
 before update on plovila
 for each row execute function prevent_plovilo_self_promotion();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK: "Javni bralni dostop - profili" (using(true)) je
+-- razkrival VSA polja vsakega uporabnika komurkoli, ki bi neposredno
+-- poklical Supabase API (mimo aplikacije) — vključno s telefonsko
+-- številko, opisom in spletno stranjo vsakega registriranega prodajalca.
+-- Aplikacija sama nikoli ne bere tujih profilov v celoti (samo id/ime
+-- in par nastavitev), zato ustvarimo ozek javni pogled samo s temi
+-- varnimi polji, osnovno tabelo pa omejimo na lastnika (+ admin).
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Javni bralni dostop - profili" on profiles;
+create policy "Lastnik bere svoj profil" on profiles for select using (auth.uid() = id);
+
+create or replace view public_profiles
+with (security_invoker = false)
+as select id, ime, vloga, verified, dovoli_tuje_objave, created_at from profiles;
+
+grant select on public_profiles to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK: profilni lastnik (npr. charter podjetje) je prek
+-- "Lastnik ureja objave na svojem profilu" (brez omejitve stolpcev)
+-- lahko urejal VSEBINO objav, ki jih je napisal nekdo DRUG na njihovem
+-- "zidu" — torej bi lahko potvoril, kaj je stranka dejansko napisala,
+-- medtem ko bi ostalo prikazano pod imenom te stranke. Aplikacija to
+-- politiko uporablja samo za "odobri objavo" (odobrena), zato ostalo
+-- zaklenemo, razen če ureja svojo LASTNO objavo.
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function prevent_objava_content_tampering()
+returns trigger as $$
+begin
+  if auth.uid() is not null
+     and auth.uid() <> old.avtor_user_id
+     and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    new.vsebina := old.vsebina;
+    new.lokacija := old.lokacija;
+    new.plovilo := old.plovilo;
+    new.avtor_ime := old.avtor_ime;
+    new.avtor_vloga := old.avtor_vloga;
+    new.avtor_user_id := old.avtor_user_id;
+    new.lastnik_user_id := old.lastnik_user_id;
+    new.tip := old.tip;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_objava_content_tampering on objave;
+create trigger trg_prevent_objava_content_tampering
+before update on objave
+for each row execute function prevent_objava_content_tampering();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK: prejemnik sporočila je prek "Oznaci prebrano"
+-- (brez omejitve stolpcev) lahko spremenil VSEBINO prejetega sporočila,
+-- ne samo "read" — kar bi omogočilo potvarjanje zgodovine pogovora.
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function prevent_message_content_tampering()
+returns trigger as $$
+begin
+  if auth.uid() is not null and auth.uid() <> old.sender_id then
+    new.content := old.content;
+    new.sender_id := old.sender_id;
+    new.receiver_id := old.receiver_id;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_message_content_tampering on messages;
+create trigger trg_prevent_message_content_tampering
+before update on messages
+for each row execute function prevent_message_content_tampering();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK: nič ni preprečevalo, da bi charter/skiper sam
+-- sebi napisal 5-zvezdično oceno (rated_id = svoj lasten charter/
+-- skipper profil) in si tako ponaredil povprečno oceno.
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function prevent_self_rating()
+returns trigger as $$
+begin
+  if new.rated_type = 'skipper' and exists (
+    select 1 from skiperji where id = new.rated_id and user_id = new.rater_id
+  ) then
+    raise exception 'Ne moreš oceniti samega sebe.';
+  end if;
+  if new.rated_type = 'charter' and exists (
+    select 1 from charterji where id = new.rated_id and user_id = new.rater_id
+  ) then
+    raise exception 'Ne moreš oceniti samega sebe.';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_self_rating on ratings;
+create trigger trg_prevent_self_rating
+before insert on ratings
+for each row execute function prevent_self_rating();

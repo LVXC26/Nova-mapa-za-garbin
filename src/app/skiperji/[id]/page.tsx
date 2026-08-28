@@ -55,7 +55,7 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
     const raterIds = Array.from(new Set(seznam.map(r => r.rater_id)))
     const imena = new Map<string, string>()
     if (raterIds.length > 0) {
-      const { data: profili } = await supabase.from('profiles').select('id, ime').in('id', raterIds)
+      const { data: profili } = await supabase.from('public_profiles').select('id, ime').in('id', raterIds)
       profili?.forEach(p => imena.set(p.id, p.ime ?? 'Uporabnik'))
     }
     setOcene(seznam.map(r => ({ ...r, ime: imena.get(r.rater_id) ?? 'Uporabnik' })))
