@@ -18,6 +18,7 @@ const vlogaBarva: Record<string, string> = {
   charter: 'bg-blue-50 text-blue-700',
   skipper: 'bg-[#c9a84c]/15 text-[#9a7a2e]',
   kupec: 'bg-gray-100 text-gray-600',
+  oba: 'bg-purple-50 text-purple-700',
 }
 
 export default function AdminUporabnikiPage() {
@@ -107,6 +108,7 @@ export default function AdminUporabnikiPage() {
                     <option value="charter">Charter</option>
                     <option value="skipper">Skipper</option>
                     <option value="kupec">Kupec</option>
+                    <option value="oba">Prodajalec & Charter</option>
                   </select>
                   {u.isAdmin && (
                     <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-700">Admin</span>
