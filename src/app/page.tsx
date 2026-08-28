@@ -359,7 +359,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-r from-[#0c2340] via-[#1e3a5f] to-[#0c2340] opacity-50" />
               <div className="relative z-10 text-center">
                 <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">728 × 90</p>
-                <p className="text-white/50 text-sm font-medium">Oglaševalski prostor · kontakt@garbin.si</p>
+                <p className="text-white/50 text-sm font-medium">Oglaševalski prostor · matej@lumavx.com</p>
               </div>
             </div>
           </div>
