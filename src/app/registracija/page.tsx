@@ -76,10 +76,18 @@ export default function RegistracijaPage() {
     })
 
     if (error) {
-      setNapaka(error.message === 'User already registered'
-        ? 'Ta e-mail je že registriran. Prijavite se.'
-        : 'Prišlo je do napake. Poskusite znova.'
-      )
+      const koda = 'code' in error ? String((error as { code?: string }).code) : ''
+      if (error.message === 'User already registered' || koda === 'user_already_exists') {
+        setNapaka('Ta e-mail je že registriran. Prijavite se.')
+      } else if (koda === 'over_email_send_rate_limit' || koda === 'over_request_rate_limit' || error.status === 429) {
+        setNapaka('Preveč poskusov registracije v kratkem času (z istega omrežja). Počakajte nekaj minut in poskusite znova.')
+      } else if (koda === 'weak_password') {
+        setNapaka('Geslo je prešibko. Uporabite daljše geslo z več znaki.')
+      } else if (koda === 'email_address_invalid') {
+        setNapaka('Ta e-mail naslov ni veljaven.')
+      } else {
+        setNapaka(`Prišlo je do napake: ${error.message}. Poskusite znova ali nas kontaktirajte na info@garbin.si.`)
+      }
       setNalaga(false)
       return
     }
