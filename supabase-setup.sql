@@ -792,6 +792,7 @@ for each row execute function prevent_plovilo_self_promotion();
 -- ═══════════════════════════════════════════════════════════════════
 
 drop policy if exists "Javni bralni dostop - profili" on profiles;
+drop policy if exists "Lastnik bere svoj profil" on profiles;
 create policy "Lastnik bere svoj profil" on profiles for select using (auth.uid() = id);
 
 create or replace view public_profiles
