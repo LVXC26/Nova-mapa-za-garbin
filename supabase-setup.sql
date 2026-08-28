@@ -683,10 +683,17 @@ begin
   -- auth.uid() je NULL pri service-role klicih (npr. /api/admin/uporabniki, ki
   -- admin status že preveri v aplikacijski kodi) — te vedno spustimo skozi.
   -- Za vsako zahtevo z resnično prijavljenim uporabnikom (auth.uid() ni null)
-  -- pa dovolimo spremembo teh dveh polj samo, če je ta uporabnik že admin.
+  -- pa dovolimo teh dveh polj samo, če je ta uporabnik že admin. Pokrijemo
+  -- tudi INSERT — brez tega bi lahko nekdo poslal is_admin/verified že ob
+  -- prvem vstavljanju vrstice, ne samo prek kasnejšega update-a.
   if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
-    new.is_admin := old.is_admin;
-    new.verified := old.verified;
+    if TG_OP = 'INSERT' then
+      new.is_admin := false;
+      new.verified := false;
+    else
+      new.is_admin := old.is_admin;
+      new.verified := old.verified;
+    end if;
   end if;
   return new;
 end;
@@ -694,7 +701,7 @@ $$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists trg_prevent_self_privilege_escalation on profiles;
 create trigger trg_prevent_self_privilege_escalation
-before update on profiles
+before insert or update on profiles
 for each row execute function prevent_self_privilege_escalation();
 
 -- ═══════════════════════════════════════════════════════════════════
@@ -709,8 +716,13 @@ create or replace function prevent_charter_self_escalation()
 returns trigger as $$
 begin
   if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
-    new.verified := old.verified;
-    new.ocena := old.ocena;
+    if TG_OP = 'INSERT' then
+      new.verified := false;
+      new.ocena := 0;
+    else
+      new.verified := old.verified;
+      new.ocena := old.ocena;
+    end if;
   end if;
   return new;
 end;
@@ -718,16 +730,22 @@ $$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists trg_prevent_charter_self_escalation on charterji;
 create trigger trg_prevent_charter_self_escalation
-before update on charterji
+before insert or update on charterji
 for each row execute function prevent_charter_self_escalation();
 
 create or replace function prevent_skipper_self_escalation()
 returns trigger as $$
 begin
   if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
-    new.verified := old.verified;
-    new.ocena := old.ocena;
-    new.st_ocen := old.st_ocen;
+    if TG_OP = 'INSERT' then
+      new.verified := false;
+      new.ocena := 0;
+      new.st_ocen := 0;
+    else
+      new.verified := old.verified;
+      new.ocena := old.ocena;
+      new.st_ocen := old.st_ocen;
+    end if;
   end if;
   return new;
 end;
@@ -735,18 +753,24 @@ $$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists trg_prevent_skipper_self_escalation on skiperji;
 create trigger trg_prevent_skipper_self_escalation
-before update on skiperji
+before insert or update on skiperji
 for each row execute function prevent_skipper_self_escalation();
 
 -- Isto za plovila: lastnik ne sme sam sebi vklopiti plačljive promocije
 -- (promoted/promoted_do) mimo Stripe plačila — to sme nastaviti samo
--- Stripe webhook (service-role, auth.uid() prazen) ali admin.
+-- Stripe webhook (service-role, auth.uid() prazen) ali admin. Pokrijemo
+-- tudi INSERT, ker bi sicer lahko poslal promoted:true že ob objavi oglasa.
 create or replace function prevent_plovilo_self_promotion()
 returns trigger as $$
 begin
   if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
-    new.promoted := old.promoted;
-    new.promoted_do := old.promoted_do;
+    if TG_OP = 'INSERT' then
+      new.promoted := false;
+      new.promoted_do := null;
+    else
+      new.promoted := old.promoted;
+      new.promoted_do := old.promoted_do;
+    end if;
   end if;
   return new;
 end;
@@ -754,7 +778,7 @@ $$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists trg_prevent_plovilo_self_promotion on plovila;
 create trigger trg_prevent_plovilo_self_promotion
-before update on plovila
+before insert or update on plovila
 for each row execute function prevent_plovilo_self_promotion();
 
 -- ═══════════════════════════════════════════════════════════════════

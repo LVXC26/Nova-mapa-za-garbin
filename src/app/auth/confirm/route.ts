@@ -6,7 +6,11 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type')
-  const next = searchParams.get('next') ?? '/ponastavi-geslo'
+  const rawNext = searchParams.get('next')
+  // Samo relativna pot znotraj strani — brez tega bi "next" lahko kazal na
+  // poljubno tujo domeno (open redirect), npr. za phishing po sicer
+  // legitimni prijavi prek povezave za ponastavitev gesla.
+  const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/ponastavi-geslo'
 
   const supabase = await createClient()
 
