@@ -53,7 +53,7 @@ export default function HomePage() {
   useEffect(() => {
     const supabase = createClient()
     supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip_oglasa', 'prodaja')
-      .order('created_at', { ascending: false }).limit(6)
+      .order('created_at', { ascending: false }).limit(50)
       .then(({ data }) => { if (data) setRealnaPlovila(data) })
     supabase.from('charterji').select('*').order('created_at', { ascending: false }).limit(3)
       .then(({ data }) => { if (data) setRealniCharterji(data) })
@@ -64,7 +64,14 @@ export default function HomePage() {
       .then(({ data }) => { if (data) setRealneNovice(data as NovicaZKategorijo[]) })
   }, [])
 
-  const plovilaZaProdajo = realnaPlovila.slice(0, 6)
+  // Enak vrstni red kot na /plovila: urgentno > promoted > ostali, prodana na konec —
+  // brez tega bi "Urgentna prodaja" (plačana/označena prioriteta) na naslovnici
+  // pomenila nič, ker se je tu prikazovalo zgolj zadnjih 6 dodanih oglasov.
+  const plovilaZaProdajo = [
+    ...realnaPlovila.filter(p => p.urgentno && !p.prodano),
+    ...realnaPlovila.filter(p => p.promoted && !p.urgentno && !p.prodano),
+    ...realnaPlovila.filter(p => !p.promoted && !p.urgentno && !p.prodano),
+  ].slice(0, 6)
   const novice = realneNovice.slice(0, 3)
   const promocije = realnePromocije.slice(0, 4)
   const charterji = realniCharterji.slice(0, 3)
