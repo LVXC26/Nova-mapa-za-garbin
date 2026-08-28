@@ -964,3 +964,20 @@ update skiperji s set
 update charterji c set
   ocena = coalesce((select round(avg(r.score), 2) from ratings r where r.rated_id = c.id and r.rated_type = 'charter'), 0),
   st_ocen = coalesce((select count(*) from ratings r where r.rated_id = c.id and r.rated_type = 'charter'), 0);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- URGENTNA PRODAJA POSTANE PLAČLJIVA (30 €, 30 dni) — po direktorjevi
+-- odločitvi. Prej je bil "Urgentna prodaja" brezplačen checkbox pri
+-- dodajanju oglasa + brezplačen preklop na "Moja plovila"; oboje je
+-- zdaj odstranjeno iz kode. Kupi se prek Stripe, enako kot "Promocija"
+-- (glej promocija_narocila / plovila.promoted), samo z novim "tip"
+-- stolpcem, da lahko en webhook loči med obema vrstama nakupa.
+-- Obstoječi oglasi, ki so urgentno=true dobili brezplačno pred to
+-- spremembo, po dogovoru obdržijo status do izteka/prodaje — spodaj
+-- jih NE ponastavljam.
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table plovila add column if not exists urgentno_do timestamptz;
+
+alter table promocija_narocila add column if not exists tip text
+  check (tip in ('promocija', 'urgentno')) not null default 'promocija';
