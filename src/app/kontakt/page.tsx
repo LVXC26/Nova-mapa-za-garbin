@@ -71,7 +71,7 @@ export default function KontaktPage() {
                   <h2 className="font-display text-xl font-bold text-[#0c2340] mb-5">Kontaktni podatki</h2>
                   <div className="space-y-4">
                     {[
-                      { ikona: Mail, label: 'E-mail', vrednost: 'info@garbin.si', href: 'mailto:info@garbin.si' },
+                      { ikona: Mail, label: 'E-mail', vrednost: 'matej@lumavx.com', href: 'mailto:matej@lumavx.com' },
                       { ikona: Phone, label: 'Telefon', vrednost: '+386 5 123 45 67', href: 'tel:+38651234567' },
                       { ikona: MapPin, label: 'Naslov', vrednost: 'Obala 14, 6320 Portorož', href: undefined },
                     ].map(({ ikona: Ikona, label, vrednost, href }) => (
