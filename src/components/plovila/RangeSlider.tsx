@@ -55,7 +55,7 @@ export default function RangeSlider({
           style={{ left: `${pHigh}%` }}
         />
 
-        {/* Low input — invisible, captures events */}
+        {/* Low input — invisible, captures events samo na svojem ročaju (glej .range-slider-input v globals.css) */}
         <input
           type="range"
           min={min}
@@ -66,10 +66,9 @@ export default function RangeSlider({
             const v = +e.target.value
             if (v <= high) onChange(v, high)
           }}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer"
-          style={{ zIndex: pLow > 50 ? 5 : 3 }}
+          className="range-slider-input absolute inset-0 w-full opacity-0 cursor-pointer z-10"
         />
-        {/* High input — invisible, captures events */}
+        {/* High input — invisible, captures events samo na svojem ročaju */}
         <input
           type="range"
           min={min}
@@ -80,8 +79,7 @@ export default function RangeSlider({
             const v = +e.target.value
             if (v >= low) onChange(low, v)
           }}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer"
-          style={{ zIndex: pLow > 50 ? 3 : 5 }}
+          className="range-slider-input absolute inset-0 w-full opacity-0 cursor-pointer z-10"
         />
       </div>
     </div>

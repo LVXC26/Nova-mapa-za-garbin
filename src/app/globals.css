@@ -188,6 +188,23 @@ html {
   background: linear-gradient(135deg, #0c2340 0%, #1e3a5f 50%, #2e6b9e 100%);
 }
 
+/* Dvojni drsnik (RangeSlider) — dva prekrivajoča se <input type=range>
+   sta čez celotno širino, da je vsak dosegljiv. Klik kamorkoli na trak
+   bi sicer vedno šel na tistega z višjim z-index (prej: kadarkoli je
+   min blizu 0, je max "na vrhu" povsod, zato je vsak klik premikal
+   max namesto min). Rešitev: cel input je "prosojen" za klike, dovolimo
+   jih samo na dejanski vidni ročaj (thumb), tako da vsak input reagira
+   samo na klik na svoj ročaj, ne na cel trak. */
+input[type='range'].range-slider-input {
+  pointer-events: none;
+}
+input[type='range'].range-slider-input::-webkit-slider-thumb {
+  pointer-events: auto;
+}
+input[type='range'].range-slider-input::-moz-range-thumb {
+  pointer-events: auto;
+}
+
 /* Print styles — oglas plovila */
 @media print {
   nav, footer, .print\:hidden { display: none !important; }
