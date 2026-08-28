@@ -21,13 +21,15 @@ function MojaPlovilaContent() {
   const { user, demoMode } = useAuth()
   const searchParams = useSearchParams()
   const promocijaStatus = searchParams.get('promocija')
+  const urgentnoStatus = searchParams.get('urgentno')
   const [plovila, setPlovila] = useState<Plovilo[]>([])
   const [nalaga, setNalaga] = useState(true)
   const [filter, setFilter] = useState<'vse' | 'prodaja' | 'najem'>('vse')
   const [prodana, setProdana] = useState<Record<string, boolean>>({})
-  const [urgentna, setUrgentna] = useState<Record<string, boolean>>({})
   const [promoviram, setPromoviram] = useState<string | null>(null)
   const [promoNapaka, setPromoNapaka] = useState('')
+  const [urgentnoNarocam, setUrgentnoNarocam] = useState<string | null>(null)
+  const [urgentnoNapaka, setUrgentnoNapaka] = useState('')
   const [zdaj, setZdaj] = useState<number | null>(null)
 
   useEffect(() => {
@@ -45,17 +47,9 @@ function MojaPlovilaContent() {
       const seznam = data ?? []
       setPlovila(seznam)
       setProdana(Object.fromEntries(seznam.map((p: Plovilo) => [p.id, p.prodano ?? false])))
-      setUrgentna(Object.fromEntries(seznam.map((p: Plovilo) => [p.id, p.urgentno ?? false])))
       setNalaga(false)
     })()
   }, [user])
-
-  async function preklopiUrgentno(id: string, trenutno: boolean) {
-    setUrgentna(prev => ({ ...prev, [id]: !trenutno }))
-    const supabase = createClient()
-    const { error } = await supabase.from('plovila').update({ urgentno: !trenutno }).eq('id', id)
-    if (error) setUrgentna(prev => ({ ...prev, [id]: trenutno }))
-  }
 
   async function preklopiProdano(id: string, trenutno: boolean) {
     setProdana(prev => ({ ...prev, [id]: !trenutno }))
@@ -86,9 +80,29 @@ function MojaPlovilaContent() {
     window.location.assign(json.url)
   }
 
+  async function naredimUrgentno(id: string) {
+    if (demoMode) { setUrgentnoNapaka('Urgentna prodaja v demo načinu ni mogoča. Prijavite se z resničnim računom.'); return }
+    setUrgentnoNapaka('')
+    setUrgentnoNarocam(id)
+    const res = await fetch('/api/urgentno/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plovilo_id: id }),
+    })
+    const json = await res.json()
+    setUrgentnoNarocam(null)
+    if (!res.ok || !json.url) { setUrgentnoNapaka(json.error ?? 'Napaka pri pripravi plačila.'); return }
+    window.location.assign(json.url)
+  }
+
   function jePromovirano(p: Plovilo): boolean {
     if (zdaj === null) return !!p.promoted
     return !!p.promoted && (!p.promoted_do || new Date(p.promoted_do).getTime() > zdaj)
+  }
+
+  function jeUrgentnoAktivno(p: Plovilo): boolean {
+    if (zdaj === null) return !!p.urgentno
+    return !!p.urgentno && (!p.urgentno_do || new Date(p.urgentno_do).getTime() > zdaj)
   }
 
   const filtirana = plovila
@@ -130,6 +144,21 @@ function MojaPlovilaContent() {
       {promoNapaka && (
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 mb-6">
           {promoNapaka}
+        </div>
+      )}
+      {urgentnoStatus === 'uspesno' && (
+        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-700 mb-6">
+          <CheckCircle className="w-4 h-4 shrink-0" /> Plačilo je bilo uspešno. Oglas bo označen kot urgenten v nekaj trenutkih.
+        </div>
+      )}
+      {urgentnoStatus === 'preklicano' && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700 mb-6">
+          Plačilo je bilo preklicano — oglas ni bil označen kot urgenten.
+        </div>
+      )}
+      {urgentnoNapaka && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 mb-6">
+          {urgentnoNapaka}
         </div>
       )}
 
@@ -178,7 +207,7 @@ function MojaPlovilaContent() {
           <div className="space-y-3">
             {filtirana.map((plovilo) => {
               const jeProdano = prodana[plovilo.id] ?? false
-              const jeUrgentno = urgentna[plovilo.id] ?? false
+              const jeUrgentno = jeUrgentnoAktivno(plovilo)
               const ogledi = mockOglediZaId(plovilo.id)
 
               return (
@@ -261,16 +290,15 @@ function MojaPlovilaContent() {
                         {promoviram === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
                       </button>
                     )}
-                    {/* Urgentna prodaja */}
-                    {!jeProdano && (
+                    {/* Urgentna prodaja — plačljivo (30 €/30 dni), samo za oglase "za prodajo" */}
+                    {!jeProdano && !jeUrgentno && plovilo.tip_oglasa === 'prodaja' && (
                       <button
-                        onClick={() => preklopiUrgentno(plovilo.id, jeUrgentno)}
-                        title={jeUrgentno ? 'Odstrani urgentno' : 'Označi kot urgentno'}
-                        className={`p-2 rounded-xl transition-colors ${
-                          jeUrgentno ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
-                        }`}
+                        onClick={() => naredimUrgentno(plovilo.id)}
+                        disabled={urgentnoNarocam === plovilo.id}
+                        title="Označi kot urgentno — 30 €"
+                        className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                       >
-                        <Zap className="w-4 h-4" />
+                        {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                       </button>
                     )}
                     {/* Prodano */}
