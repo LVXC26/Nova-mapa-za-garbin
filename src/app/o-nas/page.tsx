@@ -137,7 +137,7 @@ export default function ONasPage() {
                   <MapPin className="w-4 h-4 text-[#c9a84c]" /> Obala 14, 6320 Portorož, Slovenija
                 </div>
                 <div className="flex items-center gap-2 text-gray-500 text-sm">
-                  <Mail className="w-4 h-4 text-[#c9a84c]" /> info@garbin.si
+                  <Mail className="w-4 h-4 text-[#c9a84c]" /> matej@lumavx.com
                 </div>
               </div>
               <div className="flex gap-3">
