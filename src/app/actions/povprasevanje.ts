@@ -42,7 +42,7 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
   }
 
   const resendKey = process.env.RESEND_API_KEY
-  const obvestiloEmail = process.env.OBVESTILO_EMAIL ?? 'matej.skulj10@gmail.com'
+  const obvestiloEmail = process.env.OBVESTILO_EMAIL ?? 'matej@lumavx.com'
 
   if (resendKey) {
     const tipLabele: Record<PovprasevanjeInput['tip'], string> = {
