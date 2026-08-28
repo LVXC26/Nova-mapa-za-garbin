@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { CheckCircle, Upload, AlertCircle, Zap, X } from 'lucide-react'
+import { CheckCircle, Upload, AlertCircle, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
 import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
@@ -94,7 +94,6 @@ function DodajPloviloContent() {
   })
   const [oprema, setOprema] = useState<Record<string, boolean>>({})
   const [cenaZahtevo, setCenaZahtevo] = useState(false)
-  const [urgentno, setUrgentno] = useState(false)
   const [napaka, setNapaka] = useState('')
   const [nalaga, setNalaga] = useState(false)
   const [nalagaSlike, setNalagaSlike] = useState(false)
@@ -131,7 +130,6 @@ function DodajPloviloContent() {
         })
         setOprema(data.oprema ?? {})
         setCenaZahtevo(data.cena_na_zahtevo ?? false)
-        setUrgentno(data.urgentno ?? false)
         setObstojeceSlike(data.slike ?? [])
         setTipOglasaUrejanje(data.tip_oglasa)
       } else {
@@ -206,7 +204,6 @@ function DodajPloviloContent() {
       tip_oglasa: tipOglasa,
       cena: cenaZahtevo ? 0 : Number(forma.cena),
       cena_na_zahtevo: cenaZahtevo,
-      urgentno,
       letnik: forma.letnik ? Number(forma.letnik) : null,
       dolzina_m: forma.dolzina_m ? Number(forma.dolzina_m) : null,
       lokacija: forma.lokacija || null,
@@ -453,28 +450,19 @@ function DodajPloviloContent() {
             </div>
           </div>
 
-          {/* Urgentna prodaja */}
+          {/* Urgentna prodaja — plačljivo, na voljo šele po objavi prek "Moja plovila" */}
           {tipOglasa === 'prodaja' && (
-            <button
-              type="button"
-              onClick={() => setUrgentno(v => !v)}
-              className={`w-full flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all ${
-                urgentno ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-red-300'
-              }`}
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${urgentno ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                <Zap className="w-5 h-5" />
+            <div className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-100 bg-gray-50 text-left">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gray-100 text-gray-400">
+                ⚡
               </div>
               <div>
-                <p className={`font-semibold text-sm ${urgentno ? 'text-red-700' : 'text-gray-700'}`}>Urgentna prodaja</p>
-                <p className="text-xs text-gray-400 mt-0.5">Oglas dobi rdeč "Nujno" badge in prioriteto v prikazu</p>
+                <p className="font-semibold text-sm text-gray-700">Urgentna prodaja — na voljo po objavi</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Po objavi oglasa lahko v "Moja plovila" doplačate 30 € za rdeč "Nujno" badge in prioriteto v prikazu.
+                </p>
               </div>
-              <div className={`ml-auto w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                urgentno ? 'bg-red-600 border-red-600' : 'border-gray-300'
-              }`}>
-                {urgentno && <CheckCircle className="w-3.5 h-3.5 text-white" />}
-              </div>
-            </button>
+            </div>
           )}
 
           {/* Oprema */}
