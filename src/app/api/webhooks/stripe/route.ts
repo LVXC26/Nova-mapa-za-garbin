@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createStripeClient, PROMOCIJA_DNI } from '@/lib/stripe'
+import { createStripeClient, PROMOCIJA_DNI, URGENTNO_DNI } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function POST(req: NextRequest) {
@@ -24,14 +24,25 @@ export async function POST(req: NextRequest) {
     const plovilo_id = session.metadata?.plovilo_id
     if (plovilo_id) {
       const adminClient = createAdminClient()
+      const tip = session.metadata?.tip === 'urgentno' ? 'urgentno' : 'promocija'
 
-      const promotedDo = new Date()
-      promotedDo.setDate(promotedDo.getDate() + PROMOCIJA_DNI)
+      if (tip === 'urgentno') {
+        const urgentnoDo = new Date()
+        urgentnoDo.setDate(urgentnoDo.getDate() + URGENTNO_DNI)
 
-      await adminClient.from('plovila').update({
-        promoted: true,
-        promoted_do: promotedDo.toISOString(),
-      }).eq('id', plovilo_id)
+        await adminClient.from('plovila').update({
+          urgentno: true,
+          urgentno_do: urgentnoDo.toISOString(),
+        }).eq('id', plovilo_id)
+      } else {
+        const promotedDo = new Date()
+        promotedDo.setDate(promotedDo.getDate() + PROMOCIJA_DNI)
+
+        await adminClient.from('plovila').update({
+          promoted: true,
+          promoted_do: promotedDo.toISOString(),
+        }).eq('id', plovilo_id)
+      }
 
       await adminClient.from('promocija_narocila').update({
         status: 'placano',
