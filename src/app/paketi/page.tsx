@@ -163,7 +163,7 @@ export default function PaketiPage() {
             {/* Opomba */}
             <p className="text-center text-sm text-gray-400 mt-10">
               Cene so informativne in bodo objavljene ob uradnem zagonu platforme.
-              Za vprašanja pišite na <a href="mailto:info@garbin.si" className="text-[#c9a84c] hover:underline">info@garbin.si</a>
+              Za vprašanja pišite na <a href="mailto:matej@lumavx.com" className="text-[#c9a84c] hover:underline">matej@lumavx.com</a>
             </p>
           </div>
         </section>
