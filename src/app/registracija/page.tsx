@@ -86,7 +86,7 @@ export default function RegistracijaPage() {
       } else if (koda === 'email_address_invalid') {
         setNapaka('Ta e-mail naslov ni veljaven.')
       } else {
-        setNapaka(`Prišlo je do napake: ${error.message}. Poskusite znova ali nas kontaktirajte na info@garbin.si.`)
+        setNapaka(`Prišlo je do napake: ${error.message}. Poskusite znova ali nas kontaktirajte na matej@lumavx.com.`)
       }
       setNalaga(false)
       return
