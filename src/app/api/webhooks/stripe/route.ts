@@ -26,6 +26,17 @@ export async function POST(req: NextRequest) {
       const adminClient = createAdminClient()
       const tip = session.metadata?.tip === 'urgentno' ? 'urgentno' : 'promocija'
 
+      // Stripe lahko isti dogodek ob omrežni napaki pošlje večkrat — brez tega
+      // preverjanja bi vsak ponovljen webhook znova podaljšal datum poteka.
+      const { data: narocilo } = await adminClient
+        .from('promocija_narocila')
+        .select('status')
+        .eq('stripe_session_id', session.id)
+        .maybeSingle()
+      if (narocilo && narocilo.status !== 'pending') {
+        return NextResponse.json({ received: true, already_processed: true })
+      }
+
       if (tip === 'urgentno') {
         const urgentnoDo = new Date()
         urgentnoDo.setDate(urgentnoDo.getDate() + URGENTNO_DNI)
