@@ -248,7 +248,7 @@ function DodajPloviloContent() {
           <div className="flex gap-3 justify-center">
             {!editId && (
               <button
-                onClick={() => { setUspesno(false); setForma(f => ({ ...f, naziv: '', opis: '', cena: '', letnik: '', dolzina_m: '' })); setCenaZahtevo(false); setUrgentno(false); setSlike([]); setObstojeceSlike([]) }}
+                onClick={() => { setUspesno(false); setForma(f => ({ ...f, naziv: '', opis: '', cena: '', letnik: '', dolzina_m: '' })); setCenaZahtevo(false); setSlike([]); setObstojeceSlike([]) }}
                 className="px-5 py-2.5 border border-gray-200 text-gray-600 font-medium text-sm rounded-full hover:bg-gray-50"
               >
                 Dodaj še eno
