@@ -15,6 +15,23 @@ export async function POST(req: NextRequest) {
   if (plovilo.user_id !== user.id) return NextResponse.json({ error: 'To ni vaš oglas.' }, { status: 403 })
   if (plovilo.urgentno) return NextResponse.json({ error: 'Oglas je že označen kot urgenten.' }, { status: 400 })
 
+  // Prepreči podvojeno plačilo (dvojni klik, dva odprta zavihka ...) — če je
+  // nedokončano naročilo za ta oglas nastalo pred manj kot 30 minutami, ne
+  // odpiraj še ene Stripe seje.
+  const pred30min = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  const { data: obstojece } = await supabase
+    .from('promocija_narocila')
+    .select('id')
+    .eq('plovilo_id', plovilo_id)
+    .eq('tip', 'urgentno')
+    .eq('status', 'pending')
+    .gte('created_at', pred30min)
+    .limit(1)
+    .maybeSingle()
+  if (obstojece) {
+    return NextResponse.json({ error: 'Plačilo za ta oglas je že v teku. Počakajte nekaj minut ali poskusite znova.' }, { status: 409 })
+  }
+
   let stripe
   try {
     stripe = createStripeClient()
