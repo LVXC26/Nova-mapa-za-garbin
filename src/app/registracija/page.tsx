@@ -40,7 +40,7 @@ type TipSkiper = 'samostojni' | 'agencija'
 export default function RegistracijaPage() {
   const router = useRouter()
   const [korak, setKorak] = useState<1 | 1.5 | 2>(1)
-  const [vloga, setVloga] = useState<Vloga>('prodajalec')
+  const [vloga, setVloga] = useState<Vloga>('kupec')
   const [tipSkiper, setTipSkiper] = useState<TipSkiper>('samostojni')
   const [ime, setIme] = useState('')
   const [email, setEmail] = useState('')

@@ -9,18 +9,8 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import { createClient } from '@/lib/supabase/client'
+import { opremaLabele } from '@/lib/oprema'
 import type { Charter, Plovilo } from '@/types/database'
-
-const opremaLabele: Record<string, string> = {
-  gps: 'GPS / Chartplotter',
-  radar: 'Radar',
-  vhf: 'VHF radio',
-  autopilot: 'Autopilot',
-  generator: 'Generator',
-  klima: 'Klimatska naprava',
-  rib: 'Pnevmatični čoln',
-  epirb: 'EPIRB',
-}
 
 const tipIkone: Record<string, string> = {
   jadrnica: '⛵',

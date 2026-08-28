@@ -9,6 +9,7 @@ import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import { createClient } from '@/lib/supabase/client'
+import { opremaLabele } from '@/lib/oprema'
 import type { Plovilo } from '@/types/database'
 
 function ShareModal({ naziv, onClose }: { naziv: string; onClose: () => void }) {
@@ -56,17 +57,6 @@ function ShareModal({ naziv, onClose }: { naziv: string; onClose: () => void }) 
       </div>
     </div>
   )
-}
-
-const opremaLabele: Record<string, string> = {
-  gps: 'GPS / Chartplotter',
-  radar: 'Radar',
-  vhf: 'VHF radio',
-  autopilot: 'Autopilot',
-  generator: 'Generator',
-  klima: 'Klimatska naprava',
-  rib: 'Pnevmatični čoln (RIB)',
-  epirb: 'EPIRB',
 }
 
 const tipIkone: Record<string, string> = {

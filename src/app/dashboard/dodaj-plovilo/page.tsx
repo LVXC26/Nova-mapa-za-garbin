@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, Upload, AlertCircle, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { opremaKategorije } from '@/lib/oprema'
 import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
 
 const tipiPlovila = [
@@ -20,55 +21,6 @@ const stanjeOpcije = ['odlično', 'dobro', 'potrebuje popravilo']
 
 const MAX_SLIK = 8
 const MAX_VELIKOST_MB = 8
-
-const opremaKategorije = [
-  {
-    naziv: 'Navigacija',
-    opcije: [
-      { kljuc: 'gps', label: 'GPS / Chartplotter' },
-      { kljuc: 'radar', label: 'Radar' },
-      { kljuc: 'vhf', label: 'VHF radio' },
-      { kljuc: 'autopilot', label: 'Autopilot' },
-      { kljuc: 'ploter', label: 'Ploter' },
-      { kljuc: 'ais', label: 'AIS' },
-    ],
-  },
-  {
-    naziv: 'Motor',
-    opcije: [
-      { kljuc: 'generator', label: 'Generator' },
-      { kljuc: 'bow_thruster', label: 'Bow thruster' },
-    ],
-  },
-  {
-    naziv: 'Udobje',
-    opcije: [
-      { kljuc: 'klima', label: 'Klimatska naprava' },
-      { kljuc: 'ogrevanje', label: 'Ogrevanje' },
-      { kljuc: 'hladilnik', label: 'Hladilnik' },
-      { kljuc: 'pecica', label: 'Pečica' },
-      { kljuc: 'mikrovalovna', label: 'Mikrovalovna' },
-    ],
-  },
-  {
-    naziv: 'Varnost',
-    opcije: [
-      { kljuc: 'epirb', label: 'EPIRB' },
-      { kljuc: 'life_raft', label: 'Life raft' },
-      { kljuc: 'jopici', label: 'Rešilni jopiči' },
-      { kljuc: 'signalne_luce', label: 'Signalne luči' },
-    ],
-  },
-  {
-    naziv: 'Dodatno',
-    opcije: [
-      { kljuc: 'rib', label: 'RIB / Gumenjak' },
-      { kljuc: 'elektricni_vitli', label: 'Električni vitli' },
-      { kljuc: 'solarni', label: 'Solarni paneli' },
-      { kljuc: 'watermaker', label: 'Watermaker' },
-    ],
-  },
-]
 
 function DodajPloviloContent() {
   const { user } = useAuth()
@@ -459,7 +411,7 @@ function DodajPloviloContent() {
               <div>
                 <p className="font-semibold text-sm text-gray-700">Urgentna prodaja — na voljo po objavi</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Po objavi oglasa lahko v "Moja plovila" doplačate 30 € za rdeč "Nujno" badge in prioriteto v prikazu.
+                  Po objavi oglasa lahko v &bdquo;Moja plovila&ldquo; doplačate 30 € za rdeč &bdquo;Nujno&ldquo; badge in prioriteto v prikazu.
                 </p>
               </div>
             </div>
