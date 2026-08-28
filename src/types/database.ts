@@ -25,6 +25,7 @@ export interface Plovilo {
   prodano?: boolean
   cena_na_zahtevo?: boolean
   urgentno?: boolean
+  urgentno_do?: string | null
   user_id: string | null
   created_at: string
   updated_at?: string
@@ -283,6 +284,7 @@ export interface PromocijaNarocilo {
   id: string
   plovilo_id: string
   user_id: string
+  tip?: 'promocija' | 'urgentno'
   stripe_session_id: string
   znesek_cent: number
   valuta: string
