@@ -299,8 +299,21 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                     )}
                   </div>
 
-                  {/* Kontaktni gumbi */}
-                  {user ? (
+                  {/* Kontaktni gumbi — pri najemu (charter) kupec NE sme imeti
+                      neposrednega stika (chat/telefon) z lastnikom; vsako
+                      povpraševanje mora iti prek Garbin ekipe (glej obrazec
+                      spodaj, ki pošlje mail na matej@lumavx.com). */}
+                  {plovilo.tip_oglasa === 'najem' ? (
+                    plovilo.user_id === user?.id ? (
+                      <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+                        <p className="text-xs text-gray-500 font-medium">To je vaš oglas</p>
+                      </div>
+                    ) : (
+                      <div className="bg-[#0c2340]/5 border border-[#0c2340]/10 rounded-xl p-3 text-center">
+                        <p className="text-xs text-gray-500 font-medium">Za rezervacijo izpolnite povpraševanje spodaj — kontaktirala vas bo naša ekipa.</p>
+                      </div>
+                    )
+                  ) : user ? (
                     <div className="space-y-3">
                       {plovilo.user_id && plovilo.user_id !== user.id ? (
                         <Link
@@ -351,23 +364,26 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                   <PovprasevanjeForma tip="plovilo" targetId={plovilo.id} pripravljenTermin={izbranTermin} />
                 </div>
 
-                {/* Prodajalec info */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                  <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Prodajalec</h3>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-lg">👤</div>
-                    <div>
-                      <p className="font-medium text-[#0c2340] text-sm">Zasebni prodajalec</p>
-                      <p className="text-xs text-gray-400">Član od 2024</p>
+                {/* Prodajalec info — pri najemu se kontakt lastnika ne razkriva
+                    kupcu (glej opombo zgoraj); Garbin ekipa ga dobi po mailu. */}
+                {plovilo.tip_oglasa !== 'najem' && (
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Prodajalec</h3>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-lg">👤</div>
+                      <div>
+                        <p className="font-medium text-[#0c2340] text-sm">Zasebni prodajalec</p>
+                        <p className="text-xs text-gray-400">Član od 2024</p>
+                      </div>
                     </div>
+                    {plovilo.kontakt_email && (
+                      <a href={`mailto:${plovilo.kontakt_email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#0c2340] transition-colors">
+                        <Mail className="w-3.5 h-3.5 text-[#c9a84c]" />
+                        {plovilo.kontakt_email}
+                      </a>
+                    )}
                   </div>
-                  {plovilo.kontakt_email && (
-                    <a href={`mailto:${plovilo.kontakt_email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#0c2340] transition-colors">
-                      <Mail className="w-3.5 h-3.5 text-[#c9a84c]" />
-                      {plovilo.kontakt_email}
-                    </a>
-                  )}
-                </div>
+                )}
 
                 {/* Banner placeholder 300x250 */}
                 <div className="w-full h-[250px] bg-[#0c2340] rounded-2xl flex flex-col items-center justify-center border border-[#1e3a5f]">

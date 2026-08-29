@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MapPin, Ship, Star, CheckCircle, Phone, Mail, ExternalLink, ArrowLeft, Users, Ruler } from 'lucide-react'
+import { MapPin, Ship, Star, CheckCircle, ExternalLink, ArrowLeft, Users, Ruler } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -194,34 +194,14 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
               <div className="space-y-4">
                 {/* Kontaktna kartica */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-20">
-                  <h3 className="font-semibold text-[#0c2340] mb-4">Pošlji povpraševanje</h3>
+                  <h3 className="font-semibold text-[#0c2340] mb-1">Pošlji povpraševanje</h3>
+                  {/* Kontakt charterja (telefon/e-mail) se namenoma ne razkriva
+                      neposredno — vsako povpraševanje gre prek Garbin ekipe,
+                      ki nato poveže stranko s charterjem. */}
+                  <p className="text-xs text-gray-400 mb-4">Kontaktirala vas bo naša ekipa.</p>
 
-                  {/* Pokliči zdaj — prominentni gumb */}
-                  {charter.kontakt_tel && (
-                    <a
-                      href={`tel:${charter.kontakt_tel}`}
-                      className="flex items-center justify-center gap-2 w-full py-3.5 mb-4 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-bold rounded-full transition-all hover:scale-[1.02] shadow-sm"
-                    >
-                      <Phone className="w-4 h-4" />
-                      Pokliči zdaj
-                    </a>
-                  )}
-                  <div className="space-y-3 mb-6">
-                    <a
-                      href={`tel:${charter.kontakt_tel}`}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group"
-                    >
-                      <Phone className="w-4 h-4 text-[#c9a84c] shrink-0" />
-                      <span className="text-sm text-gray-700 group-hover:text-[#0c2340]">{charter.kontakt_tel}</span>
-                    </a>
-                    <a
-                      href={`mailto:${charter.kontakt_email}`}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group"
-                    >
-                      <Mail className="w-4 h-4 text-[#c9a84c] shrink-0" />
-                      <span className="text-sm text-gray-700 group-hover:text-[#0c2340] truncate">{charter.kontakt_email}</span>
-                    </a>
-                    {charter.spletna_stran && (
+                  {charter.spletna_stran && (
+                    <div className="mb-6">
                       <a
                         href={charter.spletna_stran}
                         target="_blank"
@@ -231,8 +211,8 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                         <ExternalLink className="w-4 h-4 text-[#c9a84c] shrink-0" />
                         <span className="text-sm text-[#0c2340] font-medium group-hover:text-[#c9a84c]">Spletna stran</span>
                       </a>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <PovprasevanjeForma tip="charter" targetId={String(charter.id)} />
                 </div>
