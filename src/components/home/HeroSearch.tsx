@@ -15,9 +15,16 @@ const DOLZINA_MAX = 150
 
 const stanja = ['odlično', 'dobro', 'potrebuje popravilo']
 
-export default function HeroSearch() {
+type Nacin = 'kupi' | 'najemi'
+
+export default function HeroSearch({
+  nacin,
+  onNacinChange,
+}: {
+  nacin: Nacin
+  onNacinChange: (n: Nacin) => void
+}) {
   const router = useRouter()
-  const [nacin, setNacin] = useState<'kupi' | 'najemi'>('kupi')
 
   // Kupi
   const [tip, setTip] = useState<TipPlovila | ''>('')
@@ -69,7 +76,7 @@ export default function HeroSearch() {
       <div className="flex justify-center mb-6">
         <div className="inline-flex bg-white/10 border border-white/20 rounded-full p-1 gap-1">
           <button
-            onClick={() => setNacin('kupi')}
+            onClick={() => onNacinChange('kupi')}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
               nacin === 'kupi'
                 ? 'bg-[#c9a84c] text-[#0c2340] shadow-lg'
@@ -80,7 +87,7 @@ export default function HeroSearch() {
             Kupi plovilo
           </button>
           <button
-            onClick={() => setNacin('najemi')}
+            onClick={() => onNacinChange('najemi')}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
               nacin === 'najemi'
                 ? 'bg-[#c9a84c] text-[#0c2340] shadow-lg'

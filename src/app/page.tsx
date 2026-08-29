@@ -45,7 +45,9 @@ function NewsletterForm() {
 }
 
 export default function HomePage() {
+  const [nacin, setNacin] = useState<'kupi' | 'najemi'>('kupi')
   const [realnaPlovila, setRealnaPlovila] = useState<Plovilo[]>([])
+  const [realnaNajemPlovila, setRealnaNajemPlovila] = useState<Plovilo[]>([])
   const [realniCharterji, setRealniCharterji] = useState<Charter[]>([])
   const [realnePromocije, setRealnePromocije] = useState<Promocija[]>([])
   const [realneNovice, setRealneNovice] = useState<NovicaZKategorijo[]>([])
@@ -55,6 +57,9 @@ export default function HomePage() {
     supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip_oglasa', 'prodaja')
       .order('created_at', { ascending: false }).limit(50)
       .then(({ data }) => { if (data) setRealnaPlovila(data) })
+    supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip_oglasa', 'najem')
+      .order('created_at', { ascending: false }).limit(50)
+      .then(({ data }) => { if (data) setRealnaNajemPlovila(data) })
     supabase.from('charterji').select('*').order('created_at', { ascending: false }).limit(3)
       .then(({ data }) => { if (data) setRealniCharterji(data) })
     supabase.from('promocije').select('*').eq('aktivna', true).order('created_at', { ascending: false }).limit(4)
@@ -67,11 +72,16 @@ export default function HomePage() {
   // Enak vrstni red kot na /plovila: urgentno > promoted > ostali, prodana na konec —
   // brez tega bi "Urgentna prodaja" (plačana/označena prioriteta) na naslovnici
   // pomenila nič, ker se je tu prikazovalo zgolj zadnjih 6 dodanih oglasov.
-  const plovilaZaProdajo = [
-    ...realnaPlovila.filter(p => p.urgentno && !p.prodano),
-    ...realnaPlovila.filter(p => p.promoted && !p.urgentno && !p.prodano),
-    ...realnaPlovila.filter(p => !p.promoted && !p.urgentno && !p.prodano),
-  ].slice(0, 6)
+  function razvrsti(seznam: Plovilo[]): Plovilo[] {
+    return [
+      ...seznam.filter(p => p.urgentno && !p.prodano),
+      ...seznam.filter(p => p.promoted && !p.urgentno && !p.prodano),
+      ...seznam.filter(p => !p.promoted && !p.urgentno && !p.prodano),
+    ].slice(0, 6)
+  }
+  // Hero "Kupi/Najemi" preklop krmili tudi to sekcijo — ni razloga za
+  // prikaz prodajnih plovil, ko stranko zanima najem, in obratno.
+  const prikazanaPlovila = nacin === 'kupi' ? razvrsti(realnaPlovila) : razvrsti(realnaNajemPlovila)
   const novice = realneNovice.slice(0, 3)
   const promocije = realnePromocije.slice(0, 4)
   const charterji = realniCharterji.slice(0, 3)
@@ -116,7 +126,7 @@ export default function HomePage() {
             </p>
 
             <div className="animate-fade-in-up delay-300">
-              <HeroSearch />
+              <HeroSearch nacin={nacin} onNacinChange={setNacin} />
             </div>
           </div>
 
@@ -147,7 +157,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* PLOVILA ZA PRODAJO */}
+        {/* PLOVILA ZA PRODAJO / NAJEM — sledi hero preklopu Kupi/Najemi */}
         <section className="py-20 bg-[#f8fafc]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
@@ -155,19 +165,35 @@ export default function HomePage() {
                 <div className="flex items-center gap-2 text-[#c9a84c] text-sm font-medium mb-2">
                   <Star className="w-4 h-4" /> Izpostavljena plovila
                 </div>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340]">Plovila za prodajo</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340]">
+                  {nacin === 'kupi' ? 'Plovila za prodajo' : 'Plovila za najem'}
+                </h2>
               </div>
-              <Link href="/plovila" className="hidden sm:flex items-center gap-1 text-sm font-medium text-[#0c2340] hover:text-[#c9a84c] transition-colors">
+              <Link
+                href={nacin === 'kupi' ? '/plovila' : '/plovila?oglas=najem'}
+                className="hidden sm:flex items-center gap-1 text-sm font-medium text-[#0c2340] hover:text-[#c9a84c] transition-colors"
+              >
                 Vsa plovila <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {plovilaZaProdajo.map((plovilo) => (
-                <PloviloKartica key={plovilo.id} plovilo={plovilo} promoted={!!plovilo.promoted} />
-              ))}
-            </div>
+            {prikazanaPlovila.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+                <p className="text-gray-400 font-medium">
+                  {nacin === 'kupi' ? 'Trenutno ni plovil za prodajo.' : 'Trenutno ni plovil za najem.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {prikazanaPlovila.map((plovilo) => (
+                  <PloviloKartica key={plovilo.id} plovilo={plovilo} promoted={!!plovilo.promoted} />
+                ))}
+              </div>
+            )}
             <div className="mt-8 text-center sm:hidden">
-              <Link href="/plovila" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#0c2340] border-2 border-[#0c2340] rounded-full hover:bg-[#0c2340] hover:text-white transition-colors">
+              <Link
+                href={nacin === 'kupi' ? '/plovila' : '/plovila?oglas=najem'}
+                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#0c2340] border-2 border-[#0c2340] rounded-full hover:bg-[#0c2340] hover:text-white transition-colors"
+              >
                 Vsa plovila <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
