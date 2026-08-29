@@ -8,7 +8,6 @@ import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
-import IzbiraTerminaKoledar from '@/components/plovila/IzbiraTerminaKoledar'
 import { createClient } from '@/lib/supabase/client'
 import { opremaLabele } from '@/lib/oprema'
 import type { Plovilo, PloviloZasedenost } from '@/types/database'
@@ -72,7 +71,6 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
   const [nalaga, setNalaga] = useState(true)
   const [shareOpen, setShareOpen] = useState(false)
   const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
-  const [izbranTermin, setIzbranTermin] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
@@ -353,15 +351,15 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                   )}
                 </div>
 
-                {/* Koledar razpoložljivosti — samo za najem */}
-                {plovilo.tip_oglasa === 'najem' && (
-                  <IzbiraTerminaKoledar zasedenost={zasedenost} onSpremembaTermina={setIzbranTermin} />
-                )}
-
-                {/* Povpraševanje forma */}
+                {/* Povpraševanje forma — pri najemu polje "Želen termin" ob
+                    kliku odpre koledar razpoložljivosti (glej TerminPolje). */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                   <h3 className="font-semibold text-[#0c2340] mb-4 text-sm">Pošlji povpraševanje</h3>
-                  <PovprasevanjeForma tip="plovilo" targetId={plovilo.id} pripravljenTermin={izbranTermin} />
+                  <PovprasevanjeForma
+                    tip="plovilo"
+                    targetId={plovilo.id}
+                    zasedenost={plovilo.tip_oglasa === 'najem' ? zasedenost : undefined}
+                  />
                 </div>
 
                 {/* Prodajalec info — pri najemu se kontakt lastnika ne razkriva

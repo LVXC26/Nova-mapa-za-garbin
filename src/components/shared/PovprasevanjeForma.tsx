@@ -5,27 +5,20 @@ import { Send, CheckCircle, AlertCircle, UserCircle2 } from 'lucide-react'
 import { oddajPovprasevanje, type PovprasevanjeInput } from '@/app/actions/povprasevanje'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import TerminPolje from '@/components/shared/TerminPolje'
+import type { PloviloZasedenost } from '@/types/database'
 
 type Props = {
   tip: PovprasevanjeInput['tip']
   targetId: string
-  // Ko starš (npr. koledar razpoložljivosti na strani plovila) izbere
-  // termin, se to polje samodejno prepiše sem.
-  pripravljenTermin?: string
+  // Za povpraševanja o najemu: če je podana zasedenost, se polje "Želen
+  // termin" spremeni v gumb, ki ob kliku odpre koledar razpoložljivosti.
+  zasedenost?: PloviloZasedenost[]
 }
 
-export default function PovprasevanjeForma({ tip, targetId, pripravljenTermin }: Props) {
+export default function PovprasevanjeForma({ tip, targetId, zasedenost }: Props) {
   const { user, demoMode } = useAuth()
   const [forma, setForma] = useState({ ime: '', email: '', telefon: '', termin: '', sporocilo: '', gdpr: false })
-
-  // Ko starš (npr. koledar razpoložljivosti) izbere termin, ga prevzamemo v
-  // formo — brez efekta, po vzorcu "adjusting state during rendering"
-  // (https://react.dev/reference/react/useState#storing-information-from-previous-renders).
-  const [zadnjiPripravljenTermin, setZadnjiPripravljenTermin] = useState(pripravljenTermin)
-  if (pripravljenTermin !== zadnjiPripravljenTermin) {
-    setZadnjiPripravljenTermin(pripravljenTermin)
-    if (pripravljenTermin) setForma((f) => ({ ...f, termin: pripravljenTermin }))
-  }
   const [stanje, setStanje] = useState<'idle' | 'poslano' | 'napaka'>('idle')
   const [napakaSporocilo, setNapakaSporocilo] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -138,11 +131,19 @@ export default function PovprasevanjeForma({ tip, targetId, pripravljenTermin }:
 
       <div>
         <label className="block text-xs font-semibold text-[#0c2340] mb-1.5">Želen termin</label>
-        <input
-          type="text" name="termin" value={forma.termin} onChange={handleChange}
-          placeholder="npr. julij 2025, teden"
-          className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]"
-        />
+        {zasedenost ? (
+          <TerminPolje
+            zasedenost={zasedenost}
+            vrednost={forma.termin}
+            onChange={(termin) => setForma((f) => ({ ...f, termin }))}
+          />
+        ) : (
+          <input
+            type="text" name="termin" value={forma.termin} onChange={handleChange}
+            placeholder="npr. julij 2025, teden"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]"
+          />
+        )}
       </div>
 
       <div>
