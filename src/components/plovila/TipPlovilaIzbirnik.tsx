@@ -60,7 +60,7 @@ export default function TipPlovilaIzbirnik({
                 </span>
               )}
               <span className="w-8 h-8 shrink-0" style={maskStyle} />
-              <span className="text-xs font-semibold leading-tight">{label}</span>
+              <span className="min-w-0 flex-1 text-xs font-semibold leading-tight">{label}</span>
             </button>
           )
         })}
