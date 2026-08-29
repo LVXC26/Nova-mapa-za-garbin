@@ -6,16 +6,8 @@ import { CheckCircle, Upload, AlertCircle, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { opremaKategorije } from '@/lib/oprema'
+import TipPlovilaFormaIzbirnik from '@/components/plovila/TipPlovilaFormaIzbirnik'
 import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
-
-const tipiPlovila = [
-  { vrednost: 'jadrnica', label: 'Jadrnica', ikona: '⛵' },
-  { vrednost: 'motorni', label: 'Motorni čoln', ikona: '🚤' },
-  { vrednost: 'gumenjak', label: 'Gumenjak', ikona: '🛟' },
-  { vrednost: 'katamaran', label: 'Katamaran', ikona: '⛵' },
-  { vrednost: 'jet', label: 'Jet ski', ikona: '💨' },
-  { vrednost: 'drugo', label: 'Drugo', ikona: '⚓' },
-]
 
 const stanjeOpcije = ['odlično', 'dobro', 'potrebuje popravilo']
 
@@ -269,22 +261,10 @@ function DodajPloviloContent() {
           {/* Tip plovila */}
           <div>
             <label className="block text-sm font-semibold text-[#0c2340] mb-3">Tip plovila</label>
-            <div className="grid grid-cols-3 gap-2">
-              {tipiPlovila.map(({ vrednost, label, ikona }) => (
-                <button
-                  key={vrednost}
-                  type="button"
-                  onClick={() => posodobiFormo('tip', vrednost)}
-                  className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                    forma.tip === vrednost
-                      ? 'border-[#c9a84c] bg-[#c9a84c]/10 text-[#0c2340]'
-                      : 'border-gray-100 text-gray-500 hover:border-gray-200'
-                  }`}
-                >
-                  <span>{ikona}</span> {label}
-                </button>
-              ))}
-            </div>
+            <TipPlovilaFormaIzbirnik
+              vrednost={forma.tip as TipPlovila}
+              onChange={(v) => posodobiFormo('tip', v)}
+            />
           </div>
 
           {/* Osnovno */}
