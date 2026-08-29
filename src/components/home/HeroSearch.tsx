@@ -4,26 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, SlidersHorizontal, ChevronDown, ChevronUp, ShoppingBag, Anchor } from 'lucide-react'
 import RangeSlider from '@/components/plovila/RangeSlider'
+import TipPlovilaIzbirnikTamno from '@/components/home/TipPlovilaIzbirnikTamno'
+import TipCharterjaIzbirnik from '@/components/charterji/TipCharterjaIzbirnik'
 import { CENA_VALUES, cenaValueToIdx, formatCena } from '@/lib/cenaSlider'
+import type { TipPlovila, TipCharterPlovila } from '@/types/database'
 
 const CENA_MAX_IDX = CENA_VALUES.length - 1
 const DOLZINA_MIN = 3
 const DOLZINA_MAX = 150
-
-const kategorije = [
-  { vrednost: 'jadrnica', label: 'Jadrnica', ikona: '⛵' },
-  { vrednost: 'motorni', label: 'Motorni čoln', ikona: '🚤' },
-  { vrednost: 'jet', label: 'Jet ski', ikona: '💨' },
-  { vrednost: 'gumenjak', label: 'Gumenjak', ikona: '🛟' },
-  { vrednost: 'katamaran', label: 'Katamaran', ikona: '⛵' },
-]
-
-const tipNajem = [
-  { vrednost: 'jahta', label: 'Jahta', ikona: '🛥️' },
-  { vrednost: 'jadrnica', label: 'Jadrnica', ikona: '⛵' },
-  { vrednost: 'motorni', label: 'Motorni čoln', ikona: '🚤' },
-  { vrednost: 'gumenjak', label: 'Gumenjak', ikona: '🛟' },
-]
 
 const stanja = ['odlično', 'dobro', 'potrebuje popravilo']
 
@@ -32,7 +20,7 @@ export default function HeroSearch() {
   const [nacin, setNacin] = useState<'kupi' | 'najemi'>('kupi')
 
   // Kupi
-  const [tip, setTip] = useState('')
+  const [tip, setTip] = useState<TipPlovila | ''>('')
   const [cenaIdx, setCenaIdx] = useState<[number, number]>([0, CENA_MAX_IDX])
   const [dolzina, setDolzina] = useState<[number, number]>([DOLZINA_MIN, DOLZINA_MAX])
   const [razsirenFiltr, setRazsirenFiltr] = useState(false)
@@ -42,7 +30,7 @@ export default function HeroSearch() {
   const [destinacija, setDestinacija] = useState('')
   const [datumOd, setDatumOd] = useState('')
   const [datumDo, setDatumDo] = useState('')
-  const [tipNajema, setTipNajema] = useState('')
+  const [tipNajema, setTipNajema] = useState<TipCharterPlovila | ''>('')
   const [steviloOseb, setSteviloOseb] = useState('')
 
   function poisciKupi() {
@@ -107,21 +95,8 @@ export default function HeroSearch() {
       {nacin === 'kupi' ? (
         <>
           {/* Kategorije */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {kategorije.map((k) => (
-              <button
-                key={k.vrednost}
-                onClick={() => setTip(tip === k.vrednost ? '' : k.vrednost)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                  tip === k.vrednost
-                    ? 'bg-[#c9a84c] text-[#0c2340] shadow-lg shadow-[#c9a84c]/30 scale-105'
-                    : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
-                }`}
-              >
-                <span className="text-base">{k.ikona}</span>
-                {k.label}
-              </button>
-            ))}
+          <div className="mb-6">
+            <TipPlovilaIzbirnikTamno vrednost={tip} onChange={setTip} />
           </div>
 
           {/* Search card */}
@@ -195,21 +170,8 @@ export default function HeroSearch() {
       ) : (
         <>
           {/* Tip plovila za najem */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {tipNajem.map((k) => (
-              <button
-                key={k.vrednost}
-                onClick={() => setTipNajema(tipNajema === k.vrednost ? '' : k.vrednost)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                  tipNajema === k.vrednost
-                    ? 'bg-[#c9a84c] text-[#0c2340] shadow-lg shadow-[#c9a84c]/30 scale-105'
-                    : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
-                }`}
-              >
-                <span className="text-base">{k.ikona}</span>
-                {k.label}
-              </button>
-            ))}
+          <div className="mb-6">
+            <TipCharterjaIzbirnik vrednost={tipNajema} onChange={setTipNajema} />
           </div>
 
           {/* Charter search card */}
