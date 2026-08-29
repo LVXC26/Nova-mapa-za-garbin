@@ -31,6 +31,14 @@ export interface Plovilo {
   updated_at?: string
 }
 
+export interface PloviloZasedenost {
+  id: string
+  plovilo_id: string
+  datum_od: string
+  datum_do: string
+  created_at: string
+}
+
 export interface Novica {
   id: string
   naslov: string
@@ -319,6 +327,7 @@ export interface Database {
       objava_likes: { Row: Pick<ObjavaLike, keyof ObjavaLike>; Insert: Omit<ObjavaLike, 'id' | 'created_at'>; Update: Partial<ObjavaLike>; Relationships: [] }
       objava_komentarji: { Row: Pick<ObjavaKomentar, keyof ObjavaKomentar>; Insert: Omit<ObjavaKomentar, 'id' | 'created_at'>; Update: Partial<ObjavaKomentar>; Relationships: [] }
       promocija_narocila: { Row: Pick<PromocijaNarocilo, keyof PromocijaNarocilo>; Insert: Omit<PromocijaNarocilo, 'id' | 'created_at'>; Update: Partial<PromocijaNarocilo>; Relationships: [] }
+      plovilo_zasedenost: { Row: Pick<PloviloZasedenost, keyof PloviloZasedenost>; Insert: Omit<PloviloZasedenost, 'id' | 'created_at'>; Update: Partial<PloviloZasedenost>; Relationships: [] }
     }
     Views: {
       public_profiles: {

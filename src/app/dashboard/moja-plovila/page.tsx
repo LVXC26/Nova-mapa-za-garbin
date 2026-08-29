@@ -3,9 +3,10 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { PlusCircle, Ship, MapPin, Calendar, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon, Star, Trash2 } from 'lucide-react'
+import { PlusCircle, Ship, MapPin, Calendar, CalendarRange, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon, Star, Trash2 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import UrediZasedenostKoledar from '@/components/plovila/UrediZasedenostKoledar'
 import type { Plovilo } from '@/types/database'
 import { formatCena } from '@/lib/utils'
 
@@ -34,6 +35,7 @@ function MojaPlovilaContent() {
   const [urgentnoNarocam, setUrgentnoNarocam] = useState<string | null>(null)
   const [urgentnoNapaka, setUrgentnoNapaka] = useState('')
   const [zdaj, setZdaj] = useState<number | null>(null)
+  const [koledarOdprtId, setKoledarOdprtId] = useState<string | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -216,10 +218,11 @@ function MojaPlovilaContent() {
               return (
                 <div
                   key={plovilo.id}
-                  className={`bg-white rounded-2xl border shadow-sm p-5 flex items-center gap-5 transition-all ${
+                  className={`bg-white rounded-2xl border shadow-sm transition-all ${
                     jeProdano ? 'border-gray-200 opacity-60' : 'border-gray-100'
                   }`}
                 >
+                <div className="p-5 flex items-center gap-5">
                   <div className="w-12 h-12 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-2xl shrink-0 relative">
                     {tipIkone[plovilo.tip] ?? '⚓'}
                     {jeProdano && (
@@ -282,6 +285,20 @@ function MojaPlovilaContent() {
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Koledar zasedenosti — samo za najem */}
+                    {plovilo.tip_oglasa === 'najem' && (
+                      <button
+                        onClick={() => setKoledarOdprtId((prev) => (prev === plovilo.id ? null : plovilo.id))}
+                        title="Koledar zasedenosti"
+                        className={`p-2 rounded-xl transition-colors ${
+                          koledarOdprtId === plovilo.id
+                            ? 'text-[#0c2340] bg-[#c9a84c]/20'
+                            : 'text-gray-400 hover:text-[#0c2340] hover:bg-gray-100'
+                        }`}
+                      >
+                        <CalendarRange className="w-4 h-4" />
+                      </button>
+                    )}
                     {/* Promocija */}
                     {!jeProdano && !jePromovirano(plovilo) && (
                       <button
@@ -340,6 +357,12 @@ function MojaPlovilaContent() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
+                </div>
+                {koledarOdprtId === plovilo.id && (
+                  <div className="border-t border-gray-100 p-5">
+                    <UrediZasedenostKoledar ploviloId={plovilo.id} />
+                  </div>
+                )}
                 </div>
               )
             })}

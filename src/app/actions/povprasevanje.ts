@@ -41,6 +41,22 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
     return { uspeh: false, napaka: 'Napaka pri shranjevanju. Prosimo, poskusite znova.' }
   }
 
+  // Za povpraševanja o plovilu (npr. najem pri charterju) poleg podatkov
+  // stranke pridobimo še kontakt lastnika oglasa, da ga lahko posredujemo
+  // v e-mail — Garbin tako dobi oba kontakta in lahko poveže stranko s
+  // charterjem/prodajalcem.
+  let kontaktLastnika: { email: string | null; tel: string | null; naziv: string | null } | null = null
+  if (data.tip === 'plovilo') {
+    const { data: plovilo } = await supabase
+      .from('plovila')
+      .select('kontakt_email, kontakt_tel, naziv')
+      .eq('id', data.target_id)
+      .maybeSingle()
+    if (plovilo) {
+      kontaktLastnika = { email: plovilo.kontakt_email, tel: plovilo.kontakt_tel, naziv: plovilo.naziv }
+    }
+  }
+
   const resendKey = process.env.RESEND_API_KEY
   const obvestiloEmail = process.env.OBVESTILO_EMAIL ?? 'matej@lumavx.com'
 
@@ -75,6 +91,11 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
               <tr><td style="padding:8px;color:#666;">Termin:</td><td style="padding:8px;">${data.termin || '—'}</td></tr>
               <tr><td style="padding:8px;color:#666;">Sporočilo:</td><td style="padding:8px;">${data.sporocilo}</td></tr>
               <tr><td style="padding:8px;color:#666;">Tip / ID:</td><td style="padding:8px;">${tipLabel} / ${data.target_id}</td></tr>
+              ${kontaktLastnika ? `
+              <tr><td colspan="2" style="padding:12px 8px 4px;color:#0c2340;font-weight:600;border-top:1px solid #eee;">Lastnik oglasa "${kontaktLastnika.naziv ?? ''}"</td></tr>
+              <tr><td style="padding:8px;color:#666;">E-mail lastnika:</td><td style="padding:8px;">${kontaktLastnika.email ? `<a href="mailto:${kontaktLastnika.email}">${kontaktLastnika.email}</a>` : '—'}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Telefon lastnika:</td><td style="padding:8px;">${kontaktLastnika.tel || '—'}</td></tr>
+              ` : ''}
             </table>
           `,
         }),

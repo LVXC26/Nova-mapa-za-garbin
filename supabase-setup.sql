@@ -1165,3 +1165,31 @@ drop trigger if exists trg_prisili_pending_narocilo on promocija_narocila;
 create trigger trg_prisili_pending_narocilo
 before insert on promocija_narocila
 for each row execute function prisili_pending_narocilo();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- KOLEDAR ZASEDENOSTI ZA NAJEMNA PLOVILA
+-- Charter za vsako svoje plovilo za najem označi termine, ko je plovilo
+-- že zasedeno — javno vidno na strani plovila, da stranka pred oddajo
+-- povpraševanja vidi, kdaj je prosto.
+-- ═══════════════════════════════════════════════════════════════════
+
+create table if not exists plovilo_zasedenost (
+  id uuid primary key default gen_random_uuid(),
+  plovilo_id uuid references plovila(id) on delete cascade not null,
+  datum_od date not null,
+  datum_do date not null,
+  created_at timestamptz default now(),
+  constraint veljaven_datumski_razpon check (datum_do >= datum_od)
+);
+
+alter table plovilo_zasedenost enable row level security;
+
+drop policy if exists "Javni bralni dostop - zasedenost" on plovilo_zasedenost;
+create policy "Javni bralni dostop - zasedenost" on plovilo_zasedenost for select using (true);
+
+drop policy if exists "Lastnik plovila upravlja zasedenost" on plovilo_zasedenost;
+create policy "Lastnik plovila upravlja zasedenost" on plovilo_zasedenost for all
+  using (exists (select 1 from plovila where plovila.id = plovilo_zasedenost.plovilo_id and plovila.user_id = auth.uid()))
+  with check (exists (select 1 from plovila where plovila.id = plovilo_zasedenost.plovilo_id and plovila.user_id = auth.uid()));
+
+create index if not exists idx_plovilo_zasedenost_plovilo_id on plovilo_zasedenost(plovilo_id);

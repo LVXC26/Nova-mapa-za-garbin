@@ -9,11 +9,23 @@ import { createClient } from '@/lib/supabase/client'
 type Props = {
   tip: PovprasevanjeInput['tip']
   targetId: string
+  // Ko starš (npr. koledar razpoložljivosti na strani plovila) izbere
+  // termin, se to polje samodejno prepiše sem.
+  pripravljenTermin?: string
 }
 
-export default function PovprasevanjeForma({ tip, targetId }: Props) {
+export default function PovprasevanjeForma({ tip, targetId, pripravljenTermin }: Props) {
   const { user, demoMode } = useAuth()
   const [forma, setForma] = useState({ ime: '', email: '', telefon: '', termin: '', sporocilo: '', gdpr: false })
+
+  // Ko starš (npr. koledar razpoložljivosti) izbere termin, ga prevzamemo v
+  // formo — brez efekta, po vzorcu "adjusting state during rendering"
+  // (https://react.dev/reference/react/useState#storing-information-from-previous-renders).
+  const [zadnjiPripravljenTermin, setZadnjiPripravljenTermin] = useState(pripravljenTermin)
+  if (pripravljenTermin !== zadnjiPripravljenTermin) {
+    setZadnjiPripravljenTermin(pripravljenTermin)
+    if (pripravljenTermin) setForma((f) => ({ ...f, termin: pripravljenTermin }))
+  }
   const [stanje, setStanje] = useState<'idle' | 'poslano' | 'napaka'>('idle')
   const [napakaSporocilo, setNapakaSporocilo] = useState('')
   const [isPending, startTransition] = useTransition()

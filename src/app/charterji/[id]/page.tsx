@@ -184,9 +184,10 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                           : []
 
                         return (
-                          <div
+                          <Link
                             key={plovilo.id}
-                            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex gap-5"
+                            href={`/plovila/${plovilo.id}`}
+                            className="flex bg-white rounded-2xl border border-gray-100 shadow-sm p-6 gap-5 hover:border-[#c9a84c]/50 hover:shadow-md transition-all"
                           >
                             {/* Ikona tipa */}
                             <div className="w-14 h-14 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-2xl shrink-0">
@@ -234,7 +235,7 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                                 </div>
                               )}
                             </div>
-                          </div>
+                          </Link>
                         )
                       })}
                     </div>

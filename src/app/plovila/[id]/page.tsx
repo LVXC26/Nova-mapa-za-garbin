@@ -8,9 +8,10 @@ import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
+import IzbiraTerminaKoledar from '@/components/plovila/IzbiraTerminaKoledar'
 import { createClient } from '@/lib/supabase/client'
 import { opremaLabele } from '@/lib/oprema'
-import type { Plovilo } from '@/types/database'
+import type { Plovilo, PloviloZasedenost } from '@/types/database'
 
 function ShareModal({ naziv, onClose }: { naziv: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false)
@@ -70,6 +71,8 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
   const [podobna, setPodobna] = useState<Plovilo[]>([])
   const [nalaga, setNalaga] = useState(true)
   const [shareOpen, setShareOpen] = useState(false)
+  const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
+  const [izbranTermin, setIzbranTermin] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
@@ -79,6 +82,10 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
       if (data) {
         supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip', data.tip).neq('id', id).limit(3)
           .then(({ data: sorodna }) => { if (sorodna) setPodobna(sorodna) })
+        if (data.tip_oglasa === 'najem') {
+          supabase.from('plovilo_zasedenost').select('*').eq('plovilo_id', id)
+            .then(({ data: termini }) => { if (termini) setZasedenost(termini) })
+        }
       }
     })
   }, [id])
@@ -333,10 +340,15 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                   )}
                 </div>
 
+                {/* Koledar razpoložljivosti — samo za najem */}
+                {plovilo.tip_oglasa === 'najem' && (
+                  <IzbiraTerminaKoledar zasedenost={zasedenost} onSpremembaTermina={setIzbranTermin} />
+                )}
+
                 {/* Povpraševanje forma */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                   <h3 className="font-semibold text-[#0c2340] mb-4 text-sm">Pošlji povpraševanje</h3>
-                  <PovprasevanjeForma tip="plovilo" targetId={plovilo.id} />
+                  <PovprasevanjeForma tip="plovilo" targetId={plovilo.id} pripravljenTermin={izbranTermin} />
                 </div>
 
                 {/* Prodajalec info */}
