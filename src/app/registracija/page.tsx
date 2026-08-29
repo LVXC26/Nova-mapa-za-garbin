@@ -44,6 +44,7 @@ export default function RegistracijaPage() {
   const [tipSkiper, setTipSkiper] = useState<TipSkiper>('samostojni')
   const [ime, setIme] = useState('')
   const [email, setEmail] = useState('')
+  const [telefon, setTelefon] = useState('')
   const [geslo, setGeslo] = useState('')
   const [prikaziGeslo, setPrikaziGeslo] = useState(false)
   const [napaka, setNapaka] = useState('')
@@ -67,13 +68,19 @@ export default function RegistracijaPage() {
     setNalaga(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password: geslo,
       options: {
         data: { vloga, ime, tip_skiper: vloga === 'skipper' ? tipSkiper : undefined },
       },
     })
+
+    if (!error && data.user && telefon.trim()) {
+      // Best-effort — če to spodleti, registracija kljub temu uspe,
+      // telefon pa lahko uporabnik doda kasneje v Nastavitvah.
+      await supabase.from('profiles').update({ telefon: telefon.trim() }).eq('id', data.user.id)
+    }
 
     if (error) {
       const koda = 'code' in error ? String((error as { code?: string }).code) : ''
@@ -269,6 +276,20 @@ export default function RegistracijaPage() {
                   placeholder="ime@primer.si"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">
+                  Telefon <span className="font-normal text-gray-400">(neobvezno)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={telefon}
+                  onChange={(e) => setTelefon(e.target.value)}
+                  placeholder="+386 40 123 456"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors"
+                />
+                <p className="text-xs text-gray-400 mt-1">Za hitrejše izpolnjevanje povpraševanj kasneje.</p>
               </div>
 
               <div>

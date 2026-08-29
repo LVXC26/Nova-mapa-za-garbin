@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Send, CheckCircle, AlertCircle } from 'lucide-react'
+import { Send, CheckCircle, AlertCircle, UserCircle2 } from 'lucide-react'
 import { oddajPovprasevanje, type PovprasevanjeInput } from '@/app/actions/povprasevanje'
+import { useAuth } from '@/components/providers/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
 
 type Props = {
   tip: PovprasevanjeInput['tip']
@@ -10,10 +12,28 @@ type Props = {
 }
 
 export default function PovprasevanjeForma({ tip, targetId }: Props) {
+  const { user, demoMode } = useAuth()
   const [forma, setForma] = useState({ ime: '', email: '', telefon: '', termin: '', sporocilo: '', gdpr: false })
   const [stanje, setStanje] = useState<'idle' | 'poslano' | 'napaka'>('idle')
   const [napakaSporocilo, setNapakaSporocilo] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [nalagaRacun, setNalagaRacun] = useState(false)
+
+  async function izpolniIzRacuna() {
+    if (!user || demoMode) return
+    setNalagaRacun(true)
+    let ime = user.user_metadata?.ime ?? ''
+    let telefon = ''
+    try {
+      const supabase = createClient()
+      const { data } = await supabase.from('profiles').select('ime, telefon').eq('id', user.id).maybeSingle()
+      ime = data?.ime || ime
+      telefon = data?.telefon ?? ''
+    } finally {
+      setForma(f => ({ ...f, ime, email: user.email ?? f.email, telefon: telefon || f.telefon }))
+      setNalagaRacun(false)
+    }
+  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value, type } = e.target
@@ -63,6 +83,18 @@ export default function PovprasevanjeForma({ tip, targetId }: Props) {
           <AlertCircle className="w-4 h-4 shrink-0" />
           {napakaSporocilo}
         </div>
+      )}
+
+      {user && !demoMode && (
+        <button
+          type="button"
+          onClick={izpolniIzRacuna}
+          disabled={nalagaRacun}
+          className="w-full flex items-center justify-center gap-2 py-2 border border-gray-200 text-gray-500 text-xs font-medium rounded-xl hover:bg-gray-50 hover:text-[#0c2340] transition-colors disabled:opacity-50"
+        >
+          <UserCircle2 className="w-3.5 h-3.5" />
+          {nalagaRacun ? 'Nalagam...' : 'Izpolni iz računa'}
+        </button>
       )}
 
       <div>
