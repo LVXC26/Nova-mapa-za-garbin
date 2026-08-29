@@ -18,7 +18,7 @@ function getNavLinks(vloga: string | null): NavItem[] {
       return [
         { href: '/dashboard', label: 'Pregled', ikona: LayoutDashboard, exact: true },
         { href: '/dashboard/moja-plovila', label: 'Moja plovila', ikona: Ship },
-        { href: '/dashboard/dodaj-plovilo', label: 'Dodaj plovilo', ikona: PlusCircle },
+        { href: '/dashboard/dodaj-plovilo?tip=najem', label: 'Dodaj plovilo', ikona: PlusCircle },
         { href: '/dashboard/profil', label: 'Moj profil', ikona: UserCircle },
         { href: '/dashboard/feed', label: 'Feed & objave', ikona: Image },
         { href: '/dashboard/paket', label: 'Paket', ikona: Zap },

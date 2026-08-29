@@ -235,7 +235,7 @@ export default function OnboardingPage() {
               <div className="bg-gray-50 rounded-2xl p-6 text-center mb-4">
                 <Ship className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 text-sm mb-4">Plovilo dodajte prek dashboarda po zaključku onboardinga.</p>
-                <Link href="/dashboard/dodaj-plovilo"
+                <Link href="/dashboard/dodaj-plovilo?tip=najem"
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0c2340] text-white text-sm font-medium rounded-full hover:bg-[#1e3a5f] transition-all">
                   Dodaj plovilo → <ArrowRight className="w-4 h-4" />
                 </Link>

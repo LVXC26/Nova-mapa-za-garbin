@@ -18,10 +18,13 @@ function mockOglediZaId(id: string): number {
 }
 
 function MojaPlovilaContent() {
-  const { user, demoMode } = useAuth()
+  const { user, vloga, demoMode } = useAuth()
   const searchParams = useSearchParams()
   const promocijaStatus = searchParams.get('promocija')
   const urgentnoStatus = searchParams.get('urgentno')
+  // Charter posluje izključno z najemom — pri njih naj se obrazec za
+  // dodajanje plovila privzeto odpre na "Za najem", ne "Za prodajo".
+  const dodajPloviloHref = vloga === 'charter' ? '/dashboard/dodaj-plovilo?tip=najem' : '/dashboard/dodaj-plovilo'
   const [plovila, setPlovila] = useState<Plovilo[]>([])
   const [nalaga, setNalaga] = useState(true)
   const [filter, setFilter] = useState<'vse' | 'prodaja' | 'najem'>('vse')
@@ -123,7 +126,7 @@ function MojaPlovilaContent() {
           <p className="text-gray-500 text-sm mt-1">Vsi vaši aktivni in nepotrjeni oglasi</p>
         </div>
         <Link
-          href="/dashboard/dodaj-plovilo"
+          href={dodajPloviloHref}
           className="flex items-center gap-2 px-4 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-105"
         >
           <PlusCircle className="w-4 h-4" />
@@ -172,7 +175,7 @@ function MojaPlovilaContent() {
           <p className="font-medium text-gray-400 mb-1">Nimate še nobenih oglasov</p>
           <p className="text-sm text-gray-300 mb-6">Dodajte svoje prvo plovilo na trg.</p>
           <Link
-            href="/dashboard/dodaj-plovilo"
+            href={dodajPloviloHref}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0c2340] text-white font-medium text-sm rounded-full hover:bg-[#1e3a5f] transition-all"
           >
             <PlusCircle className="w-4 h-4" />
