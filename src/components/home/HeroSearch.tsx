@@ -48,12 +48,13 @@ export default function HeroSearch() {
 
   function poisciNajemi() {
     const params = new URLSearchParams()
-    if (destinacija) params.set('destinacija', destinacija)
-    if (datumOd) params.set('od', datumOd)
-    if (datumDo) params.set('do', datumDo)
-    if (tipNajema) params.set('tip', tipNajema)
-    if (steviloOseb) params.set('oseb', steviloOseb)
-    router.push(`/charterji${params.toString() ? `?${params}` : ''}`)
+    params.set('oglas', 'najem')
+    // "jahta" je charter-specifičen tip brez ustreznice med tipi plovil na
+    // /plovila (glej TipPlovila) — ga zato ne prenesemo naprej kot filter.
+    if (tipNajema && tipNajema !== 'jahta') params.set('tip', tipNajema)
+    // Destinacija/datum/število oseb: /plovila teh filtrov še ne podpira —
+    // sledi kot naslednji korak, ko dodelava filtre za najem podrobneje.
+    router.push(`/plovila?${params}`)
   }
 
   function toggleStanje(s: string) {

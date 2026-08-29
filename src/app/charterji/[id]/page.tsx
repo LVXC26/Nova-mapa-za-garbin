@@ -2,14 +2,14 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MapPin, Ship, Star, CheckCircle, Phone, Mail, ExternalLink, ArrowLeft, Calendar, Users, Ruler } from 'lucide-react'
+import { MapPin, Ship, Star, CheckCircle, Phone, Mail, ExternalLink, ArrowLeft, Users, Ruler } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
+import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { createClient } from '@/lib/supabase/client'
-import { opremaLabele } from '@/lib/oprema'
 import type { Charter, Plovilo } from '@/types/database'
 
 const tipIkone: Record<string, string> = {
@@ -177,67 +177,10 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                       <p className="text-gray-400 font-medium">Še ni objavljenih plovil</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {plovila.map((plovilo) => {
-                        const aktivnaOprema = plovilo.oprema
-                          ? Object.entries(plovilo.oprema).filter(([, v]) => v).map(([k]) => opremaLabele[k] ?? k)
-                          : []
-
-                        return (
-                          <Link
-                            key={plovilo.id}
-                            href={`/plovila/${plovilo.id}`}
-                            className="flex bg-white rounded-2xl border border-gray-100 shadow-sm p-6 gap-5 hover:border-[#c9a84c]/50 hover:shadow-md transition-all"
-                          >
-                            {/* Ikona tipa */}
-                            <div className="w-14 h-14 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-2xl shrink-0">
-                              {tipIkone[plovilo.tip] ?? '⚓'}
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-3 mb-2">
-                                <h3 className="font-display text-lg font-semibold text-[#0c2340] leading-tight">{plovilo.naziv}</h3>
-                                <div className="text-right shrink-0">
-                                  <p className="font-bold text-[#0c2340] text-lg">{plovilo.cena.toLocaleString('sl-SI')} €</p>
-                                  <p className="text-xs text-gray-400">/ teden</p>
-                                </div>
-                              </div>
-
-                              {/* Meta */}
-                              <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-3">
-                                {plovilo.dolzina_m && (
-                                  <span className="flex items-center gap-1">
-                                    <Ruler className="w-3.5 h-3.5" /> {plovilo.dolzina_m} m
-                                  </span>
-                                )}
-                                {plovilo.letnik && (
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3.5 h-3.5" /> {plovilo.letnik}
-                                  </span>
-                                )}
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3.5 h-3.5" /> {plovilo.lokacija}
-                                </span>
-                              </div>
-
-                              {plovilo.opis && (
-                                <p className="text-sm text-gray-500 line-clamp-2 mb-3">{plovilo.opis}</p>
-                              )}
-
-                              {/* Oprema */}
-                              {aktivnaOprema.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {aktivnaOprema.map((o) => (
-                                    <span key={o} className="text-xs px-2 py-0.5 bg-[#0c2340]/5 text-[#0c2340] rounded-full">
-                                      {o}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </Link>
-                        )
-                      })}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      {plovila.map((plovilo) => (
+                        <PloviloKartica key={plovilo.id} plovilo={plovilo} />
+                      ))}
                     </div>
                   )}
                 </div>

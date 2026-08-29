@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { X, Search, ArrowUpDown, GitCompare, ArrowRight, Tag, Ruler } from 'lucide-react'
+import { X, Search, ArrowUpDown, GitCompare, ArrowRight, Tag, Ruler, ShoppingBag, Anchor } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
@@ -34,7 +34,9 @@ function PlovilaContent() {
   const initTip = (params.get('tip') ?? 'vse') as TipPlovila | 'vse'
   const initCenaMin = cenaValueToIdx(Number(params.get('cena_min') ?? 0))
   const initCenaMax = cenaValueToIdx(Number(params.get('cena_max') ?? CENA_VALUES[CENA_MAX_IDX]))
+  const initOglas = params.get('oglas') === 'najem' ? 'najem' : 'prodaja'
 
+  const [oglas, setOglas] = useState<'prodaja' | 'najem'>(initOglas)
   const [tip, setTip] = useState<TipPlovila | 'vse'>(initTip)
   const [cenaIdx, setCenaIdx] = useState<[number, number]>([initCenaMin, initCenaMax])
   const [dolzina, setDolzina] = useState<[number, number]>([DOLZINA_MIN, DOLZINA_MAX])
@@ -51,10 +53,10 @@ function PlovilaContent() {
       .from('plovila')
       .select('*')
       .eq('potrjeno', true)
-      .eq('tip_oglasa', 'prodaja')
+      .eq('tip_oglasa', oglas)
       .order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setRealPlovila(data) })
-  }, [])
+  }, [oglas])
 
   const vsaPlovila = realPlovila
 
@@ -137,8 +139,32 @@ function PlovilaContent() {
         {/* HEADER */}
         <section className="bg-[#0c2340] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="font-display text-4xl sm:text-5xl font-bold text-white mb-3">Plovila</h1>
-            <p className="text-white/70 text-lg">Jadrnice, motorni čolni, gumenjaki — najdite idealno plovilo.</p>
+            <h1 className="font-display text-4xl sm:text-5xl font-bold text-white mb-3">
+              {oglas === 'najem' ? 'Plovila za najem' : 'Plovila'}
+            </h1>
+            <p className="text-white/70 text-lg mb-6">
+              {oglas === 'najem'
+                ? 'Jadrnice, motorni čolni, gumenjaki — najemite plovilo za svoj naslednji izlet.'
+                : 'Jadrnice, motorni čolni, gumenjaki — najdite idealno plovilo.'}
+            </p>
+            <div className="inline-flex bg-white/10 border border-white/20 rounded-full p-1 gap-1">
+              <button
+                onClick={() => { setOglas('prodaja'); setStran(1) }}
+                className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  oglas === 'prodaja' ? 'bg-[#c9a84c] text-[#0c2340] shadow-lg' : 'text-white/70 hover:text-white'
+                }`}
+              >
+                <ShoppingBag className="w-4 h-4" /> Za prodajo
+              </button>
+              <button
+                onClick={() => { setOglas('najem'); setStran(1) }}
+                className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  oglas === 'najem' ? 'bg-[#c9a84c] text-[#0c2340] shadow-lg' : 'text-white/70 hover:text-white'
+                }`}
+              >
+                <Anchor className="w-4 h-4" /> Za najem
+              </button>
+            </div>
           </div>
         </section>
 
