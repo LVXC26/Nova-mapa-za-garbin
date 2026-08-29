@@ -1,18 +1,15 @@
 'use client'
 
 import { Check, Anchor } from 'lucide-react'
-import {
-  IkonaVsaPlovila, IkonaJadrnica, IkonaMotorni, IkonaJetSki, IkonaGumenjak, IkonaKatamaran,
-} from './TipPlovilaIkone'
 import type { TipPlovila } from '@/types/database'
 
-const tipi: { vrednost: TipPlovila | 'vse'; label: string; Ikona: typeof IkonaVsaPlovila }[] = [
-  { vrednost: 'vse', label: 'Vsa plovila', Ikona: IkonaVsaPlovila },
-  { vrednost: 'jadrnica', label: 'Jadrnice', Ikona: IkonaJadrnica },
-  { vrednost: 'motorni', label: 'Motorni', Ikona: IkonaMotorni },
-  { vrednost: 'jet', label: 'Jet ski', Ikona: IkonaJetSki },
-  { vrednost: 'gumenjak', label: 'Gumenjaki', Ikona: IkonaGumenjak },
-  { vrednost: 'katamaran', label: 'Katamarani', Ikona: IkonaKatamaran },
+const tipi: { vrednost: TipPlovila | 'vse'; label: string; slika: string }[] = [
+  { vrednost: 'vse', label: 'Vsa plovila', slika: 'vsa-plovila' },
+  { vrednost: 'jadrnica', label: 'Jadrnice', slika: 'jadrnica' },
+  { vrednost: 'motorni', label: 'Motorni', slika: 'motorni' },
+  { vrednost: 'jet', label: 'Jet ski', slika: 'jet-ski' },
+  { vrednost: 'gumenjak', label: 'Gumenjaki', slika: 'gumenjak' },
+  { vrednost: 'katamaran', label: 'Katamarani', slika: 'katamaran' },
 ]
 
 export default function TipPlovilaIzbirnik({
@@ -33,8 +30,19 @@ export default function TipPlovilaIzbirnik({
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        {tipi.map(({ vrednost: v, label, Ikona }) => {
+        {tipi.map(({ vrednost: v, label, slika }) => {
           const izbrano = vrednost === v
+          const maskStyle = {
+            backgroundColor: 'currentColor',
+            WebkitMaskImage: `url(/plovila-ikone/${slika}.png)`,
+            maskImage: `url(/plovila-ikone/${slika}.png)`,
+            WebkitMaskSize: 'contain',
+            maskSize: 'contain',
+            WebkitMaskRepeat: 'no-repeat',
+            maskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskPosition: 'center',
+          } as React.CSSProperties
           return (
             <button
               key={v}
@@ -51,7 +59,7 @@ export default function TipPlovilaIzbirnik({
                   <Check className="w-3 h-3" strokeWidth={3} />
                 </span>
               )}
-              <Ikona className="w-9 h-9 sm:w-10 sm:h-10" />
+              <span className="w-11 h-11 sm:w-12 sm:h-12" style={maskStyle} />
               <span className="text-xs sm:text-sm font-semibold text-center leading-tight">{label}</span>
             </button>
           )
