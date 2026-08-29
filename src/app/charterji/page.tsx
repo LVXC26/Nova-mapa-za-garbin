@@ -5,6 +5,7 @@ import { Building2, User, CheckCircle, Send, Ship, Search, X } from 'lucide-reac
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import CharterKartica from '@/components/charterji/CharterKartica'
+import TipCharterjaIzbirnik from '@/components/charterji/TipCharterjaIzbirnik'
 import RangeSlider from '@/components/plovila/RangeSlider'
 import { createClient } from '@/lib/supabase/client'
 import { oddajPovprasevanje } from '@/app/actions/povprasevanje'
@@ -14,13 +15,6 @@ const OSEBE_MIN = 1
 const OSEBE_MAX = 50
 const DOLZINA_MIN = 5
 const DOLZINA_MAX = 80
-
-const tipovPlovil: { vrednost: TipCharterPlovila; label: string; ikona: string }[] = [
-  { vrednost: 'jahta', label: 'Jahta', ikona: '🛥️' },
-  { vrednost: 'jadrnica', label: 'Jadrnica', ikona: '⛵' },
-  { vrednost: 'motorni', label: 'Motorni čoln', ikona: '🚤' },
-  { vrednost: 'gumenjak', label: 'Gumenjak', ikona: '🛟' },
-]
 
 export default function CharterjiPage() {
   // Iskalni filtri
@@ -119,24 +113,12 @@ export default function CharterjiPage() {
             {/* Iskalni widget */}
             <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-t-3xl p-6">
               {/* Tip plovila */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {tipovPlovil.map((t) => (
-                  <button
-                    key={t.vrednost}
-                    onClick={() => setTipPlovila(tipPlovila === t.vrednost ? '' : t.vrednost)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                      tipPlovila === t.vrednost
-                        ? 'bg-[#c9a84c] text-[#0c2340] scale-105 shadow-lg shadow-[#c9a84c]/25'
-                        : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
-                    }`}
-                  >
-                    <span>{t.ikona}</span> {t.label}
-                  </button>
-                ))}
+              <div className="mb-6">
+                <TipCharterjaIzbirnik vrednost={tipPlovila} onChange={setTipPlovila} />
                 {aktivniFilter && (
                   <button
                     onClick={resetFiltre}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm text-white/60 hover:text-white border border-white/10 hover:border-white/30 transition-all"
+                    className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm text-white/60 hover:text-white border border-white/10 hover:border-white/30 transition-all"
                   >
                     <X className="w-3.5 h-3.5" /> Počisti
                   </button>
