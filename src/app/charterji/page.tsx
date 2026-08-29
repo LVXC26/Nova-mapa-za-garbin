@@ -51,8 +51,11 @@ export default function CharterjiPage() {
     return vsiCharterji.filter((c) => {
       if (filter !== 'vse' && c.tip !== filter) return false
       if (tipPlovila && !c.tip_plovila.includes(tipPlovila)) return false
-      if (c.max_oseb < osebe[0] || c.max_oseb > osebe[1]) return false
-      if (c.max_dolzina_m < dolzina[0] || c.max_dolzina_m > dolzina[1]) return false
+      // 0 pomeni, da charter tega podatka še ni izpolnil — takega ne
+      // izločimo, sicer bi nepopolni (a sicer objavljeni) profili
+      // trajno izginili iz iskanja, ne glede na izbrane filtre.
+      if (c.max_oseb > 0 && (c.max_oseb < osebe[0] || c.max_oseb > osebe[1])) return false
+      if (c.max_dolzina_m > 0 && (c.max_dolzina_m < dolzina[0] || c.max_dolzina_m > dolzina[1])) return false
       return true
     })
   }, [vsiCharterji, filter, tipPlovila, osebe, dolzina])
