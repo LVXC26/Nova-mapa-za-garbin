@@ -3,11 +3,12 @@
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { SlidersHorizontal, X, Search, ArrowUpDown, GitCompare, ArrowRight } from 'lucide-react'
+import { SlidersHorizontal, X, Search, ArrowUpDown, GitCompare, ArrowRight, Tag, Ruler } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import RangeSlider from '@/components/plovila/RangeSlider'
+import TipPlovilaIzbirnik from '@/components/plovila/TipPlovilaIzbirnik'
 import { CENA_VALUES, cenaValueToIdx, formatCena } from '@/lib/cenaSlider'
 import { usePrimerjava } from '@/context/PrimerjaContext'
 import { createClient } from '@/lib/supabase/client'
@@ -17,16 +18,6 @@ const CENA_MAX_IDX = CENA_VALUES.length - 1
 const DOLZINA_MIN = 3
 const DOLZINA_MAX = 150
 const PER_PAGE = 6
-
-
-const tipi: { vrednost: TipPlovila | 'vse'; label: string; ikona: string }[] = [
-  { vrednost: 'vse', label: 'Vsa plovila', ikona: '⚓' },
-  { vrednost: 'jadrnica', label: 'Jadrnice', ikona: '⛵' },
-  { vrednost: 'motorni', label: 'Motorni', ikona: '🚤' },
-  { vrednost: 'jet', label: 'Jet ski', ikona: '💨' },
-  { vrednost: 'gumenjak', label: 'Gumenjaki', ikona: '🛟' },
-  { vrednost: 'katamaran', label: 'Katamarani', ikona: '⛵' },
-]
 
 type SortKey = 'privzeto' | 'cena_asc' | 'cena_desc' | 'letnik_desc' | 'dolzina_asc'
 
@@ -109,21 +100,35 @@ function PlovilaContent() {
   }
 
   const CenaSlider = (
-    <RangeSlider
-      label="Cena"
-      min={0} max={CENA_MAX_IDX} low={cenaIdx[0]} high={cenaIdx[1]} step={1}
-      onChange={(l, h) => { setCenaIdx([l, h]); setStran(1) }}
-      format={(idx) => formatCena(CENA_VALUES[idx])}
-    />
+    <div className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-full bg-[#0c2340] text-[#c9a84c] flex items-center justify-center shrink-0 mt-0.5">
+        <Tag className="w-3.5 h-3.5" />
+      </div>
+      <div className="flex-1">
+        <RangeSlider
+          label="Cena"
+          min={0} max={CENA_MAX_IDX} low={cenaIdx[0]} high={cenaIdx[1]} step={1}
+          onChange={(l, h) => { setCenaIdx([l, h]); setStran(1) }}
+          format={(idx) => formatCena(CENA_VALUES[idx])}
+        />
+      </div>
+    </div>
   )
 
   const DolzinaSlider = (
-    <RangeSlider
-      label="Dolžina"
-      min={DOLZINA_MIN} max={DOLZINA_MAX} low={dolzina[0]} high={dolzina[1]} step={1}
-      onChange={(l, h) => { setDolzina([l, h]); setStran(1) }}
-      format={(v) => `${v} m`}
-    />
+    <div className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-full bg-[#0c2340] text-[#c9a84c] flex items-center justify-center shrink-0 mt-0.5">
+        <Ruler className="w-3.5 h-3.5" />
+      </div>
+      <div className="flex-1">
+        <RangeSlider
+          label="Dolžina"
+          min={DOLZINA_MIN} max={DOLZINA_MAX} low={dolzina[0]} high={dolzina[1]} step={1}
+          onChange={(l, h) => { setDolzina([l, h]); setStran(1) }}
+          format={(v) => `${v} m`}
+        />
+      </div>
+    </div>
   )
 
   return (
@@ -155,21 +160,7 @@ function PlovilaContent() {
                   </div>
 
                   <div className="mb-6">
-                    <p className="text-sm font-semibold text-[#0c2340] mb-3">Tip plovila</p>
-                    <div className="flex flex-col gap-1.5">
-                      {tipi.map((t) => (
-                        <button
-                          key={t.vrednost}
-                          onClick={() => { setTip(t.vrednost); setStran(1) }}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all ${
-                            tip === t.vrednost ? 'bg-[#0c2340] text-white font-medium' : 'text-gray-600 hover:bg-gray-50'
-                          }`}
-                        >
-                          <span>{t.ikona}</span>
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
+                    <TipPlovilaIzbirnik vrednost={tip} onChange={(v) => { setTip(v); setStran(1) }} />
                   </div>
 
                   <div className="h-px bg-gray-100 mb-6" />
@@ -207,18 +198,8 @@ function PlovilaContent() {
 
                 {filtrOdprt && (
                   <div className="lg:hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
-                    <div className="flex flex-wrap gap-2 mb-5">
-                      {tipi.map((t) => (
-                        <button
-                          key={t.vrednost}
-                          onClick={() => { setTip(t.vrednost); setStran(1) }}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all ${
-                            tip === t.vrednost ? 'bg-[#0c2340] text-white font-medium' : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {t.ikona} {t.label}
-                        </button>
-                      ))}
+                    <div className="mb-5">
+                      <TipPlovilaIzbirnik vrednost={tip} onChange={(v) => { setTip(v); setStran(1) }} />
                     </div>
                     <div className="h-px bg-gray-100 mb-5" />
                     {CenaSlider}
