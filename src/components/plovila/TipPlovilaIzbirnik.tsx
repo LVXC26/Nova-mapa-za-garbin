@@ -29,7 +29,7 @@ export default function TipPlovilaIzbirnik({
         <div className="flex-1 h-px bg-gradient-to-l from-transparent to-[#c9a84c]/40" />
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {tipi.map(({ vrednost: v, label, slika }) => {
           const izbrano = vrednost === v
           const maskStyle = {
@@ -48,19 +48,19 @@ export default function TipPlovilaIzbirnik({
               key={v}
               type="button"
               onClick={() => onChange(v)}
-              className={`relative flex items-center gap-2.5 rounded-2xl border-2 px-3 py-2.5 text-left transition-all ${
+              className={`relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 px-2 py-4 transition-all ${
                 izbrano
                   ? 'bg-[#0c2340] border-[#0c2340] text-white shadow-md'
                   : 'bg-white border-gray-100 text-[#0c2340] hover:border-[#c9a84c]/50 hover:shadow-sm'
               }`}
             >
               {izbrano && (
-                <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#c9a84c] text-[#0c2340] flex items-center justify-center">
-                  <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#c9a84c] text-[#0c2340] flex items-center justify-center">
+                  <Check className="w-3 h-3" strokeWidth={3} />
                 </span>
               )}
-              <span className="w-8 h-8 shrink-0" style={maskStyle} />
-              <span className="min-w-0 flex-1 text-xs font-semibold leading-tight">{label}</span>
+              <span className="w-10 h-10 sm:w-11 sm:h-11" style={maskStyle} />
+              <span className="text-xs sm:text-sm font-semibold text-center leading-tight break-words">{label}</span>
             </button>
           )
         })}

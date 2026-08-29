@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { SlidersHorizontal, X, Search, ArrowUpDown, GitCompare, ArrowRight, Tag, Ruler } from 'lucide-react'
+import { X, Search, ArrowUpDown, GitCompare, ArrowRight, Tag, Ruler } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
@@ -38,7 +38,6 @@ function PlovilaContent() {
   const [tip, setTip] = useState<TipPlovila | 'vse'>(initTip)
   const [cenaIdx, setCenaIdx] = useState<[number, number]>([initCenaMin, initCenaMax])
   const [dolzina, setDolzina] = useState<[number, number]>([DOLZINA_MIN, DOLZINA_MAX])
-  const [filtrOdprt, setFiltrOdprt] = useState(false)
   const [sortiranje, setSortiranje] = useState<SortKey>('privzeto')
   const [stran, setStran] = useState(1)
 
@@ -145,70 +144,33 @@ function PlovilaContent() {
 
         <section className="py-10 bg-[#f8fafc]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex gap-8">
 
-              {/* SIDEBAR — desktop */}
-              <aside className="hidden lg:block w-64 shrink-0">
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-24">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="font-semibold text-[#0c2340]">Filtri</h2>
-                    {aktivniFilter && (
-                      <button onClick={resetFiltre} className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#c9a84c] transition-colors">
-                        <X className="w-3 h-3" /> Počisti
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="mb-6">
-                    <TipPlovilaIzbirnik vrednost={tip} onChange={(v) => { setTip(v); setStran(1) }} />
-                  </div>
-
-                  <div className="h-px bg-gray-100 mb-6" />
-                  {CenaSlider}
-                  <div className="h-px bg-gray-100 mb-6 mt-6" />
-                  {DolzinaSlider}
-                </div>
-
-                {/* Sidebar banner placeholder */}
-                <div className="mt-5 w-full h-[250px] bg-[#0c2340] rounded-2xl flex flex-col items-center justify-center border border-[#1e3a5f]">
-                  <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">300 × 250</p>
-                  <p className="text-white/50 text-sm text-center px-4">Oglaševalski prostor</p>
-                </div>
-              </aside>
-
-              {/* DESNA VSEBINA */}
-              <div className="flex-1 min-w-0">
-
-                {/* MOBILNI gumb */}
-                <div className="lg:hidden flex items-center gap-3 mb-5">
-                  <button
-                    onClick={() => setFiltrOdprt(!filtrOdprt)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-[#0c2340] shadow-sm"
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                    Filtri
-                    {aktivniFilter && <span className="w-2 h-2 rounded-full bg-[#c9a84c]" />}
+            {/* FILTRI — čez celo širino, nad rezultati */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-semibold text-[#0c2340]">Filtri</h2>
+                {aktivniFilter && (
+                  <button onClick={resetFiltre} className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#c9a84c] transition-colors">
+                    <X className="w-3 h-3" /> Počisti
                   </button>
-                  {aktivniFilter && (
-                    <button onClick={resetFiltre} className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1">
-                      <X className="w-3.5 h-3.5" /> Počisti
-                    </button>
-                  )}
-                </div>
-
-                {filtrOdprt && (
-                  <div className="lg:hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
-                    <div className="mb-5">
-                      <TipPlovilaIzbirnik vrednost={tip} onChange={(v) => { setTip(v); setStran(1) }} />
-                    </div>
-                    <div className="h-px bg-gray-100 mb-5" />
-                    {CenaSlider}
-                    <div className="h-px bg-gray-100 mb-5 mt-5" />
-                    {DolzinaSlider}
-                  </div>
                 )}
+              </div>
 
-                {/* Toolbar */}
+              <div className="mb-6">
+                <TipPlovilaIzbirnik vrednost={tip} onChange={(v) => { setTip(v); setStran(1) }} />
+              </div>
+
+              <div className="h-px bg-gray-100 mb-6" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {CenaSlider}
+                {DolzinaSlider}
+              </div>
+            </div>
+
+            {/* DESNA VSEBINA */}
+            <div className="min-w-0">
+
+              {/* Toolbar */}
                 <div className="flex items-center justify-between mb-5 gap-3">
                   <p className="text-sm text-gray-500">
                     <span className="font-semibold text-[#0c2340]">{filtrirano.length}</span> plovil najdenih
@@ -285,7 +247,6 @@ function PlovilaContent() {
                     )}
                   </>
                 )}
-              </div>
             </div>
           </div>
         </section>
