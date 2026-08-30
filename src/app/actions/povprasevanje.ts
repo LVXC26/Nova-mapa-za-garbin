@@ -3,6 +3,20 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
+// Varnostni popravek: polja v e-mail predlogi spodaj so bila vstavljena
+// neposredno v HTML brez pobega — kdorkoli bi lahko v "ime"/"sporočilo" (ali
+// prodajalec v naziv plovila) vstavil HTML/link in tako preoblikoval mail,
+// ki ga vidi Garbin ekipa (npr. lažen "kliknite tukaj" gumb). escapeHtml()
+// vsak tak vnos pretvori v neškodljivo besedilo, preden gre v predlogo.
+function escapeHtml(vrednost: string): string {
+  return vrednost
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export type PovprasevanjeInput = {
   tip: 'charter' | 'skipper' | 'plovilo' | 'kontakt' | 'prijava-charter' | 'prijava-skipper'
   target_id: string
@@ -92,16 +106,16 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
           html: `
             <h2 style="color:#0c2340;">Novo povpraševanje na Garbin</h2>
             <table style="border-collapse:collapse;width:100%;font-family:sans-serif;font-size:14px;">
-              <tr><td style="padding:8px;color:#666;">Ime:</td><td style="padding:8px;font-weight:600;">${data.ime}</td></tr>
-              <tr><td style="padding:8px;color:#666;">E-mail:</td><td style="padding:8px;"><a href="mailto:${data.email}">${data.email}</a></td></tr>
-              <tr><td style="padding:8px;color:#666;">Telefon:</td><td style="padding:8px;">${data.telefon || '—'}</td></tr>
-              <tr><td style="padding:8px;color:#666;">Termin:</td><td style="padding:8px;">${data.termin || '—'}</td></tr>
-              <tr><td style="padding:8px;color:#666;">Sporočilo:</td><td style="padding:8px;">${data.sporocilo}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Ime:</td><td style="padding:8px;font-weight:600;">${escapeHtml(data.ime)}</td></tr>
+              <tr><td style="padding:8px;color:#666;">E-mail:</td><td style="padding:8px;"><a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></td></tr>
+              <tr><td style="padding:8px;color:#666;">Telefon:</td><td style="padding:8px;">${data.telefon ? escapeHtml(data.telefon) : '—'}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Termin:</td><td style="padding:8px;">${data.termin ? escapeHtml(data.termin) : '—'}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Sporočilo:</td><td style="padding:8px;">${escapeHtml(data.sporocilo)}</td></tr>
               <tr><td style="padding:8px;color:#666;">Tip / ID:</td><td style="padding:8px;">${tipLabel} / ${data.target_id}</td></tr>
               ${kontaktLastnika ? `
-              <tr><td colspan="2" style="padding:12px 8px 4px;border-top:1px solid #eee;"><span style="color:#666;">Naziv plovila:</span> <strong style="color:#0c2340;">${kontaktLastnika.naziv ?? ''}</strong></td></tr>
-              <tr><td style="padding:8px;color:#666;">E-mail lastnika:</td><td style="padding:8px;">${kontaktLastnika.email ? `<a href="mailto:${kontaktLastnika.email}">${kontaktLastnika.email}</a>` : '—'}</td></tr>
-              <tr><td style="padding:8px;color:#666;">Telefon lastnika:</td><td style="padding:8px;">${kontaktLastnika.tel || '—'}</td></tr>
+              <tr><td colspan="2" style="padding:12px 8px 4px;border-top:1px solid #eee;"><span style="color:#666;">Naziv plovila:</span> <strong style="color:#0c2340;">${escapeHtml(kontaktLastnika.naziv ?? '')}</strong></td></tr>
+              <tr><td style="padding:8px;color:#666;">E-mail lastnika:</td><td style="padding:8px;">${kontaktLastnika.email ? `<a href="mailto:${escapeHtml(kontaktLastnika.email)}">${escapeHtml(kontaktLastnika.email)}</a>` : '—'}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Telefon lastnika:</td><td style="padding:8px;">${kontaktLastnika.tel ? escapeHtml(kontaktLastnika.tel) : '—'}</td></tr>
               ` : ''}
             </table>
           `,
