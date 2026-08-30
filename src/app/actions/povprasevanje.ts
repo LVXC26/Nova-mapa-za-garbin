@@ -56,11 +56,13 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
     return { uspeh: false, napaka: 'Napaka pri shranjevanju. Prosimo, poskusite znova.' }
   }
 
-  // Za povpraševanja o plovilu (npr. najem pri charterju) poleg podatkov
-  // stranke pridobimo še kontakt lastnika oglasa, da ga lahko posredujemo
-  // v e-mail — Garbin tako dobi oba kontakta in lahko poveže stranko s
-  // charterjem/prodajalcem.
-  let kontaktLastnika: { email: string | null; tel: string | null; naziv: string | null } | null = null
+  // Za povpraševanja o plovilu (npr. najem pri charterju) ali o skiperju
+  // poleg podatkov stranke pridobimo še kontakt lastnika/skiperja, da ga
+  // lahko posredujemo v e-mail — Garbin tako dobi oba kontakta in lahko
+  // poveže stranko s charterjem/prodajalcem/skiperjem. "oznaka" pove, kako
+  // se v mailu imenuje vrstica z imenom (npr. "Naziv plovila" ali "Skiper"),
+  // ker je enaka predloga uporabljena za oba primera.
+  let kontaktLastnika: { email: string | null; tel: string | null; naziv: string | null; oznaka: string } | null = null
   if (data.tip === 'plovilo') {
     // Kontakt lastnika (še posebej pri najemu) ni več javno berljiv prek
     // anon ključa (glej varnostni popravek "plovila_javno" v
@@ -74,7 +76,30 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
       .eq('id', data.target_id)
       .maybeSingle()
     if (plovilo) {
-      kontaktLastnika = { email: plovilo.kontakt_email, tel: plovilo.kontakt_tel, naziv: plovilo.naziv }
+      kontaktLastnika = { email: plovilo.kontakt_email, tel: plovilo.kontakt_tel, naziv: plovilo.naziv, oznaka: 'Naziv plovila' }
+    }
+  } else if (data.tip === 'skipper') {
+    // Skiperji nimajo neposrednega javnega kontakta na strani (glej
+    // "Pokliči zdaj" popravek) — telefon je na profilu, email pa na
+    // uporabniškem računu (auth.users), zato ju tu pridobimo posebej
+    // prek service-role klienta.
+    const adminClient = createAdminClient()
+    const { data: skipper } = await adminClient
+      .from('skiperji')
+      .select('user_id, ime')
+      .eq('id', data.target_id)
+      .maybeSingle()
+    if (skipper?.user_id) {
+      const [{ data: profil }, { data: userData }] = await Promise.all([
+        adminClient.from('profiles').select('telefon').eq('id', skipper.user_id).maybeSingle(),
+        adminClient.auth.admin.getUserById(skipper.user_id),
+      ])
+      kontaktLastnika = {
+        email: userData?.user?.email ?? null,
+        tel: profil?.telefon ?? null,
+        naziv: skipper.ime,
+        oznaka: 'Skiper',
+      }
     }
   }
 
@@ -113,9 +138,9 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
               <tr><td style="padding:8px;color:#666;">Sporočilo:</td><td style="padding:8px;">${escapeHtml(data.sporocilo)}</td></tr>
               <tr><td style="padding:8px;color:#666;">Tip / ID:</td><td style="padding:8px;">${tipLabel} / ${data.target_id}</td></tr>
               ${kontaktLastnika ? `
-              <tr><td colspan="2" style="padding:12px 8px 4px;border-top:1px solid #eee;"><span style="color:#666;">Naziv plovila:</span> <strong style="color:#0c2340;">${escapeHtml(kontaktLastnika.naziv ?? '')}</strong></td></tr>
-              <tr><td style="padding:8px;color:#666;">E-mail lastnika:</td><td style="padding:8px;">${kontaktLastnika.email ? `<a href="mailto:${escapeHtml(kontaktLastnika.email)}">${escapeHtml(kontaktLastnika.email)}</a>` : '—'}</td></tr>
-              <tr><td style="padding:8px;color:#666;">Telefon lastnika:</td><td style="padding:8px;">${kontaktLastnika.tel ? escapeHtml(kontaktLastnika.tel) : '—'}</td></tr>
+              <tr><td colspan="2" style="padding:12px 8px 4px;border-top:1px solid #eee;"><span style="color:#666;">${escapeHtml(kontaktLastnika.oznaka)}:</span> <strong style="color:#0c2340;">${escapeHtml(kontaktLastnika.naziv ?? '')}</strong></td></tr>
+              <tr><td style="padding:8px;color:#666;">E-mail ${kontaktLastnika.oznaka === 'Skiper' ? 'skiperja' : 'lastnika'}:</td><td style="padding:8px;">${kontaktLastnika.email ? `<a href="mailto:${escapeHtml(kontaktLastnika.email)}">${escapeHtml(kontaktLastnika.email)}</a>` : '—'}</td></tr>
+              <tr><td style="padding:8px;color:#666;">Telefon ${kontaktLastnika.oznaka === 'Skiper' ? 'skiperja' : 'lastnika'}:</td><td style="padding:8px;">${kontaktLastnika.tel ? escapeHtml(kontaktLastnika.tel) : '—'}</td></tr>
               ` : ''}
             </table>
           `,

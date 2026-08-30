@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, MapPin, Star, CheckCircle, Phone, Mail, Calendar, Award, Globe, Ship, Users, Building2 } from 'lucide-react'
+import { ArrowLeft, MapPin, Star, CheckCircle, Mail, Calendar, Award, Globe, Ship, Users, Building2 } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { unsplashSkipperji } from '@/data/mock'
@@ -413,15 +413,15 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                     <p className="text-gray-400 text-sm">/ dan</p>
                   </div>
 
-                  {/* Pokliči zdaj — na mobilnih odpre klicalnik */}
-                  <a
-                    href={`tel:+38641000000`}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-bold rounded-full transition-all hover:scale-[1.02] mb-3 text-sm shadow-sm"
-                  >
-                    <Phone className="w-4 h-4" />
-                    Pokliči zdaj
-                  </a>
-                  <p className="text-xs font-semibold text-[#0c2340] mb-3 mt-3">Pošlji povpraševanje</p>
+                  {/* Neposreden kontakt s skiperjem je skrit — enak koncept kot
+                      pri najemu plovil: edini kanal je spodnji obrazec, ki gre
+                      najprej na Garbin ekipo (glej povprasevanje.ts), stranka
+                      pa nikoli ne dobi skiperjevega telefona/e-maila neposredno. */}
+                  <div className="flex items-start gap-2.5 p-3.5 bg-[#0c2340]/5 rounded-xl mb-4 text-xs text-gray-600 leading-relaxed">
+                    <CheckCircle className="w-4 h-4 text-[#c9a84c] shrink-0 mt-0.5" />
+                    Za rezervacijo izpolnite povpraševanje spodaj — kontaktirala vas bo naša ekipa.
+                  </div>
+                  <p className="text-xs font-semibold text-[#0c2340] mb-3">Pošlji povpraševanje</p>
                   <PovprasevanjeForma tip="skipper" targetId={String(skipper.id)} />
                 </div>
 
