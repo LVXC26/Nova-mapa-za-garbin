@@ -120,7 +120,7 @@ export default function ProfilPage() {
             verified: false,
             ocena: 0,
             st_ocen: 0,
-            tip_skiper: 'samostojni',
+            tip_skiper: (user.user_metadata?.tip_skiper as 'samostojni' | 'agencija' | undefined) ?? 'samostojni',
           })
       setNalaga(false)
       if (error) { setNapaka('Napaka pri shranjevanju profila.'); return }
@@ -141,7 +141,7 @@ export default function ProfilPage() {
         : await supabase.from('charterji').insert({
             ...polja,
             user_id: user.id,
-            tip: 'podjetje',
+            tip: (user.user_metadata?.tip_charterja as 'podjetje' | 'zasebnik' | undefined) ?? 'podjetje',
             verified: false,
             ocena: 0,
             st_ocen: 0,

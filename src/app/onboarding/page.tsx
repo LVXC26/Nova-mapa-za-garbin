@@ -68,7 +68,7 @@ export default function OnboardingPage() {
         kontakt_email: user!.email ?? '',
         kontakt_tel: charterForma.telefon || '',
         spletna_stran: charterForma.spletna_stran || null,
-        tip: 'podjetje',
+        tip: (user!.user_metadata?.tip_charterja as 'podjetje' | 'zasebnik' | undefined) ?? 'podjetje',
         tip_plovila: [],
         st_plovil: 0,
         verified: false,

@@ -36,12 +36,21 @@ const vloge: { vrednost: Vloga; label: string; opis: string; ikona: React.Elemen
 ]
 
 type TipSkiper = 'samostojni' | 'agencija'
+type TipCharterja = 'podjetje' | 'zasebnik'
+
+// Skipper in charter oba potrebujeta dodaten korak, kjer izbereta, kako
+// nastopajo na platformi (isti razlog kot pri skiperju: charter je lahko
+// podjetje/agencija ALI zasebnik, ki oddaja svoje plovilo — glej charterji.tip
+// v bazi, ki je ta razlika ves čas podpirala, samo registracija je ni nikoli
+// vprašala in je vedno privzeto shranila kot "podjetje").
+const VLOGE_S_PODKORAKOM: Vloga[] = ['skipper', 'charter']
 
 export default function RegistracijaPage() {
   const router = useRouter()
   const [korak, setKorak] = useState<1 | 1.5 | 2>(1)
   const [vloga, setVloga] = useState<Vloga>('kupec')
   const [tipSkiper, setTipSkiper] = useState<TipSkiper>('samostojni')
+  const [tipCharterja, setTipCharterja] = useState<TipCharterja>('podjetje')
   const [ime, setIme] = useState('')
   const [email, setEmail] = useState('')
   const [telefon, setTelefon] = useState('')
@@ -50,12 +59,13 @@ export default function RegistracijaPage() {
   const [napaka, setNapaka] = useState('')
   const [nalaga, setNalaga] = useState(false)
 
-  const skupajKorakov = vloga === 'skipper' ? 3 : 2
-  const koraki = vloga === 'skipper' ? [1, 1.5, 2] : [1, 2]
+  const imaPodkorak = VLOGE_S_PODKORAKOM.includes(vloga)
+  const skupajKorakov = imaPodkorak ? 3 : 2
+  const koraki = imaPodkorak ? [1, 1.5, 2] : [1, 2]
   const korrakSt = koraki.indexOf(korak) + 1
 
   function naKorak2() {
-    if (vloga === 'skipper') {
+    if (imaPodkorak) {
       setKorak(1.5)
     } else {
       setKorak(2)
@@ -72,7 +82,12 @@ export default function RegistracijaPage() {
       email,
       password: geslo,
       options: {
-        data: { vloga, ime, tip_skiper: vloga === 'skipper' ? tipSkiper : undefined },
+        data: {
+          vloga,
+          ime,
+          tip_skiper: vloga === 'skipper' ? tipSkiper : undefined,
+          tip_charterja: vloga === 'charter' ? tipCharterja : undefined,
+        },
       },
     })
 
@@ -122,7 +137,7 @@ export default function RegistracijaPage() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-[#0c2340]">Korak {korrakSt} od {skupajKorakov}</span>
               <span className="text-xs text-gray-400">
-                {korak === 1 ? 'Tip računa' : korak === 1.5 ? 'Tip skiperja' : 'Podatki'}
+                {korak === 1 ? 'Tip računa' : korak === 1.5 ? (vloga === 'charter' ? 'Tip charterja' : 'Tip skiperja') : 'Podatki'}
               </span>
             </div>
             <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -180,8 +195,8 @@ export default function RegistracijaPage() {
             </div>
           )}
 
-          {/* KORAK 1.5 — Skipper sub-tip */}
-          {korak === 1.5 && (
+          {/* KORAK 1.5 — Skipper/Charter sub-tip */}
+          {korak === 1.5 && vloga === 'skipper' && (
             <div>
               <h1 className="font-display text-2xl font-bold text-[#0c2340] mb-1">Kakšen tip skiperja ste?</h1>
               <p className="text-gray-500 text-sm mb-6">Izberite, kako boste nastopali na platformi.</p>
@@ -240,6 +255,65 @@ export default function RegistracijaPage() {
             </div>
           )}
 
+          {korak === 1.5 && vloga === 'charter' && (
+            <div>
+              <h1 className="font-display text-2xl font-bold text-[#0c2340] mb-1">Kakšen tip charterja ste?</h1>
+              <p className="text-gray-500 text-sm mb-6">Izberite, kako boste nastopali na platformi.</p>
+              <div className="flex flex-col gap-3 mb-6">
+                {([
+                  {
+                    vrednost: 'podjetje' as TipCharterja,
+                    label: 'Podjetje / agencija',
+                    opis: 'Firmski profil — javen kontakt (email + telefon)',
+                    ikona: '🏢',
+                  },
+                  {
+                    vrednost: 'zasebnik' as TipCharterja,
+                    label: 'Zasebnik',
+                    opis: 'Oddajam v najem svoje lastno plovilo',
+                    ikona: '👤',
+                  },
+                ]).map(({ vrednost, label, opis, ikona }) => (
+                  <button
+                    key={vrednost}
+                    type="button"
+                    onClick={() => setTipCharterja(vrednost)}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
+                      tipCharterja === vrednost
+                        ? 'border-[#c9a84c] bg-[#c9a84c]/8'
+                        : 'border-gray-100 hover:border-gray-200'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${
+                      tipCharterja === vrednost ? 'bg-[#c9a84c]/20' : 'bg-gray-100'
+                    }`}>
+                      {ikona}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[#0c2340] text-sm">{label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{opis}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setKorak(1)}
+                  className="flex-1 py-3.5 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-all"
+                >
+                  ← Nazaj
+                </button>
+                <button
+                  onClick={() => setKorak(2)}
+                  className="flex-1 py-3.5 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-semibold rounded-xl transition-all"
+                >
+                  Naprej →
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* KORAK 2 — Podatki */}
           {korak === 2 && (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -255,13 +329,13 @@ export default function RegistracijaPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">
-                  {vloga === 'charter' ? 'Naziv podjetja / ime' : 'Ime in priimek'}
+                  {vloga === 'charter' ? (tipCharterja === 'podjetje' ? 'Naziv podjetja' : 'Ime in priimek') : 'Ime in priimek'}
                 </label>
                 <input
                   required
                   value={ime}
                   onChange={(e) => setIme(e.target.value)}
-                  placeholder={vloga === 'charter' ? 'Adriatic Sail d.o.o.' : 'Janez Novak'}
+                  placeholder={vloga === 'charter' ? (tipCharterja === 'podjetje' ? 'Adriatic Sail d.o.o.' : 'Janez Novak') : 'Janez Novak'}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors"
                 />
               </div>
@@ -317,7 +391,7 @@ export default function RegistracijaPage() {
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => setKorak(vloga === 'skipper' ? 1.5 : 1)}
+                  onClick={() => setKorak(imaPodkorak ? 1.5 : 1)}
                   className="flex-1 py-3.5 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-all"
                 >
                   ← Nazaj
