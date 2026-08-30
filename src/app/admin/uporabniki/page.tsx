@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Shield, Ban, CheckCircle, Mail } from 'lucide-react'
+import { Shield, Ban, CheckCircle, Mail, MessageSquareWarning, Star } from 'lucide-react'
 
 interface Uporabnik {
   id: string
@@ -11,6 +11,8 @@ interface Uporabnik {
   created: string
   aktiven: boolean
   isAdmin: boolean
+  isModerator: boolean
+  autoPromocija: boolean
 }
 
 const vlogaBarva: Record<string, string> = {
@@ -70,6 +72,26 @@ export default function AdminUporabnikiPage() {
     if (!res.ok) await nalozi()
   }
 
+  async function preklopiModeratorja(userId: string, trenutno: boolean) {
+    setUporabniki(prev => prev.map(u => u.id === userId ? { ...u, isModerator: !trenutno } : u))
+    const res = await fetch('/api/admin/uporabniki', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, isModerator: !trenutno }),
+    })
+    if (!res.ok) await nalozi()
+  }
+
+  async function preklopiAvtoPromocijo(userId: string, trenutno: boolean) {
+    setUporabniki(prev => prev.map(u => u.id === userId ? { ...u, autoPromocija: !trenutno } : u))
+    const res = await fetch('/api/admin/uporabniki', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, autoPromocija: !trenutno }),
+    })
+    if (!res.ok) await nalozi()
+  }
+
   return (
     <div className="p-8">
       <div className="mb-6">
@@ -113,6 +135,12 @@ export default function AdminUporabnikiPage() {
                   {u.isAdmin && (
                     <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-700">Admin</span>
                   )}
+                  {u.isModerator && (
+                    <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">Moderator</span>
+                  )}
+                  {u.autoPromocija && (
+                    <span className="ml-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Auto-promo</span>
+                  )}
                 </td>
                 <td className="px-5 py-3.5 text-gray-500">{new Date(u.created).toLocaleDateString('sl-SI')}</td>
                 <td className="px-5 py-3.5">
@@ -129,6 +157,20 @@ export default function AdminUporabnikiPage() {
                       title={u.isAdmin ? 'Odstrani admin dostop' : 'Nastavi kot admin'}
                     >
                       <Shield className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => preklopiModeratorja(u.id, u.isModerator)}
+                      className={`p-1.5 rounded-lg transition-colors ${u.isModerator ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                      title={u.isModerator ? 'Odstrani moderatorske pravice' : 'Nastavi kot moderatorja (lahko briše objave/komentarje povsod)'}
+                    >
+                      <MessageSquareWarning className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => preklopiAvtoPromocijo(u.id, u.autoPromocija)}
+                      className={`p-1.5 rounded-lg transition-colors ${u.autoPromocija ? 'text-amber-600 bg-amber-50' : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'}`}
+                      title={u.autoPromocija ? 'Odstrani samodejno promocijo' : 'Vsi oglasi tega računa vedno brezplačno promovirani'}
+                    >
+                      <Star className="w-4 h-4" />
                     </button>
                     <button onClick={() => preklopiBlokado(u.id, u.aktiven)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title={u.aktiven ? 'Blokiraj' : 'Odblokiraj'}>
                       {u.aktiven ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}

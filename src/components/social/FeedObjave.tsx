@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor, CheckCircle, X, Clock } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor, CheckCircle, X, Clock, Trash2 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
@@ -20,7 +20,7 @@ function LikeButton({ objavaId, stevilo, jazLajkam, onToggle }: {
   )
 }
 
-function KomentarjiPanel({ objavaId }: { objavaId: string }) {
+function KomentarjiPanel({ objavaId, isModerator }: { objavaId: string; isModerator: boolean }) {
   const { user } = useAuth()
   const [komentarji, setKomentarji] = useState<ObjavaKomentar[]>([])
   const [nalaga, setNalaga] = useState(true)
@@ -54,6 +54,12 @@ function KomentarjiPanel({ objavaId }: { objavaId: string }) {
     nalozi()
   }
 
+  async function izbrisiKomentar(id: string) {
+    const supabase = createClient()
+    await supabase.from('objava_komentarji').delete().eq('id', id)
+    nalozi()
+  }
+
   return (
     <div className="mt-3 pt-3 border-t border-gray-50 space-y-3">
       {nalaga ? (
@@ -64,9 +70,20 @@ function KomentarjiPanel({ objavaId }: { objavaId: string }) {
         komentarji.map(k => (
           <div key={k.id} className="flex items-start gap-2">
             <div className="w-6 h-6 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-xs font-bold text-[#0c2340] shrink-0">{k.ime[0]}</div>
-            <div className="flex-1 bg-gray-50 rounded-xl px-3 py-2">
-              <p className="text-xs font-semibold text-[#0c2340]">{k.ime}</p>
-              <p className="text-xs text-gray-600">{k.vsebina}</p>
+            <div className="flex-1 bg-gray-50 rounded-xl px-3 py-2 flex items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-[#0c2340]">{k.ime}</p>
+                <p className="text-xs text-gray-600">{k.vsebina}</p>
+              </div>
+              {isModerator && (
+                <button
+                  onClick={() => izbrisiKomentar(k.id)}
+                  title="Izbriši komentar (moderator)"
+                  className="p-1 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
             </div>
           </div>
         ))
@@ -118,8 +135,18 @@ export default function FeedObjave({
   const [showForm, setShowForm] = useState(false)
   const [posilja, setPosilja] = useState(false)
   const [filter, setFilter] = useState<'vse' | 'moje' | 'caka'>('vse')
+  const [isModerator, setIsModerator] = useState(false)
 
   const jeLastnik = !!user && !!lastnikUserId && user.id === lastnikUserId
+
+  useEffect(() => {
+    ;(async () => {
+      if (!user) { setIsModerator(false); return }
+      const supabase = createClient()
+      const { data } = await supabase.from('profiles').select('is_moderator').eq('id', user.id).maybeSingle()
+      setIsModerator(!!data?.is_moderator)
+    })()
+  }, [user])
 
   const nalozi = useCallback(async () => {
     if (!lastnikUserId) { setNalaga(false); return }
@@ -203,6 +230,13 @@ export default function FeedObjave({
   }
 
   async function zavrni(id: string) {
+    const supabase = createClient()
+    await supabase.from('objave').delete().eq('id', id)
+    nalozi()
+  }
+
+  async function izbrisiObjavo(id: string) {
+    if (!confirm('Izbrišete to objavo? Tega ni mogoče razveljaviti.')) return
     const supabase = createClient()
     await supabase.from('objave').delete().eq('id', id)
     nalozi()
@@ -403,6 +437,15 @@ export default function FeedObjave({
                       <p className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                     </div>
                   </div>
+                  {isModerator && (
+                    <button
+                      onClick={() => izbrisiObjavo(o.id)}
+                      title="Izbriši objavo (moderator)"
+                      className="p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Lokacija + plovilo */}
@@ -438,7 +481,7 @@ export default function FeedObjave({
                   </button>
                 </div>
 
-                {odprtiKomentarji.has(o.id) && <KomentarjiPanel objavaId={o.id} />}
+                {odprtiKomentarji.has(o.id) && <KomentarjiPanel objavaId={o.id} isModerator={isModerator} />}
               </div>
             ))
           )}

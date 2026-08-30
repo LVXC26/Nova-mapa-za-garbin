@@ -93,6 +93,8 @@ export interface Profil {
   spletna_stran: string | null
   verified: boolean
   is_admin: boolean
+  is_moderator?: boolean
+  auto_promocija?: boolean
   created_at: string
   notifikacije?: Record<string, boolean> | null
   dovoli_tuje_objave?: boolean

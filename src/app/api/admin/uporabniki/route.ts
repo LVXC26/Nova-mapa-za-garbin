@@ -24,8 +24,8 @@ export async function GET() {
   const { data, error } = await adminClient.auth.admin.listUsers()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data: profili } = await adminClient.from('profiles').select('id, is_admin')
-  const adminMap = new Map((profili ?? []).map(p => [p.id, p.is_admin]))
+  const { data: profili } = await adminClient.from('profiles').select('id, is_admin, is_moderator, auto_promocija')
+  const profilMap = new Map((profili ?? []).map(p => [p.id, p]))
 
   const uporabniki = data.users.map((u) => ({
     id: u.id,
@@ -34,7 +34,9 @@ export async function GET() {
     vloga: (u.user_metadata?.vloga as string | undefined) ?? 'prodajalec',
     created: u.created_at,
     aktiven: !u.banned_until || new Date(u.banned_until) < new Date(),
-    isAdmin: adminMap.get(u.id) ?? false,
+    isAdmin: profilMap.get(u.id)?.is_admin ?? false,
+    isModerator: profilMap.get(u.id)?.is_moderator ?? false,
+    autoPromocija: profilMap.get(u.id)?.auto_promocija ?? false,
   }))
 
   return NextResponse.json({ data: uporabniki })
@@ -44,7 +46,9 @@ export async function PATCH(req: NextRequest) {
   const { ok } = await jeAdmin()
   if (!ok) return NextResponse.json({ error: 'Nisi admin' }, { status: 403 })
 
-  const { userId, vloga, aktiven, isAdmin } = await req.json() as { userId: string; vloga?: string; aktiven?: boolean; isAdmin?: boolean }
+  const { userId, vloga, aktiven, isAdmin, isModerator, autoPromocija } = await req.json() as {
+    userId: string; vloga?: string; aktiven?: boolean; isAdmin?: boolean; isModerator?: boolean; autoPromocija?: boolean
+  }
   if (!userId) return NextResponse.json({ error: 'Manjka userId' }, { status: 400 })
 
   const adminClient = createAdminClient()
@@ -61,6 +65,21 @@ export async function PATCH(req: NextRequest) {
   if (isAdmin !== undefined) {
     const { error } = await adminClient.from('profiles').update({ is_admin: isAdmin }).eq('id', userId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (isModerator !== undefined) {
+    const { error } = await adminClient.from('profiles').update({ is_moderator: isModerator }).eq('id', userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (autoPromocija !== undefined) {
+    const { error } = await adminClient.from('profiles').update({ auto_promocija: autoPromocija }).eq('id', userId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // Takoj uveljavimo tudi za oglase, ki jih je ta oseba že objavila prej —
+    // brez tega bi "vedno promoviran" veljalo samo za bodoče, ne za obstoječe.
+    if (autoPromocija) {
+      await adminClient.from('plovila').update({ promoted: true, promoted_do: null }).eq('user_id', userId)
+    }
   }
 
   return NextResponse.json({ ok: true })

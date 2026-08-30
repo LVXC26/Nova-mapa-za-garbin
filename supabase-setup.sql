@@ -1193,3 +1193,88 @@ create policy "Lastnik plovila upravlja zasedenost" on plovilo_zasedenost for al
   with check (exists (select 1 from plovila where plovila.id = plovilo_zasedenost.plovilo_id and plovila.user_id = auth.uid()));
 
 create index if not exists idx_plovilo_zasedenost_plovilo_id on plovilo_zasedenost(plovilo_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POSEBNE VLOGE: is_moderator (lahko izbriše katerokoli objavo/komentar
+-- na charter/skipper zidovih, ne samo svoje) in auto_promocija (vsak
+-- oglas te osebe je vedno prikazan kot "Promoted", brez plačila).
+-- Oboje nastavlja izključno obstoječi admin prek /admin/uporabniki —
+-- enak vzorec in enaka zaščita pred samo-podelitvijo kot pri is_admin.
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table profiles add column if not exists is_moderator boolean default false;
+alter table profiles add column if not exists auto_promocija boolean default false;
+
+-- Razširimo OBSTOJEČI zaščitni trigger (varuje že is_admin/verified), da
+-- ščiti tudi ta dva nova stolpca pred samo-podelitvijo prek "Uredi svoj
+-- profil" politike (npr. supabase.from('profiles').update({is_moderator:true})
+-- iz konzole brskalnika).
+create or replace function prevent_self_privilege_escalation()
+returns trigger as $$
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    if TG_OP = 'INSERT' then
+      new.is_admin := false;
+      new.verified := false;
+      new.is_moderator := false;
+      new.auto_promocija := false;
+    else
+      new.is_admin := old.is_admin;
+      new.verified := old.verified;
+      new.is_moderator := old.is_moderator;
+      new.auto_promocija := old.auto_promocija;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_self_privilege_escalation on profiles;
+create trigger trg_prevent_self_privilege_escalation
+before insert or update on profiles
+for each row execute function prevent_self_privilege_escalation();
+
+-- Moderator lahko izbriše katerokoli objavo/komentar na katerem koli
+-- charter/skipper zidu (obstoječe pravice dovolijo samo lastniku/avtorju
+-- brisati SVOJE — to je dodatna, širša pravica poleg njih, ne zamenjava).
+drop policy if exists "Moderator brise katerokoli objavo" on objave;
+create policy "Moderator brise katerokoli objavo" on objave for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_moderator = true)
+);
+
+drop policy if exists "Moderator brise katerikoli komentar" on objava_komentarji;
+create policy "Moderator brise katerikoli komentar" on objava_komentarji for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_moderator = true)
+);
+
+-- Razširimo OBSTOJEČI prevent_plovilo_self_boost trigger: če ima
+-- objavljalec auto_promocija=true, se "promoted" ne resetira na false
+-- (kot za vse ostale), ampak se vsili na true — trajna brezplačna
+-- promocija za ta račun, ne glede na to, kaj klient pošlje.
+create or replace function prevent_plovilo_self_boost()
+returns trigger as $$
+declare
+  ima_auto_promocijo boolean;
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    select coalesce(auto_promocija, false) into ima_auto_promocijo from profiles where id = auth.uid();
+    if TG_OP = 'INSERT' then
+      new.promoted := coalesce(ima_auto_promocijo, false);
+      new.promoted_do := null;
+      new.urgentno := false;
+      new.urgentno_do := null;
+    else
+      new.promoted := case when ima_auto_promocijo then true else old.promoted end;
+      new.promoted_do := case when ima_auto_promocijo then null else old.promoted_do end;
+      new.urgentno := old.urgentno;
+      new.urgentno_do := old.urgentno_do;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_plovilo_self_boost on plovila;
+create trigger trg_prevent_plovilo_self_boost
+before insert or update on plovila
+for each row execute function prevent_plovilo_self_boost();
