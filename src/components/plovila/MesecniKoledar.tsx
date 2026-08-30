@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const DNEVI_V_TEDNU = ['Po', 'To', 'Sr', 'Če', 'Pe', 'So', 'Ne']
@@ -20,19 +21,37 @@ export function formatDan(dan: string): string {
   return `${parseInt(d)}. ${parseInt(m)}. ${l}`
 }
 
+function dnevniRazpon(od: string, do_: string): string[] {
+  const rezultat: string[] = []
+  const zac = new Date(od)
+  const kon = new Date(do_)
+  for (let d = zac; d <= kon; d.setDate(d.getDate() + 1)) {
+    rezultat.push(danString(d))
+  }
+  return rezultat
+}
+
+// Izbira termina podpira dva enakovredna načina, kot na večini rezervacijskih
+// strani: (1) klik na začetni dan, nato klik na končni dan, ali (2) klik in
+// povleci od začetnega do končnega dneva v eni potezi (miška navzdol na
+// začetku, drži, spusti na koncu).
 export default function MesecniKoledar({
   mesec,
   onMesecChange,
   zasedeniDnevi,
-  izbraniDnevi,
-  onDanKlik,
+  onIzbira,
 }: {
   mesec: Date
   onMesecChange: (m: Date) => void
   zasedeniDnevi: Set<string>
-  izbraniDnevi: Set<string>
-  onDanKlik: (dan: string) => void
+  onIzbira: (zacetek: string, konec: string) => void
 }) {
+  const [od, setOd] = useState<string | null>(null)
+  const [hoverDan, setHoverDan] = useState<string | null>(null)
+  const [zacetnoDejanje, setZacetnoDejanje] = useState(false)
+  const [miskaDol, setMiskaDol] = useState(false)
+  const [napaka, setNapaka] = useState('')
+
   const leto = mesec.getFullYear()
   const mesecIdx = mesec.getMonth()
   const prviDan = new Date(leto, mesecIdx, 1)
@@ -45,6 +64,71 @@ export default function MesecniKoledar({
     ...Array.from({ length: offset }, () => null),
     ...Array.from({ length: steviloDni }, (_, i) => danString(new Date(leto, mesecIdx, i + 1))),
   ]
+
+  const izbraniDnevi: Set<string> = (() => {
+    if (!od) return new Set()
+    const konec = hoverDan ?? od
+    const [zac, kon] = konec < od ? [konec, od] : [od, konec]
+    return new Set(dnevniRazpon(zac, kon))
+  })()
+
+  function zacniIzbiro(dan: string, onemogocen: boolean) {
+    // Nove izbire ni mogoče začeti na zasedenem/preteklem dnevu — a gumb
+    // namerno ni pravi `disabled` (brskalnik onemogočenim elementom ne
+    // pošlje mouseenter/mouseup, zaradi česar bi vlečenje, ki se konča nad
+    // takim dnevom, "obtičalo") — zato tu samo tiho ignoriramo mousedown.
+    if (onemogocen && !od) return
+    setMiskaDol(true)
+    if (!od) {
+      setOd(dan)
+      setHoverDan(dan)
+      setZacetnoDejanje(true)
+      setNapaka('')
+    } else {
+      setHoverDan(dan)
+      setZacetnoDejanje(false)
+    }
+  }
+
+  function ohNaDan(dan: string) {
+    // Med vlečenjem sledimo tudi zasedenim/preteklim dnevom, da se ob
+    // spustu pravilno zazna prekrivanje in prikaže napaka.
+    if (miskaDol) setHoverDan(dan)
+  }
+
+  const koncajIzbiro = useCallback(() => {
+    setMiskaDol((jeDol) => (jeDol ? false : jeDol))
+    if (!miskaDol) return
+    if (!od) return
+
+    const konec = hoverDan ?? od
+    // Prvi (samostojni) klik brez vlečenja — počakamo na drugi klik/vlečenje.
+    if (zacetnoDejanje && konec === od) return
+
+    const [zac, kon] = konec < od ? [konec, od] : [od, konec]
+    const razpon = dnevniRazpon(zac, kon)
+    if (razpon.some((d) => zasedeniDnevi.has(d))) {
+      setNapaka('V izbranem obdobju je plovilo delno zasedeno — izberite drug termin.')
+      setOd(konec)
+      setHoverDan(konec)
+      setZacetnoDejanje(true)
+      return
+    }
+    setNapaka('')
+    setOd(zac)
+    setHoverDan(kon)
+    onIzbira(zac, kon)
+  }, [miskaDol, od, hoverDan, zacetnoDejanje, zasedeniDnevi, onIzbira])
+
+  // Varovalka: brskalnik ne sproži mouseup/mouseenter na onemogočenih
+  // (zasedenih) gumbih, zato bi lahko vlečenje, ki se konča točno nad
+  // zasedenim dnevom, pustilo izbiro "obtičalo". Globalni listener to
+  // vedno ujame, ne glede na to, kje se miška dejansko spusti.
+  useEffect(() => {
+    if (!miskaDol) return
+    document.addEventListener('mouseup', koncajIzbiro)
+    return () => document.removeEventListener('mouseup', koncajIzbiro)
+  }, [miskaDol, koncajIzbiro])
 
   return (
     <div>
@@ -72,7 +156,7 @@ export default function MesecniKoledar({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1 select-none">
         {celice.map((dan, i) => {
           if (!dan) return <div key={`prazno-${i}`} />
           const zaseden = zasedeniDnevi.has(dan)
@@ -84,8 +168,9 @@ export default function MesecniKoledar({
             <button
               key={dan}
               type="button"
-              disabled={onemogocen}
-              onClick={() => onDanKlik(dan)}
+              aria-disabled={onemogocen}
+              onMouseDown={() => zacniIzbiro(dan, onemogocen)}
+              onMouseEnter={() => ohNaDan(dan)}
               title={zaseden ? 'Zasedeno' : undefined}
               className={`aspect-square rounded-lg text-xs font-medium transition-all ${
                 zaseden
@@ -107,6 +192,8 @@ export default function MesecniKoledar({
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#c9a84c]" /> Izbrano</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-50 border border-red-200" /> Zasedeno</span>
       </div>
+
+      {napaka && <p className="mt-2 text-xs text-red-600">{napaka}</p>}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { CalendarDays } from 'lucide-react'
 import MesecniKoledar, { danString, formatDan } from '@/components/plovila/MesecniKoledar'
 import type { PloviloZasedenost } from '@/types/database'
@@ -29,9 +29,6 @@ export default function TerminPolje({
 }) {
   const [odprto, setOdprto] = useState(false)
   const [mesec, setMesec] = useState(() => { const d = new Date(); d.setDate(1); return d })
-  const [od, setOd] = useState<string | null>(null)
-  const [do_, setDo] = useState<string | null>(null)
-  const [napaka, setNapaka] = useState('')
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -42,35 +39,10 @@ export default function TerminPolje({
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const zasedeniDnevi = useMemo(() => {
-    const set = new Set<string>()
-    zasedenost.forEach((z) => dnevniRazpon(z.datum_od, z.datum_do).forEach((d) => set.add(d)))
-    return set
-  }, [zasedenost])
+  const zasedeniDnevi = new Set<string>()
+  zasedenost.forEach((z) => dnevniRazpon(z.datum_od, z.datum_do).forEach((d) => zasedeniDnevi.add(d)))
 
-  const izbraniDnevi = useMemo(() => {
-    if (!od) return new Set<string>()
-    if (!do_) return new Set([od])
-    return new Set(dnevniRazpon(od, do_))
-  }, [od, do_])
-
-  function danKlik(dan: string) {
-    setNapaka('')
-    if (!od || do_) {
-      setOd(dan)
-      setDo(null)
-      return
-    }
-    const [zac, kon] = dan < od ? [dan, od] : [od, dan]
-    const razpon = dnevniRazpon(zac, kon)
-    if (razpon.some((d) => zasedeniDnevi.has(d))) {
-      setNapaka('V izbranem obdobju je plovilo delno zasedeno — izberite drug termin.')
-      setOd(dan)
-      setDo(null)
-      return
-    }
-    setOd(zac)
-    setDo(kon)
+  function izbira(zac: string, kon: string) {
     onChange(zac === kon ? formatDan(zac) : `${formatDan(zac)} – ${formatDan(kon)}`)
     setOdprto(false)
   }
@@ -90,14 +62,13 @@ export default function TerminPolje({
 
       {odprto && (
         <div className="absolute z-30 mt-2 w-[300px] max-w-[90vw] bg-white rounded-2xl border border-gray-100 shadow-xl p-4">
+          <p className="text-[11px] text-gray-400 mb-2">Kliknite začetek in konec, ali povlecite čez želene dni.</p>
           <MesecniKoledar
             mesec={mesec}
             onMesecChange={setMesec}
             zasedeniDnevi={zasedeniDnevi}
-            izbraniDnevi={izbraniDnevi}
-            onDanKlik={danKlik}
+            onIzbira={izbira}
           />
-          {napaka && <p className="mt-2 text-xs text-red-600">{napaka}</p>}
         </div>
       )}
     </div>

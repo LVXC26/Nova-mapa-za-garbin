@@ -20,8 +20,8 @@ export default function UrediZasedenostKoledar({ ploviloId }: { ploviloId: strin
   const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
   const [nalaga, setNalaga] = useState(true)
   const [mesec, setMesec] = useState(() => { const d = new Date(); d.setDate(1); return d })
-  const [od, setOd] = useState<string | null>(null)
-  const [do_, setDo] = useState<string | null>(null)
+  const [izbor, setIzbor] = useState<{ od: string; do_: string } | null>(null)
+  const [koledarKey, setKoledarKey] = useState(0)
   const [shranjujem, setShranjujem] = useState(false)
 
   const nalozi = useCallback(async () => {
@@ -45,32 +45,15 @@ export default function UrediZasedenostKoledar({ ploviloId }: { ploviloId: strin
     return set
   }, [zasedenost])
 
-  const izbraniDnevi = useMemo(() => {
-    if (!od) return new Set<string>()
-    if (!do_) return new Set([od])
-    return new Set(dnevniRazpon(od, do_))
-  }, [od, do_])
-
-  function danKlik(dan: string) {
-    if (!od || do_) {
-      setOd(dan)
-      setDo(null)
-      return
-    }
-    const [zac, kon] = dan < od ? [dan, od] : [od, dan]
-    setOd(zac)
-    setDo(kon)
-  }
-
   async function dodajZasedeno() {
-    if (!od || !do_) return
+    if (!izbor) return
     setShranjujem(true)
     const supabase = createClient()
-    const { error } = await supabase.from('plovilo_zasedenost').insert({ plovilo_id: ploviloId, datum_od: od, datum_do: do_ })
+    const { error } = await supabase.from('plovilo_zasedenost').insert({ plovilo_id: ploviloId, datum_od: izbor.od, datum_do: izbor.do_ })
     setShranjujem(false)
     if (!error) {
-      setOd(null)
-      setDo(null)
+      setIzbor(null)
+      setKoledarKey((k) => k + 1) // resetira izbiro v MesecniKoledar
       nalozi()
     }
   }
@@ -88,14 +71,15 @@ export default function UrediZasedenostKoledar({ ploviloId }: { ploviloId: strin
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <div>
+        <p className="text-[11px] text-gray-400 mb-2">Kliknite začetek in konec, ali povlecite čez želene dni.</p>
         <MesecniKoledar
+          key={koledarKey}
           mesec={mesec}
           onMesecChange={setMesec}
           zasedeniDnevi={zasedeniDnevi}
-          izbraniDnevi={izbraniDnevi}
-          onDanKlik={danKlik}
+          onIzbira={(od, do_) => setIzbor({ od, do_ })}
         />
-        {od && do_ && (
+        {izbor && (
           <button
             type="button"
             onClick={dodajZasedeno}
@@ -103,7 +87,7 @@ export default function UrediZasedenostKoledar({ ploviloId }: { ploviloId: strin
             className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-semibold text-xs rounded-full transition-all disabled:opacity-60"
           >
             <CalendarPlus className="w-3.5 h-3.5" />
-            {shranjujem ? 'Shranjujem...' : `Označi zasedeno: ${od === do_ ? formatDan(od) : `${formatDan(od)} – ${formatDan(do_)}`}`}
+            {shranjujem ? 'Shranjujem...' : `Označi zasedeno: ${izbor.od === izbor.do_ ? formatDan(izbor.od) : `${formatDan(izbor.od)} – ${formatDan(izbor.do_)}`}`}
           </button>
         )}
       </div>
