@@ -84,8 +84,25 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
       setRealPlovilo(data)
       setNalaga(false)
       if (data) {
-        supabase.from('plovila_javno').select('*').eq('tip', data.tip).neq('id', id).limit(3)
-          .then(({ data: sorodna }) => { if (sorodna) setPodobna(sorodna) })
+        // Najprej naberemo širši nabor istega tipa/oglasa, nato jih uredimo
+        // sami: promovirani vedno na vrh, znotraj tega pa po ceni najbližji
+        // ogledanemu plovilu (lahko malo višja ali malo nižja cena) — Supabase
+        // poizvedba sama po sebi ne zna razvrščati po absolutni razliki cen.
+        supabase.from('plovila_javno').select('*').eq('tip', data.tip).eq('tip_oglasa', data.tip_oglasa).neq('id', id).limit(50)
+          .then(({ data: sorodna }) => {
+            if (!sorodna) return
+            const izhodiscnaCena = data.cena_na_zahtevo ? null : data.cena
+            const razvrsceno = [...sorodna].sort((a, b) => {
+              if (a.promoted !== b.promoted) return a.promoted ? -1 : 1
+              if (izhodiscnaCena) {
+                const razlikaA = Math.abs((a.cena_na_zahtevo ? Infinity : a.cena) - izhodiscnaCena)
+                const razlikaB = Math.abs((b.cena_na_zahtevo ? Infinity : b.cena) - izhodiscnaCena)
+                return razlikaA - razlikaB
+              }
+              return 0
+            })
+            setPodobna(razvrsceno.slice(0, 3))
+          })
         if (data.tip_oglasa === 'najem') {
           supabase.from('plovilo_zasedenost').select('*').eq('plovilo_id', id)
             .then(({ data: termini }) => { if (termini) setZasedenost(termini) })
