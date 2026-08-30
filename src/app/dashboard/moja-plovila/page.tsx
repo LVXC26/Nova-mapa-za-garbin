@@ -90,14 +90,25 @@ function MojaPlovilaContent() {
     window.location.assign(json.url)
   }
 
+  // Oglas ima še "neporabljen" plačan rok, če je urgentno trenutno izklopljen
+  // (lastnik ga je sam ugasnil), rok pa še ni potekel — glej /api/urgentno/odstrani,
+  // ki ob izklopu urgentno_do namenoma ohrani, ne zbriše.
+  function imaNeporabljenoUrgentno(p: Plovilo): boolean {
+    if (p.urgentno || !p.urgentno_do || zdaj === null) return false
+    return new Date(p.urgentno_do).getTime() > zdaj
+  }
+
   async function naredimUrgentno(id: string) {
     if (demoMode) { setUrgentnoNapaka('Urgentna prodaja v demo načinu ni mogoča. Prijavite se z resničnim računom.'); return }
     setUrgentnoNapaka('')
     setUrgentnoNarocam(id)
 
-    // Admin lahko svoj oglas označi kot urgenten brezplačno, brez Stripe —
-    // glej /api/urgentno/brezplacno (preverja is_admin in lastništvo).
-    if (isAdmin) {
+    const plovilo = plovila.find(p => p.id === id)
+
+    // Brezplačno gre skozi /api/urgentno/brezplacno v dveh primerih:
+    // admin (vedno) ali navaden lastnik, ki znotraj tega oglasa obnavlja
+    // še neporaben, že plačan rok (glej imaNeporabljenoUrgentno).
+    if (isAdmin || (plovilo && imaNeporabljenoUrgentno(plovilo))) {
       const res = await fetch('/api/urgentno/brezplacno', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,7 +143,9 @@ function MojaPlovilaContent() {
     const json = await res.json()
     setUrgentnoNarocam(null)
     if (!res.ok) { setUrgentnoNapaka(json.error ?? 'Napaka pri odstranjevanju oznake.'); return }
-    setPlovila(prev => prev.map(p => p.id === id ? { ...p, urgentno: false, urgentno_do: null } : p))
+    // urgentno_do namenoma NE spreminjamo tu — API ga ohrani, da je viden
+    // pri naslednjem izracunu imaNeporabljenoUrgentno.
+    setPlovila(prev => prev.map(p => p.id === id ? { ...p, urgentno: false } : p))
   }
 
   function jePromovirano(p: Plovilo): boolean {
@@ -345,24 +358,36 @@ function MojaPlovilaContent() {
                         {promoviram === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
                       </button>
                     )}
-                    {/* Urgentna prodaja — plačljivo (30 €/30 dni), samo za oglase "za prodajo" */}
+                    {/* Urgentna prodaja — 30 €/30 dni, razen: admin (vedno brezplačno)
+                        ali lastnik, ki obnavlja še neporabljen že plačan rok (brezplačno,
+                        glej imaNeporabljenoUrgentno) — samo za oglase "za prodajo" */}
                     {!jeProdano && !jeUrgentno && plovilo.tip_oglasa === 'prodaja' && (
                       <button
                         onClick={() => naredimUrgentno(plovilo.id)}
                         disabled={urgentnoNarocam === plovilo.id}
-                        title={isAdmin ? 'Označi kot urgentno — brezplačno (admin)' : 'Označi kot urgentno — 30 €'}
-                        className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        title={
+                          isAdmin
+                            ? 'Označi kot urgentno — brezplačno (admin)'
+                            : imaNeporabljenoUrgentno(plovilo)
+                              ? `Vklopi nazaj — brezplačno (plačano do ${new Date(plovilo.urgentno_do as string).toLocaleDateString('sl-SI')})`
+                              : 'Označi kot urgentno — 30 €'
+                        }
+                        className={`p-2 rounded-xl transition-colors disabled:opacity-50 ${
+                          imaNeporabljenoUrgentno(plovilo) || isAdmin
+                            ? 'text-red-500 bg-red-50 hover:bg-red-100'
+                            : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                        }`}
                       >
                         {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                       </button>
                     )}
-                    {/* Admin lahko urgentno stanje tudi takoj izklopi (brezplacna
-                        pot nima Stripe narocila, ki bi samo poteklo) */}
-                    {!jeProdano && jeUrgentno && isAdmin && (
+                    {/* Izklop urgentne oznake — na voljo vsakemu lastniku (brezplačno,
+                        rok poteka pa se ohrani za morebiten brezplačen ponoven vklop) */}
+                    {!jeProdano && jeUrgentno && (
                       <button
                         onClick={() => odstraniUrgentno(plovilo.id)}
                         disabled={urgentnoNarocam === plovilo.id}
-                        title="Odstrani urgentno oznako (admin)"
+                        title="Izklopi urgentno oznako"
                         className="p-2 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
                       >
                         {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
