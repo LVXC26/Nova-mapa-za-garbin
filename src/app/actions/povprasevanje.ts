@@ -92,7 +92,7 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
               <tr><td style="padding:8px;color:#666;">Sporočilo:</td><td style="padding:8px;">${data.sporocilo}</td></tr>
               <tr><td style="padding:8px;color:#666;">Tip / ID:</td><td style="padding:8px;">${tipLabel} / ${data.target_id}</td></tr>
               ${kontaktLastnika ? `
-              <tr><td colspan="2" style="padding:12px 8px 4px;color:#0c2340;font-weight:600;border-top:1px solid #eee;">${kontaktLastnika.naziv ?? ''}</td></tr>
+              <tr><td colspan="2" style="padding:12px 8px 4px;border-top:1px solid #eee;"><span style="color:#666;">Naziv plovila:</span> <strong style="color:#0c2340;">${kontaktLastnika.naziv ?? ''}</strong></td></tr>
               <tr><td style="padding:8px;color:#666;">E-mail lastnika:</td><td style="padding:8px;">${kontaktLastnika.email ? `<a href="mailto:${kontaktLastnika.email}">${kontaktLastnika.email}</a>` : '—'}</td></tr>
               <tr><td style="padding:8px;color:#666;">Telefon lastnika:</td><td style="padding:8px;">${kontaktLastnika.tel || '—'}</td></tr>
               ` : ''}
