@@ -10,7 +10,7 @@ import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { createClient } from '@/lib/supabase/client'
-import type { Charter, Plovilo } from '@/types/database'
+import type { Charter, Plovilo, PloviloZasedenost } from '@/types/database'
 
 const tipIkone: Record<string, string> = {
   jadrnica: '⛵',
@@ -27,6 +27,7 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
   const { user } = useAuth()
   const [realCharter, setRealCharter] = useState<Charter | null>(null)
   const [plovila, setPlovila] = useState<Plovilo[]>([])
+  const [zasedenostFlote, setZasedenostFlote] = useState<PloviloZasedenost[]>([])
   const [nalaga, setNalaga] = useState(true)
 
   useEffect(() => {
@@ -36,7 +37,19 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
       setNalaga(false)
       if (data?.user_id) {
         supabase.from('plovila').select('*').eq('user_id', data.user_id).eq('tip_oglasa', 'najem').eq('potrjeno', true)
-          .then(({ data: flota }) => { if (flota) setPlovila(flota) })
+          .then(({ data: flota }) => {
+            if (flota) {
+              setPlovila(flota)
+              // Splošno povpraševanje (ne za konkretno plovilo) prikaže
+              // koledar, sestavljen iz zasedenosti CELE flote — če ima
+              // charter samo eno plovilo (najpogostejši primer), je to
+              // enako natančno kot na strani posameznega plovila.
+              if (flota.length > 0) {
+                supabase.from('plovilo_zasedenost').select('*').in('plovilo_id', flota.map(p => p.id))
+                  .then(({ data: termini }) => { if (termini) setZasedenostFlote(termini) })
+              }
+            }
+          })
       }
     })
   }, [id])
@@ -214,7 +227,11 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   )}
 
-                  <PovprasevanjeForma tip="charter" targetId={String(charter.id)} />
+                  <PovprasevanjeForma
+                    tip="charter"
+                    targetId={String(charter.id)}
+                    zasedenost={plovila.length > 0 ? zasedenostFlote : undefined}
+                  />
                 </div>
 
                 {/* Tip plovil */}
