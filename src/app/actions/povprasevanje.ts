@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export type PovprasevanjeInput = {
   tip: 'charter' | 'skipper' | 'plovilo' | 'kontakt' | 'prijava-charter' | 'prijava-skipper'
@@ -47,7 +48,13 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
   // charterjem/prodajalcem.
   let kontaktLastnika: { email: string | null; tel: string | null; naziv: string | null } | null = null
   if (data.tip === 'plovilo') {
-    const { data: plovilo } = await supabase
+    // Kontakt lastnika (še posebej pri najemu) ni več javno berljiv prek
+    // anon ključa (glej varnostni popravek "plovila_javno" v
+    // supabase-setup.sql) — za ta interni mail Garbin ekipi zato beremo
+    // prek service-role klienta, ki obide RLS. Vrednost gre samo v mail,
+    // nikoli nazaj v odgovor stranki/brskalniku.
+    const adminClient = createAdminClient()
+    const { data: plovilo } = await adminClient
       .from('plovila')
       .select('kontakt_email, kontakt_tel, naziv')
       .eq('id', data.target_id)

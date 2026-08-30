@@ -50,9 +50,8 @@ function PlovilaContent() {
   useEffect(() => {
     const supabase = createClient()
     supabase
-      .from('plovila')
+      .from('plovila_javno')
       .select('*')
-      .eq('potrjeno', true)
       .eq('tip_oglasa', oglas)
       .order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setRealPlovila(data) })

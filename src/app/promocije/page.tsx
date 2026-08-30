@@ -30,7 +30,7 @@ export default function PromoPage() {
 
       const idji = (promoData ?? []).map(p => p.plovilo_id).filter((id): id is string => !!id)
       if (idji.length > 0) {
-        const { data: plovilaData } = await supabase.from('plovila').select('*').in('id', idji)
+        const { data: plovilaData } = await supabase.from('plovila_javno').select('*').in('id', idji)
         setRealnaPlovila(plovilaData ?? [])
       }
     })()

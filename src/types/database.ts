@@ -338,6 +338,12 @@ export interface Database {
         Update: never
         Relationships: []
       }
+      plovila_javno: {
+        Row: Pick<Plovilo, keyof Plovilo>
+        Insert: never
+        Update: never
+        Relationships: []
+      }
     }
     Functions: Record<string, never>
     Enums: Record<string, never>

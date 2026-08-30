@@ -36,7 +36,7 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
       setRealCharter(data)
       setNalaga(false)
       if (data?.user_id) {
-        supabase.from('plovila').select('*').eq('user_id', data.user_id).eq('tip_oglasa', 'najem').eq('potrjeno', true)
+        supabase.from('plovila_javno').select('*').eq('user_id', data.user_id).eq('tip_oglasa', 'najem')
           .then(({ data: flota }) => {
             if (flota) {
               setPlovila(flota)

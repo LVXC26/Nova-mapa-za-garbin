@@ -74,11 +74,17 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('plovila').select('*').eq('id', id).maybeSingle().then(({ data }) => {
+    // Najprej poskusimo pravo tabelo — nanjo se ujameta samo lastnik (tudi za
+    // svoj še nepotrjen oglas) ali admin. Za vse ostale (javni obiskovalci)
+    // pravo tabelo ne vrne nič (kontakt lastnika ni več javno berljiv), zato
+    // v tem primeru padeva na "plovila_javno" (potrjena, kontakt zamaskiran
+    // za najem) — glej varnostni popravek v supabase-setup.sql.
+    supabase.from('plovila').select('*').eq('id', id).maybeSingle().then(async ({ data: privatno }) => {
+      const data = privatno ?? (await supabase.from('plovila_javno').select('*').eq('id', id).maybeSingle()).data
       setRealPlovilo(data)
       setNalaga(false)
       if (data) {
-        supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip', data.tip).neq('id', id).limit(3)
+        supabase.from('plovila_javno').select('*').eq('tip', data.tip).neq('id', id).limit(3)
           .then(({ data: sorodna }) => { if (sorodna) setPodobna(sorodna) })
         if (data.tip_oglasa === 'najem') {
           supabase.from('plovilo_zasedenost').select('*').eq('plovilo_id', id)

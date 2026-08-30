@@ -27,7 +27,7 @@ export default function PriljubljeniPage() {
 
       let realna: Plovilo[] = []
       if (ids.length > 0) {
-        const { data } = await supabase.from('plovila').select('*').in('id', ids)
+        const { data } = await supabase.from('plovila_javno').select('*').in('id', ids)
         realna = data ?? []
       }
 

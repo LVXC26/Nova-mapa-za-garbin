@@ -54,10 +54,10 @@ export default function HomePage() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip_oglasa', 'prodaja')
+    supabase.from('plovila_javno').select('*').eq('tip_oglasa', 'prodaja')
       .order('created_at', { ascending: false }).limit(50)
       .then(({ data }) => { if (data) setRealnaPlovila(data) })
-    supabase.from('plovila').select('*').eq('potrjeno', true).eq('tip_oglasa', 'najem')
+    supabase.from('plovila_javno').select('*').eq('tip_oglasa', 'najem')
       .order('created_at', { ascending: false }).limit(50)
       .then(({ data }) => { if (data) setRealnaNajemPlovila(data) })
     supabase.from('charterji').select('*').order('created_at', { ascending: false }).limit(3)

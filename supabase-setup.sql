@@ -1278,3 +1278,31 @@ drop trigger if exists trg_prevent_plovilo_self_boost on plovila;
 create trigger trg_prevent_plovilo_self_boost
 before insert or update on plovila
 for each row execute function prevent_plovilo_self_boost();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK: kontakt lastnika najemnega plovila (kontakt_email/
+-- kontakt_tel) je bil na strani plovila samo SKRIT v UI-ju (glej commit
+-- "Hide direct charter contact...") — osnovna tabela "plovila" pa je
+-- imela povsem javno bralno politiko (potrjeno = true) BREZ omejitve
+-- stolpcev, zato je bil kontakt še vedno berljiv z direktnim klicem na
+--   /rest/v1/plovila?select=kontakt_email,kontakt_tel&id=eq...
+-- mimo aplikacije, enak razred napake kot pri profiles/public_profiles.
+-- Rešitev: osnovno tabelo zapremo za javnost, ozek javni POGLED pa za
+-- najemna plovila kontakt polji vrne kot null. Lastnik svojega plovila
+-- (dashboard) in admin bereta osnovno tabelo naprej brez sprememb.
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Javni bralni dostop - plovila" on plovila;
+
+create or replace view plovila_javno
+with (security_invoker = false)
+as select
+  id, naziv, opis, cena, letnik, dolzina_m, tip, tip_oglasa, stanje, lokacija,
+  case when tip_oglasa = 'najem' then null else kontakt_email end as kontakt_email,
+  case when tip_oglasa = 'najem' then null else kontakt_tel end as kontakt_tel,
+  slike, model_3d_url, oprema, potrjeno, promoted, promoted_do, prodano,
+  cena_na_zahtevo, urgentno, urgentno_do, user_id, created_at, updated_at
+from plovila
+where potrjeno = true;
+
+grant select on plovila_javno to anon, authenticated;
