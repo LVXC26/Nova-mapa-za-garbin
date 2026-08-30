@@ -121,6 +121,20 @@ function MojaPlovilaContent() {
     window.location.assign(json.url)
   }
 
+  async function odstraniUrgentno(id: string) {
+    setUrgentnoNapaka('')
+    setUrgentnoNarocam(id)
+    const res = await fetch('/api/urgentno/odstrani', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plovilo_id: id }),
+    })
+    const json = await res.json()
+    setUrgentnoNarocam(null)
+    if (!res.ok) { setUrgentnoNapaka(json.error ?? 'Napaka pri odstranjevanju oznake.'); return }
+    setPlovila(prev => prev.map(p => p.id === id ? { ...p, urgentno: false, urgentno_do: null } : p))
+  }
+
   function jePromovirano(p: Plovilo): boolean {
     if (zdaj === null) return !!p.promoted
     return !!p.promoted && (!p.promoted_do || new Date(p.promoted_do).getTime() > zdaj)
@@ -338,6 +352,18 @@ function MojaPlovilaContent() {
                         disabled={urgentnoNarocam === plovilo.id}
                         title={isAdmin ? 'Označi kot urgentno — brezplačno (admin)' : 'Označi kot urgentno — 30 €'}
                         className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                      </button>
+                    )}
+                    {/* Admin lahko urgentno stanje tudi takoj izklopi (brezplacna
+                        pot nima Stripe narocila, ki bi samo poteklo) */}
+                    {!jeProdano && jeUrgentno && isAdmin && (
+                      <button
+                        onClick={() => odstraniUrgentno(plovilo.id)}
+                        disabled={urgentnoNarocam === plovilo.id}
+                        title="Odstrani urgentno oznako (admin)"
+                        className="p-2 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
                       >
                         {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                       </button>
