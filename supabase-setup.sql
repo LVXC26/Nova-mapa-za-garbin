@@ -1356,3 +1356,34 @@ with (security_invoker = false)
 as select id, ime, vloga, verified, dovoli_tuje_objave, created_at, slika_url from profiles;
 
 grant select on public_profiles to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK (najden pri pregledu ob delu na skiperjih): enak
+-- razred napake kot pri "plovila" — "Javni bralni dostop - charterji"
+-- (using(true)) ni omejeval stolpcev, zato je bil pravi kontakt_email in
+-- kontakt_tel VSAKEGA charter racuna berljiv mimo aplikacije, kar UI
+-- ze dolgo skriva:
+--   curl ".../rest/v1/charterji?select=naziv,kontakt_email,kontakt_tel"
+-- Resitev: enak vzorec kot plovila_javno — ozek javni pogled brez kontakt
+-- polj, osnovno tabelo pa omejimo na lastnika + admina (ki ju uredita/
+-- vidita naprej prek obstojecih "Uredi svoj.../Vstavi..." politik).
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Javni bralni dostop - charterji" on charterji;
+
+drop policy if exists "Lastnik bere svoj charter profil" on charterji;
+create policy "Lastnik bere svoj charter profil" on charterji for select using (auth.uid() = user_id);
+
+drop policy if exists "Admin bere vse charterje" on charterji;
+create policy "Admin bere vse charterje" on charterji for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+create or replace view charterji_javno
+with (security_invoker = false)
+as select
+  id, user_id, naziv, opis, tip, lokacija, spletna_stran, ocena, st_ocen,
+  st_plovil, max_oseb, max_dolzina_m, tip_plovila, verified, created_at
+from charterji;
+
+grant select on charterji_javno to anon, authenticated;

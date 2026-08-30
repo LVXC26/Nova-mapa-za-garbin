@@ -41,7 +41,7 @@ export default function CharterjiPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('charterji').select('*').order('created_at', { ascending: false })
+    supabase.from('charterji_javno').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setRealCharterji(data) })
   }, [])
 

@@ -40,7 +40,7 @@ function IskanjeContent() {
       const supabase = createClient()
       const [plovilaRes, charterjiRes, skiperjiRes, noviceRes] = await Promise.all([
         supabase.from('plovila_javno').select('*').ilike('naziv', `%${initQ}%`),
-        supabase.from('charterji').select('*').ilike('naziv', `%${initQ}%`),
+        supabase.from('charterji_javno').select('*').ilike('naziv', `%${initQ}%`),
         supabase.from('skiperji').select('*').ilike('ime', `%${initQ}%`),
         supabase.from('novice').select('*').not('published_at', 'is', null).ilike('naslov', `%${initQ}%`),
       ])

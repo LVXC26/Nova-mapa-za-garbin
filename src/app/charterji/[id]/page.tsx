@@ -32,7 +32,12 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('charterji').select('*').eq('id', id).maybeSingle().then(({ data }) => {
+    // Kontakt (kontakt_email/kontakt_tel) ni več javno berljiv prek anon
+    // ključa (glej varnostni popravek "charterji_javno" v supabase-setup.sql)
+    // — najprej poskusimo pravo tabelo (ujame samo lastnika/admina), za vse
+    // ostale (javni obiskovalci) pademo na ozek javni pogled.
+    supabase.from('charterji').select('*').eq('id', id).maybeSingle().then(async ({ data: privatno }) => {
+      const data = privatno ?? (await supabase.from('charterji_javno').select('*').eq('id', id).maybeSingle()).data
       setRealCharter(data)
       setNalaga(false)
       if (data?.user_id) {

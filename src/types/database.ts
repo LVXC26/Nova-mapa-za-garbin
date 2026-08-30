@@ -334,13 +334,19 @@ export interface Database {
     }
     Views: {
       public_profiles: {
-        Row: Pick<Profil, 'id' | 'ime' | 'vloga' | 'verified' | 'dovoli_tuje_objave' | 'created_at'>
+        Row: Pick<Profil, 'id' | 'ime' | 'slika_url' | 'vloga' | 'verified' | 'dovoli_tuje_objave' | 'created_at'>
         Insert: never
         Update: never
         Relationships: []
       }
       plovila_javno: {
         Row: Pick<Plovilo, keyof Plovilo>
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      charterji_javno: {
+        Row: Pick<Charter, keyof Charter>
         Insert: never
         Update: never
         Relationships: []
