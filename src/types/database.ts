@@ -88,6 +88,7 @@ export interface Profil {
   id: string
   vloga: 'prodajalec' | 'charter' | 'oba'
   ime: string | null
+  slika_url: string | null
   opis: string | null
   telefon: string | null
   spletna_stran: string | null

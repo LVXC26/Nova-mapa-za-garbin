@@ -36,6 +36,7 @@ function MojaPlovilaContent() {
   const [urgentnoNapaka, setUrgentnoNapaka] = useState('')
   const [zdaj, setZdaj] = useState<number | null>(null)
   const [koledarOdprtId, setKoledarOdprtId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     ;(async () => {
@@ -43,15 +44,19 @@ function MojaPlovilaContent() {
       if (!user) { setNalaga(false); return }
 
       const supabase = createClient()
-      const { data } = await supabase
-        .from('plovila')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      const [{ data }, { data: profil }] = await Promise.all([
+        supabase
+          .from('plovila')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+      ])
 
       const seznam = data ?? []
       setPlovila(seznam)
       setProdana(Object.fromEntries(seznam.map((p: Plovilo) => [p.id, p.prodano ?? false])))
+      setIsAdmin(profil?.is_admin ?? false)
       setNalaga(false)
     })()
   }, [user])
@@ -89,6 +94,22 @@ function MojaPlovilaContent() {
     if (demoMode) { setUrgentnoNapaka('Urgentna prodaja v demo načinu ni mogoča. Prijavite se z resničnim računom.'); return }
     setUrgentnoNapaka('')
     setUrgentnoNarocam(id)
+
+    // Admin lahko svoj oglas označi kot urgenten brezplačno, brez Stripe —
+    // glej /api/urgentno/brezplacno (preverja is_admin in lastništvo).
+    if (isAdmin) {
+      const res = await fetch('/api/urgentno/brezplacno', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plovilo_id: id }),
+      })
+      const json = await res.json()
+      setUrgentnoNarocam(null)
+      if (!res.ok) { setUrgentnoNapaka(json.error ?? 'Napaka pri označevanju oglasa.'); return }
+      setPlovila(prev => prev.map(p => p.id === id ? { ...p, urgentno: true, urgentno_do: json.urgentno_do } : p))
+      return
+    }
+
     const res = await fetch('/api/urgentno/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -315,7 +336,7 @@ function MojaPlovilaContent() {
                       <button
                         onClick={() => naredimUrgentno(plovilo.id)}
                         disabled={urgentnoNarocam === plovilo.id}
-                        title="Označi kot urgentno — 30 €"
+                        title={isAdmin ? 'Označi kot urgentno — brezplačno (admin)' : 'Označi kot urgentno — 30 €'}
                         className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                       >
                         {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}

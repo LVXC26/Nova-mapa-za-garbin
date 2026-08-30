@@ -942,6 +942,13 @@ alter table charterji add column if not exists st_ocen integer not null default 
 -- triggerja (ravno naš primer), teče na globini 2+.
 -- ═══════════════════════════════════════════════════════════════════
 
+-- VARNOSTNI POPRAVEK (naknadno odkrito): ta funkcija je ščitila "verified"
+-- in "ocena", ni pa nikoli ščitila "st_ocen" (dodan šele zgoraj v tej
+-- datoteki, po prvi različici te funkcije) — charter je torej lahko prek
+-- konzole (supabase.from('charterji').update({st_ocen: 500})) sam sebi
+-- ponaredil poljubno število ocen, do naslednje prave ocene stranke.
+-- skiperji.st_ocen je bil ves čas pravilno zaščiten (primerjaj spodnjo
+-- funkcijo) — tole samo poravna charterje na isto raven.
 create or replace function prevent_charter_self_escalation()
 returns trigger as $$
 begin
@@ -949,9 +956,11 @@ begin
     if TG_OP = 'INSERT' then
       new.verified := false;
       new.ocena := 0;
+      new.st_ocen := 0;
     else
       new.verified := old.verified;
       new.ocena := old.ocena;
+      new.st_ocen := old.st_ocen;
     end if;
   end if;
   return new;
@@ -1306,3 +1315,44 @@ from plovila
 where potrjeno = true;
 
 grant select on plovila_javno to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- PROFILNA SLIKA — uporabnik lahko na "Nastavitve profila" naloži svojo
+-- sliko. Ni zaupno/privilegirano polje (kot npr. is_admin), zato ne
+-- potrebuje zaščitnega triggerja — enak razred kot "opis"/"telefon", ki
+-- ju "Uredi svoj profil" politika že dovoljuje urejati. Bucket in RLS
+-- so po vzoru "plovila-slike" — vsak nalaga/briše samo v svojo mapo
+-- (ime datoteke se začne z njegovim auth.uid()).
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table profiles add column if not exists slika_url text;
+
+insert into storage.buckets (id, name, public)
+values ('profilne-slike', 'profilne-slike', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Javni bralni dostop - profilne slike" on storage.objects;
+create policy "Javni bralni dostop - profilne slike" on storage.objects
+  for select using (bucket_id = 'profilne-slike');
+
+drop policy if exists "Prijavljeni nalagajo profilno sliko v svojo mapo" on storage.objects;
+create policy "Prijavljeni nalagajo profilno sliko v svojo mapo" on storage.objects
+  for insert with check (
+    bucket_id = 'profilne-slike'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "Prijavljeni brisejo svojo profilno sliko" on storage.objects;
+create policy "Prijavljeni brisejo svojo profilno sliko" on storage.objects
+  for delete using (
+    bucket_id = 'profilne-slike'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- "ime" je že v javnem pogledu, slika je enako varna za pokazati vsem
+-- (uporablja se lahko npr. pri komentarjih/objavah v prihodnje).
+create or replace view public_profiles
+with (security_invoker = false)
+as select id, ime, vloga, verified, dovoli_tuje_objave, created_at, slika_url from profiles;
+
+grant select on public_profiles to anon, authenticated;

@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { CheckCircle, AlertCircle, User, Lock, Bell } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { CheckCircle, AlertCircle, User, Lock, Bell, Camera, X, Loader2 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+
+const MAX_SLIKA_MB = 8
 
 const NOTIFIKACIJE_OPCIJE = [
   { kljuc: 'novo_sporocilo', label: 'E-mail obvestila ob novem sporočilu', opis: 'Prejmite email ko prejmete novo sporočilo' },
@@ -17,6 +19,9 @@ export default function NastavitveProfilaPage() {
   const [uspesno, setUspesno] = useState('')
   const [napaka, setNapaka] = useState('')
   const [nalaga, setNalaga] = useState(false)
+  const [slikaUrl, setSlikaUrl] = useState<string | null>(null)
+  const [nalagaSliko, setNalagaSliko] = useState(false)
+  const datotekaRef = useRef<HTMLInputElement>(null)
   const [forma, setForma] = useState({
     ime: user?.user_metadata?.ime ?? '',
     email: user?.email ?? '',
@@ -43,6 +48,7 @@ export default function NastavitveProfilaPage() {
         opis: data.opis ?? '',
         spletna_stran: data.spletna_stran ?? '',
       }))
+      setSlikaUrl(data.slika_url ?? null)
       if (data.notifikacije) {
         setNotifikacije(n => ({ ...n, ...data.notifikacije }))
       }
@@ -92,6 +98,49 @@ export default function NastavitveProfilaPage() {
         ? 'Shranjeno. Za potrditev nove e-pošte preverite oba poštna predala.'
         : 'Spremembe so bile uspešno shranjene.'
     )
+    setTimeout(() => setUspesno(''), 4000)
+  }
+
+  async function naloziSliko(e: React.ChangeEvent<HTMLInputElement>) {
+    const datoteka = e.target.files?.[0]
+    e.target.value = ''
+    if (!datoteka || !user) return
+    setNapaka('')
+    setUspesno('')
+
+    if (demoMode) { setNapaka('Nalaganje slike v demo načinu ni mogoče. Prijavite se z resničnim računom.'); return }
+    if (!datoteka.type.startsWith('image/')) { setNapaka(`"${datoteka.name}" ni slikovna datoteka.`); return }
+    if (datoteka.size > MAX_SLIKA_MB * 1024 * 1024) { setNapaka(`Slika presega ${MAX_SLIKA_MB} MB.`); return }
+
+    setNalagaSliko(true)
+    const supabase = createClient()
+    const pot = `${user.id}/${crypto.randomUUID()}-${datoteka.name}`
+    const { error: uploadError } = await supabase.storage.from('profilne-slike').upload(pot, datoteka)
+    if (uploadError) {
+      setNalagaSliko(false)
+      setNapaka('Napaka pri nalaganju slike: ' + uploadError.message)
+      return
+    }
+    const { data } = supabase.storage.from('profilne-slike').getPublicUrl(pot)
+    const { error: profilError } = await supabase.from('profiles').update({ slika_url: data.publicUrl }).eq('id', user.id)
+    setNalagaSliko(false)
+    if (profilError) { setNapaka('Slika je bila naložena, a shranjevanje ni uspelo.'); return }
+    setSlikaUrl(data.publicUrl)
+    setUspesno('Profilna slika je bila posodobljena.')
+    setTimeout(() => setUspesno(''), 4000)
+  }
+
+  async function odstraniSliko() {
+    if (!user) return
+    if (demoMode) { setNapaka('Spremembe v demo načinu se ne shranijo. Prijavite se z resničnim računom.'); return }
+    setNapaka('')
+    setUspesno('')
+    const prejsnja = slikaUrl
+    setSlikaUrl(null)
+    const supabase = createClient()
+    const { error } = await supabase.from('profiles').update({ slika_url: null }).eq('id', user.id)
+    if (error) { setSlikaUrl(prejsnja); setNapaka('Napaka pri odstranjevanju slike.'); return }
+    setUspesno('Profilna slika je bila odstranjena.')
     setTimeout(() => setUspesno(''), 4000)
   }
 
@@ -192,9 +241,36 @@ export default function NastavitveProfilaPage() {
       {tab === 'profil' && (
         <form onSubmit={handleSave} className="space-y-5">
           {/* Vloga badge */}
-          <div className="flex items-center gap-3 p-4 bg-[#0c2340]/5 rounded-xl">
-            <div className="w-12 h-12 rounded-full bg-[#c9a84c] flex items-center justify-center text-[#0c2340] text-xl font-bold">
-              {forma.ime ? forma.ime[0].toUpperCase() : '?'}
+          <div className="flex items-center gap-4 p-4 bg-[#0c2340]/5 rounded-xl">
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 rounded-full bg-[#c9a84c] flex items-center justify-center text-[#0c2340] text-2xl font-bold overflow-hidden">
+                {slikaUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={slikaUrl} alt="Profilna slika" className="w-full h-full object-cover" />
+                ) : (
+                  forma.ime ? forma.ime[0].toUpperCase() : '?'
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => datotekaRef.current?.click()}
+                disabled={nalagaSliko}
+                title="Naloži profilno sliko"
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#0c2340] text-white flex items-center justify-center border-2 border-white hover:bg-[#1e3a5f] transition-colors disabled:opacity-60"
+              >
+                {nalagaSliko ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+              </button>
+              {slikaUrl && !nalagaSliko && (
+                <button
+                  type="button"
+                  onClick={odstraniSliko}
+                  title="Odstrani profilno sliko"
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white text-gray-400 flex items-center justify-center border border-gray-200 hover:text-red-500 hover:border-red-200 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+              <input ref={datotekaRef} type="file" accept="image/*" onChange={naloziSliko} className="hidden" />
             </div>
             <div>
               <p className="font-semibold text-[#0c2340]">{forma.ime || 'Vaše ime'}</p>
