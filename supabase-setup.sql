@@ -1387,3 +1387,17 @@ as select
 from charterji;
 
 grant select on charterji_javno to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POPRAVEK: admin v /admin/plovila klice supabase.from('plovila').delete(),
+-- a nikoli ni obstajala politika, ki bi to dovolila komurkoli razen
+-- lastniku samemu (glej "Lastnik brise svoje plovilo" zgoraj) — za
+-- novice/bannerje/zemljevid je admin-delete politika obstajala, za
+-- plovila pa je bila spregledana. Gumb "Zavrni" je zato RLS tiho
+-- zavrnil (0 vrstic izbrisanih, brez napake).
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Admin brise plovila" on plovila;
+create policy "Admin brise plovila" on plovila for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
