@@ -12,7 +12,8 @@ const links = [
   { href: '/charterji', label: 'Charter' },
   { href: '/skiperji', label: 'Skiperji' },
   { href: '/rezervni-deli', label: 'Deli' },
-  { href: '/forum', label: 'Forum' },
+  // Forum je zacasno skrit iz navigacije — vsebina je se vedno samo
+  // izmisljen mock (glej src/data/forum.ts), ne prava Supabase baza.
   { href: '/novice', label: 'Novice' },
   { href: '/zemljevid', label: 'Zemljevid', ikona: Map },
 ]
