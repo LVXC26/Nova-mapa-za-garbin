@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor, CheckCircle, X, Clock, Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor, CheckCircle, X, Clock, Trash2, Loader2, Camera } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
+
+const MAX_SLIK_OBJAVA = 6
+const MAX_SLIKA_MB = 8
 
 function LikeButton({ objavaId, stevilo, jazLajkam, onToggle }: {
   objavaId: string
@@ -132,6 +135,10 @@ export default function FeedObjave({
   const [vsebina, setVsebina] = useState('')
   const [lokacija, setLokacija] = useState('')
   const [plovilo, setPlovilo] = useState('')
+  const [slike, setSlike] = useState<string[]>([])
+  const [nalagaSlike, setNalagaSlike] = useState(false)
+  const [slikeNapaka, setSlikeNapaka] = useState('')
+  const datotekeRef = useRef<HTMLInputElement>(null)
   const [showForm, setShowForm] = useState(false)
   const [posilja, setPosilja] = useState(false)
   const [filter, setFilter] = useState<'vse' | 'moje' | 'caka'>('vse')
@@ -199,6 +206,37 @@ export default function FeedObjave({
     ? (filter === 'caka' ? cakajo : filter === 'moje' ? objave.filter(o => o.avtor_user_id === user?.id) : odobrene)
     : odobrene
 
+  async function naloziSlike(e: React.ChangeEvent<HTMLInputElement>) {
+    const datoteke = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (datoteke.length === 0 || !user) return
+    setSlikeNapaka('')
+
+    if (slike.length + datoteke.length > MAX_SLIK_OBJAVA) {
+      setSlikeNapaka(`Največ ${MAX_SLIK_OBJAVA} slik na objavo.`)
+      return
+    }
+
+    setNalagaSlike(true)
+    const supabase = createClient()
+    const nove: string[] = []
+    for (const datoteka of datoteke) {
+      if (!datoteka.type.startsWith('image/')) { setSlikeNapaka(`"${datoteka.name}" ni slikovna datoteka.`); continue }
+      if (datoteka.size > MAX_SLIKA_MB * 1024 * 1024) { setSlikeNapaka(`Slika "${datoteka.name}" presega ${MAX_SLIKA_MB} MB.`); continue }
+      const pot = `${user.id}/${crypto.randomUUID()}-${datoteka.name}`
+      const { error: uploadError } = await supabase.storage.from('objave-slike').upload(pot, datoteka)
+      if (uploadError) { setSlikeNapaka('Napaka pri nalaganju slike: ' + uploadError.message); continue }
+      const { data } = supabase.storage.from('objave-slike').getPublicUrl(pot)
+      nove.push(data.publicUrl)
+    }
+    setSlike(prev => [...prev, ...nove])
+    setNalagaSlike(false)
+  }
+
+  function odstraniSliko(url: string) {
+    setSlike(prev => prev.filter(s => s !== url))
+  }
+
   async function addPost() {
     if (!vsebina.trim() || !user || !lastnikUserId) return
     setPosilja(true)
@@ -213,11 +251,12 @@ export default function FeedObjave({
       vsebina: vsebina.trim(),
       lokacija: lokacija || null,
       plovilo: plovilo || null,
+      slike,
       odobrena: jeLastnik ? true : odobrena ?? false,
     })
     setPosilja(false)
     if (!error) {
-      setVsebina(''); setLokacija(''); setPlovilo('')
+      setVsebina(''); setLokacija(''); setPlovilo(''); setSlike([]); setSlikeNapaka('')
       setShowForm(false)
       nalozi()
     }
@@ -386,6 +425,37 @@ export default function FeedObjave({
             </div>
           )}
 
+          {/* Slike */}
+          <div className="ml-12 mb-3">
+            {slike.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {slike.map(url => (
+                  <div key={url} className="relative w-16 h-16 rounded-xl overflow-hidden group">
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => odstraniSliko(url)}
+                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => datotekeRef.current?.click()}
+              disabled={nalagaSlike || slike.length >= MAX_SLIK_OBJAVA}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-xs text-gray-500 hover:border-[#c9a84c] hover:text-[#0c2340] transition-colors disabled:opacity-40"
+            >
+              {nalagaSlike ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+              Dodaj slike ({slike.length}/{MAX_SLIK_OBJAVA})
+            </button>
+            <input ref={datotekeRef} type="file" accept="image/*" multiple onChange={naloziSlike} className="hidden" />
+            {slikeNapaka && <p className="text-xs text-red-500 mt-1.5">{slikeNapaka}</p>}
+          </div>
+
           {!jeLastnik && dovoljenoTuje && (
             <p className="text-xs text-gray-400 ml-12 mb-3">Vaša objava bo vidna po odobritvi lastnika profila.</p>
           )}
@@ -395,7 +465,7 @@ export default function FeedObjave({
             <div className="flex gap-2">
               <button onClick={() => setShowForm(false)}
                 className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700 transition-colors">Prekliči</button>
-              <button onClick={addPost} disabled={!vsebina.trim() || posilja}
+              <button onClick={addPost} disabled={!vsebina.trim() || posilja || nalagaSlike}
                 className="flex items-center gap-1.5 px-4 py-2 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-40 text-[#0c2340] text-xs font-semibold rounded-full transition-all">
                 <Send className="w-3.5 h-3.5" /> {posilja ? 'Objavljam...' : 'Objavi'}
               </button>
@@ -465,6 +535,15 @@ export default function FeedObjave({
                 )}
 
                 <p className="text-sm text-gray-700 leading-relaxed mb-4">{o.vsebina}</p>
+
+                {o.slike && o.slike.length > 0 && (
+                  <div className={`grid gap-1.5 mb-4 rounded-xl overflow-hidden ${o.slike.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {o.slike.map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={i} src={url} alt="" className="w-full h-48 object-cover" />
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-5 pt-3 border-t border-gray-50">
                   <LikeButton

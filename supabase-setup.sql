@@ -1401,3 +1401,35 @@ drop policy if exists "Admin brise plovila" on plovila;
 create policy "Admin brise plovila" on plovila for delete using (
   exists (select 1 from profiles where id = auth.uid() and is_admin = true)
 );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- SLIKE PRI OBJAVAH NA ZIDU (Feed) — npr. skipper ali charter deli slike
+-- s poti s svojo stranko. Ni zaupno/privilegirano polje (kot "vsebina"/
+-- "lokacija", ki ju avtor objave ze prosto ureja), zato ne potrebuje
+-- zascitnega triggerja. Bucket in RLS po vzoru "plovila-slike" — vsak
+-- nalaga/brise samo v svojo mapo.
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table objave add column if not exists slike text[] default '{}';
+
+insert into storage.buckets (id, name, public)
+values ('objave-slike', 'objave-slike', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Javni bralni dostop - slike objav" on storage.objects;
+create policy "Javni bralni dostop - slike objav" on storage.objects
+  for select using (bucket_id = 'objave-slike');
+
+drop policy if exists "Prijavljeni nalagajo slike objav v svojo mapo" on storage.objects;
+create policy "Prijavljeni nalagajo slike objav v svojo mapo" on storage.objects
+  for insert with check (
+    bucket_id = 'objave-slike'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "Prijavljeni brisejo svoje slike objav" on storage.objects;
+create policy "Prijavljeni brisejo svoje slike objav" on storage.objects
+  for delete using (
+    bucket_id = 'objave-slike'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
