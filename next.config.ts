@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
     ]
   },
   images: {
+    // Ta (novejsa) verzija Next.js privzeto dovoli SAMO quality=75 za
+    // next/image, tudi ce komponenta zahteva drugo vrednost (tiho pade
+    // nazaj na 75, samo v dev konzoli opozori) — brez tega vnosa bi bil
+    // "quality={90}" na PloviloKartica.tsx brez ucinka.
+    qualities: [75, 90],
     remotePatterns: [
       {
         protocol: 'https',

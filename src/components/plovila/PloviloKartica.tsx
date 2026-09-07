@@ -118,6 +118,7 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
               src={plovilo.slike[0]}
               alt={plovilo.naziv}
               fill
+              quality={90}
               className="object-cover"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
