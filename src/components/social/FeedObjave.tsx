@@ -152,8 +152,11 @@ export default function FeedObjave({
     ;(async () => {
       if (!user) { setIsModerator(false); return }
       const supabase = createClient()
-      const { data } = await supabase.from('profiles').select('is_moderator').eq('id', user.id).maybeSingle()
-      setIsModerator(!!data?.is_moderator)
+      // Admin sme brisati katerokoli objavo/komentar enako kot moderator
+      // (glej "Admin brise katerokoli objavo/komentar" v supabase-setup.sql)
+      // — is_moderator ostaja ločena vloga za tiste, ki NISO admin.
+      const { data } = await supabase.from('profiles').select('is_moderator, is_admin').eq('id', user.id).maybeSingle()
+      setIsModerator(!!data?.is_moderator || !!data?.is_admin)
     })()
   }, [user])
 

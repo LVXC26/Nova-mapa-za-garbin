@@ -1483,3 +1483,22 @@ begin
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POPRAVEK: admin je povsod drugod po strani najvišja vloga (lahko vse,
+-- kar lahko tudi ostali), pri "objave"/"objava_komentarji" pa je bilo
+-- brisanje dovoljeno samo lastniku zidu, avtorju objave/komentarja in
+-- moderatorju (is_moderator) — admin (is_admin) brez is_moderator
+-- zastavice tuje objave/komentarja ni mogel izbrisati. Avtor svoje
+-- objave/komentarja ostane nespremenjeno (že obstoječi politiki zgoraj).
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Admin brise katerokoli objavo" on objave;
+create policy "Admin brise katerokoli objavo" on objave for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+drop policy if exists "Admin brise katerikoli komentar" on objava_komentarji;
+create policy "Admin brise katerikoli komentar" on objava_komentarji for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
