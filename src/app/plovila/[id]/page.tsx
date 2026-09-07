@@ -8,7 +8,6 @@ import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
-import FeedObjave from '@/components/social/FeedObjave'
 import { createClient } from '@/lib/supabase/client'
 import { opremaLabele } from '@/lib/oprema'
 import type { Plovilo, PloviloZasedenost } from '@/types/database'
@@ -377,17 +376,6 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   </div>
                 )}
-
-                {/* Izkušnje strank — zid, vezan samo na to plovilo (ne na
-                    celoten profil prodajalca/charterja) */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                  <FeedObjave
-                    title="Izkušnje in mnenja"
-                    showAddPost={!!user}
-                    lastnikUserId={plovilo.user_id ?? null}
-                    ploviloId={plovilo.id}
-                  />
-                </div>
 
                 {/* Oglaševalski banner placeholder */}
                 <div className="w-full h-[90px] bg-[#0c2340] rounded-2xl flex items-center justify-center border border-[#1e3a5f] relative overflow-hidden">
