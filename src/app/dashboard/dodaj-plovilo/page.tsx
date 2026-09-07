@@ -11,8 +11,28 @@ import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
 
 const stanjeOpcije = ['odlično', 'dobro', 'potrebuje popravilo']
 
-const MAX_SLIK = 8
+const MAX_SLIK = 20
 const MAX_VELIKOST_MB = 8
+
+// Slovenski uporabniki pri ceni pogosto natipkajo piko kot ločilo tisočic
+// (npr. "135.000" za 135.000 €) — JS Number() bi to prebral kot 135 (pika =
+// decimalno mesto), zato je oglas dobil napačno, veliko prenizko ceno. Cena
+// je vedno cel evro (glej formatCena — brez decimalk), zato je varno vse
+// pike/vejice/presledke preprosto odstraniti pred pretvorbo v število.
+function parsiCeno(vnos: string): number {
+  return Number(vnos.replace(/[.,\s]/g, '')) || 0
+}
+
+// Za dolžino plovila je decimalka smiselna (npr. 12,5 m). Slovenci pišejo
+// vejico kot decimalno ločilo, JS Number() pa razume samo piko ("12,5" bi
+// vrnilo NaN). Native <input type="number"> se je v številnih brskalnikih na
+// vejico obnašal nekonsistentno (odvisno od jezika brskalnika/OS), zato je
+// polje spodaj zdaj besedilno, mi pa vejico sami pretvorimo v piko.
+function parsiDolzino(vnos: string): number | null {
+  if (!vnos.trim()) return null
+  const stevilo = Number(vnos.replace(',', '.'))
+  return Number.isFinite(stevilo) ? stevilo : null
+}
 
 function DodajPloviloContent() {
   const { user } = useAuth()
@@ -146,10 +166,10 @@ function DodajPloviloContent() {
       opis: forma.opis || null,
       tip: forma.tip as TipPlovila,
       tip_oglasa: tipOglasa,
-      cena: cenaZahtevo ? 0 : Number(forma.cena),
+      cena: cenaZahtevo ? 0 : parsiCeno(forma.cena),
       cena_na_zahtevo: cenaZahtevo,
       letnik: forma.letnik ? Number(forma.letnik) : null,
-      dolzina_m: forma.dolzina_m ? Number(forma.dolzina_m) : null,
+      dolzina_m: parsiDolzino(forma.dolzina_m),
       lokacija: forma.lokacija || null,
       stanje: forma.stanje as StanjePlovila,
       kontakt_email: forma.kontakt_email || null,
@@ -311,14 +331,20 @@ function DodajPloviloContent() {
                 </label>
               </div>
               {!cenaZahtevo ? (
-                <input
-                  type="number"
-                  min="0"
-                  value={forma.cena}
-                  onChange={(e) => posodobiFormo('cena', e.target.value)}
-                  placeholder="45000"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white"
-                />
+                <>
+                  {/* Besedilno polje (ne type="number") — dovoli piko kot ločilo
+                      tisočic (npr. "135.000"), ki bi jo native number polje
+                      napačno prebralo kot decimalno mesto (135.000 = 135). */}
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={forma.cena}
+                    onChange={(e) => posodobiFormo('cena', e.target.value)}
+                    placeholder="45000 ali 45.000"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Pike/vejice se ob shranjevanju samodejno odstranijo.</p>
+                </>
               ) : (
                 <div className="px-4 py-2.5 rounded-xl border border-[#c9a84c]/30 bg-[#c9a84c]/5 text-sm text-[#9a7a2e] font-medium">
                   Cena na zahtevo — kupci vas bodo kontaktirali za ceno
@@ -341,13 +367,15 @@ function DodajPloviloContent() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Dolžina (m)</label>
+                {/* Besedilno polje — native type="number" je vejico (12,5) v
+                    nekaterih brskalnikih/jezikih popolnoma zavračal, v drugih
+                    pa jo tiho izgubil. Zdaj sprejmemo tako "12.5" kot "12,5". */}
                 <input
-                  type="number"
-                  step="0.1"
-                  min="1"
+                  type="text"
+                  inputMode="decimal"
                   value={forma.dolzina_m}
                   onChange={(e) => posodobiFormo('dolzina_m', e.target.value)}
-                  placeholder="12.5"
+                  placeholder="12.5 ali 12,5"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white"
                 />
               </div>

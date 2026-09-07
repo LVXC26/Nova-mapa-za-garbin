@@ -1,8 +1,8 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { use, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, MapPin, Calendar, Ruler, Phone, Mail, MessageCircle, CheckCircle, Share2, Copy, X, Printer } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, Ruler, Phone, Mail, MessageCircle, CheckCircle, Share2, Copy, X, Printer, ChevronLeft, ChevronRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
@@ -63,6 +63,66 @@ const tipIkone: Record<string, string> = {
   jadrnica: '⛵', motorni: '🚤', gumenjak: '🛟', katamaran: '⛵', jet: '💨', drugo: '⚓',
 }
 
+// Polnozaslonski pregledovalnik slik — odpre se ob kliku na katerokoli sliko
+// v galeriji (glavno ali eno od sličic), s puščicami/tipkovnico za listanje
+// med VSEMI naloženimi slikami (ne samo tistimi vidnimi v mreži).
+function GalerijaLightbox({ slike, naziv, zacetniIndeks, onClose }: {
+  slike: string[]
+  naziv: string
+  zacetniIndeks: number
+  onClose: () => void
+}) {
+  const [indeks, setIndeks] = useState(zacetniIndeks)
+
+  const naprej = useCallback(() => setIndeks(i => (i + 1) % slike.length), [slike.length])
+  const nazaj = useCallback(() => setIndeks(i => (i - 1 + slike.length) % slike.length), [slike.length])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowRight') naprej()
+      if (e.key === 'ArrowLeft') nazaj()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose, naprej, nazaj])
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors z-10">
+        <X className="w-7 h-7" />
+      </button>
+      <div className="absolute top-4 left-4 text-white/70 text-sm">{indeks + 1} / {slike.length}</div>
+
+      {slike.length > 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); nazaj() }}
+          className="absolute left-2 sm:left-6 text-white/70 hover:text-white transition-colors z-10 p-2"
+        >
+          <ChevronLeft className="w-8 h-8 sm:w-10 sm:h-10" />
+        </button>
+      )}
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={slike[indeks]}
+        alt={`${naziv} — slika ${indeks + 1}`}
+        className="max-w-[92vw] max-h-[88vh] object-contain"
+        onClick={e => e.stopPropagation()}
+      />
+
+      {slike.length > 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); naprej() }}
+          className="absolute right-2 sm:right-6 text-white/70 hover:text-white transition-colors z-10 p-2"
+        >
+          <ChevronRight className="w-8 h-8 sm:w-10 sm:h-10" />
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function PloviloDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user } = useAuth()
@@ -71,6 +131,7 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
   const [nalaga, setNalaga] = useState(true)
   const [shareOpen, setShareOpen] = useState(false)
   const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
+  const [lightboxIndeks, setLightboxIndeks] = useState<number | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -152,6 +213,14 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
     <>
       <Navbar />
       {shareOpen && plovilo && <ShareModal naziv={plovilo.naziv} onClose={() => setShareOpen(false)} />}
+      {lightboxIndeks !== null && plovilo?.slike && (
+        <GalerijaLightbox
+          slike={plovilo.slike}
+          naziv={plovilo.naziv}
+          zacetniIndeks={lightboxIndeks}
+          onClose={() => setLightboxIndeks(null)}
+        />
+      )}
       <main className="flex-1 pt-16">
 
         {/* HERO */}
@@ -161,15 +230,19 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
               <ArrowLeft className="w-4 h-4" /> Vsa plovila
             </Link>
 
-            {/* Galerija */}
+            {/* Galerija — klik na katerokoli sliko odpre polnozaslonski pregledovalnik
+                z vsemi naloženimi slikami (do 20), ne samo tistimi vidnimi tukaj. */}
             <div className="grid grid-cols-4 gap-3">
-              {/* Glavna slika */}
-              <div className="col-span-4 md:col-span-3 h-72 md:h-96 rounded-2xl overflow-hidden relative bg-[#1e3a5f]">
+              {/* Glavna slika — povečana za boljšo vidljivost */}
+              <div
+                className="col-span-4 md:col-span-3 h-80 md:h-[520px] rounded-2xl overflow-hidden relative bg-[#1e3a5f] cursor-pointer group"
+                onClick={() => plovilo.slike?.[0] && setLightboxIndeks(0)}
+              >
                 {plovilo.slike && plovilo.slike[0] ? (
                   <img
                     src={plovilo.slike[0]}
                     alt={plovilo.naziv}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
                     onError={e => { (e.target as HTMLImageElement).src = '' }}
                   />
                 ) : (
@@ -181,23 +254,36 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                   📷 {plovilo.slike?.length ?? 0} fotografij
                 </div>
               </div>
-              {/* Thumbnails */}
-              <div className="hidden md:flex flex-col gap-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex-1 rounded-xl overflow-hidden relative bg-[#1e3a5f]">
-                    {plovilo.slike && plovilo.slike[i] ? (
-                      <img
-                        src={plovilo.slike[i]}
-                        alt={`${plovilo.naziv} ${i + 1}`}
-                        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-2xl opacity-20">{tipIkone[plovilo.tip] ?? '⚓'}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+              {/* Sličice — mreža 2×2, zadnja s "+N" prekritjem, če je slik več kot 5 */}
+              <div className="hidden md:grid grid-cols-2 grid-rows-2 gap-3 h-[520px]">
+                {[1, 2, 3, 4].map(i => {
+                  const zadnjaVidna = i === 4
+                  const steviloSkritih = (plovilo.slike?.length ?? 0) - 5
+                  return (
+                    <div
+                      key={i}
+                      className="rounded-xl overflow-hidden relative bg-[#1e3a5f] cursor-pointer group"
+                      onClick={() => plovilo.slike?.[i] && setLightboxIndeks(i)}
+                    >
+                      {plovilo.slike && plovilo.slike[i] ? (
+                        <img
+                          src={plovilo.slike[i]}
+                          alt={`${plovilo.naziv} ${i + 1}`}
+                          className="w-full h-full object-cover cursor-pointer group-hover:scale-[1.02] transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-2xl opacity-20">{tipIkone[plovilo.tip] ?? '⚓'}</span>
+                        </div>
+                      )}
+                      {zadnjaVidna && steviloSkritih > 0 && (
+                        <div className="absolute inset-0 bg-black/55 flex items-center justify-center text-white font-semibold text-lg">
+                          +{steviloSkritih}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -269,7 +355,10 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                 {plovilo.opis && (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <h2 className="font-display text-lg font-semibold text-[#0c2340] mb-3">Opis</h2>
-                    <p className="text-gray-600 leading-relaxed">{plovilo.opis}</p>
+                    {/* whitespace-pre-wrap ohrani odstavke/prazne vrstice točno tako,
+                        kot jih je prodajalec napisal — navaden <p> bi vse presledke
+                        in nove vrstice po HTML pravilih tiho strnil v enega. */}
+                    <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{plovilo.opis}</p>
                   </div>
                 )}
 
@@ -310,7 +399,9 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
               {/* DESNA — cena + kontakt */}
               <div className="space-y-4">
                 {/* Cena kartica */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-20">
+                {/* Namenoma NE sticky — kartica naj ostane na svojem mestu, ne
+                    "lebdi" med skrolanjem po strani. */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                   <div className="mb-5">
                     <p className="text-3xl font-display font-bold text-[#0c2340]">
                       {plovilo.cena.toLocaleString('sl-SI')} €
