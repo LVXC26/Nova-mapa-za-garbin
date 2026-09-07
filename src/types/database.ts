@@ -271,6 +271,7 @@ export interface Objava {
   vsebina: string
   lokacija: string | null
   plovilo: string | null
+  plovilo_id?: string | null
   odobrena: boolean
   slike?: string[] | null
   created_at: string

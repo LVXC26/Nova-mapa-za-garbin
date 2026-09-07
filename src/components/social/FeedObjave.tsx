@@ -112,6 +112,7 @@ function KomentarjiPanel({ objavaId, isModerator }: { objavaId: string; isModera
 interface Props {
   title?: string
   lastnikUserId?: string | null
+  ploviloId?: string | null
   showAddPost?: boolean
   showModeracija?: boolean
 }
@@ -119,6 +120,7 @@ interface Props {
 export default function FeedObjave({
   title = 'Objave',
   lastnikUserId = null,
+  ploviloId = null,
   showAddPost = false,
   showModeracija = false,
 }: Props) {
@@ -156,15 +158,23 @@ export default function FeedObjave({
   }, [user])
 
   const nalozi = useCallback(async () => {
-    if (!lastnikUserId) { setNalaga(false); return }
+    if (!lastnikUserId && !ploviloId) { setNalaga(false); return }
     setNalaga(true)
     const supabase = createClient()
 
-    const { data: objavaData } = await supabase.from('objave').select('*').eq('lastnik_user_id', lastnikUserId).order('created_at', { ascending: false })
+    // Zid plovila (ploviloId) prikaže SAMO objave, vezane na to konkretno
+    // plovilo — splošni zid lastnika (charter/skipper profil) pa namenoma
+    // izključi te, plovilu vezane objave (is('plovilo_id', null)), da se
+    // ne mešajo med sabo.
+    let poizvedba = supabase.from('objave').select('*').order('created_at', { ascending: false })
+    poizvedba = ploviloId
+      ? poizvedba.eq('plovilo_id', ploviloId)
+      : poizvedba.eq('lastnik_user_id', lastnikUserId as string).is('plovilo_id', null)
+    const { data: objavaData } = await poizvedba
     const seznam = objavaData ?? []
     setObjave(seznam)
 
-    if (!jeLastnik) {
+    if (!jeLastnik && lastnikUserId) {
       const { data: profil } = await supabase.from('public_profiles').select('dovoli_tuje_objave').eq('id', lastnikUserId).maybeSingle()
       setDovoljenoTuje(profil?.dovoli_tuje_objave ?? true)
     }
@@ -193,7 +203,7 @@ export default function FeedObjave({
 
     setNalaga(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastnikUserId, jeLastnik, user?.id])
+  }, [lastnikUserId, ploviloId, jeLastnik, user?.id])
 
   useEffect(() => {
     ;(async () => { await nalozi() })()
@@ -251,6 +261,7 @@ export default function FeedObjave({
       vsebina: vsebina.trim(),
       lokacija: lokacija || null,
       plovilo: plovilo || null,
+      plovilo_id: ploviloId,
       slike,
       odobrena: jeLastnik ? true : odobrena ?? false,
     })
@@ -456,7 +467,9 @@ export default function FeedObjave({
             {slikeNapaka && <p className="text-xs text-red-500 mt-1.5">{slikeNapaka}</p>}
           </div>
 
-          {!jeLastnik && dovoljenoTuje && (
+          {/* Objave na zidu plovila so vedno takoj vidne (glej trigger
+              nastavi_odobritev_objave) — namig o odobritvi zato tu ne velja. */}
+          {!ploviloId && !jeLastnik && dovoljenoTuje && (
             <p className="text-xs text-gray-400 ml-12 mb-3">Vaša objava bo vidna po odobritvi lastnika profila.</p>
           )}
 
@@ -507,10 +520,14 @@ export default function FeedObjave({
                       <p className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                     </div>
                   </div>
-                  {isModerator && (
+                  {/* RLS "Lastnik brise objave na svojem profilu" to že dovoljuje
+                      lastniku zidu (ne samo globalnemu moderatorju) — brez tega bi
+                      npr. prodajalec plovila (ki nima moderatorskih pravic) nikoli
+                      ne mogel odstraniti neprimerne objave na svojem oglasu. */}
+                  {(isModerator || jeLastnik) && (
                     <button
                       onClick={() => izbrisiObjavo(o.id)}
-                      title="Izbriši objavo (moderator)"
+                      title={isModerator ? 'Izbriši objavo (moderator)' : 'Izbriši objavo'}
                       className="p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />

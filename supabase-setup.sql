@@ -1433,3 +1433,53 @@ create policy "Prijavljeni brisejo svoje slike objav" on storage.objects
     bucket_id = 'objave-slike'
     and auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- ZID (Feed & objave) POD POSAMEZNIM PLOVILOM — stranke lahko pod vsakim
+-- plovilom (prodaja ALI najem) pustijo mnenje/izkušnjo ("kako so se
+-- imeli"), na kar lahko kdorkoli odgovori prek že obstoječih komentarjev
+-- (objava_komentarji) — enak "Facebook" koncept kot pri charter/skipper
+-- zidu, samo obseg je posamezno plovilo namesto celotnega profila.
+--
+-- "lastnik_user_id" ostane lastnik plovila (za obstoječe RLS/moderacijo,
+-- nespremenjeno), nov "plovilo_id" pa poizvedbo zoži na TO plovilo,
+-- namesto na vsa plovila/profil tega lastnika hkrati.
+--
+-- Prodajalci (za razliko od charterja/skiperja) nimajo strani za
+-- odobravanje čakajočih objav — če bi torej objave na plovilu čakale na
+-- odobritev kot pri charterju, bi obtičale v limbu, ki ga prodajalec ne
+-- bi mogel nikoli videti/odobriti. Zato so objave na plovilu VEDNO takoj
+-- vidne (kot pravi Facebook), lastnik pa jih lahko kadarkoli izbriše
+-- (glej popravek spodaj — prej je to smel samo moderator).
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table objave add column if not exists plovilo_id uuid references plovila(id) on delete cascade;
+
+create or replace function nastavi_odobritev_objave()
+returns trigger as $$
+declare
+  dovoljeno boolean;
+  avto_odobri boolean;
+begin
+  if new.plovilo_id is not null then
+    new.odobrena := true;
+    return new;
+  end if;
+
+  if new.avtor_user_id = new.lastnik_user_id then
+    new.odobrena := true;
+    return new;
+  end if;
+
+  select coalesce(dovoli_tuje_objave, true), coalesce(avto_odobritev_objav, false)
+    into dovoljeno, avto_odobri
+    from profiles where id = new.lastnik_user_id;
+
+  if dovoljeno is false then
+    raise exception 'Lastnik profila ne dovoljuje objav drugih uporabnikov.';
+  end if;
+
+  new.odobrena := coalesce(avto_odobri, false);
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
