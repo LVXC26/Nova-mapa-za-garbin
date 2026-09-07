@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Star, MapPin, Ship, CheckCircle, ArrowRight, Users } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import type { Charter } from '@/types/database'
 
 function useFavorite(id: string) {
@@ -35,6 +36,23 @@ const tipIkone: Record<string, string> = {
 export default function CharterKartica({ charter }: { charter: Charter }) {
   const zvezdice = Array.from({ length: 5 }, (_, i) => i < Math.round(charter.ocena))
   const { isFav, toggle } = useFavorite(charter.id)
+  const [slikaUrl, setSlikaUrl] = useState<string | null>(null)
+
+  // Charterji nimajo lastne "naslovne slike" — prej je bila tu trdo kodirana
+  // tuja Unsplash fotografija, ki je ob padlem/blokiranem URL-ju pustila
+  // prazen temno moder pravokotnik (glej onError spodaj v stari verziji).
+  // Namesto tega prikažemo pravo fotografijo enega od njihovih plovil za
+  // najem, če jo imajo — sicer ostane samo čist gradient z ikono.
+  useEffect(() => {
+    if (!charter.user_id) return
+    const supabase = createClient()
+    supabase.from('plovila_javno').select('slike').eq('user_id', charter.user_id).eq('tip_oglasa', 'najem')
+      .order('created_at', { ascending: false }).limit(5)
+      .then(({ data }) => {
+        const prva = data?.find(p => p.slike && p.slike.length > 0)?.slike?.[0]
+        if (prva) setSlikaUrl(prva)
+      })
+  }, [charter.user_id])
 
   return (
     <Link
@@ -43,12 +61,18 @@ export default function CharterKartica({ charter }: { charter: Charter }) {
     >
       {/* Header image */}
       <div className="h-32 relative overflow-hidden bg-gradient-to-br from-[#0c2340] to-[#1e3a5f]">
-        <img
-          src="https://images.unsplash.com/photo-1519789110440-4b90d6f7e65b?auto=format&fit=crop&w=600&q=70"
-          alt={charter.naziv}
-          className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
-          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-        />
+        {slikaUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={slikaUrl}
+            alt={charter.naziv}
+            className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Ship className="w-10 h-10 text-white/15" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0c2340]/80 to-transparent" />
         <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
           {charter.verified && (
