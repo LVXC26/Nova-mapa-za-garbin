@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
 
 const MAX_SLIK_OBJAVA = 6
-const MAX_SLIKA_MB = 8
+const MAX_SLIKA_MB = 30
 
 function LikeButton({ objavaId, stevilo, jazLajkam, onToggle }: {
   objavaId: string

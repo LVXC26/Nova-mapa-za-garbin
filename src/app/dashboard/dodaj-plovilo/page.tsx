@@ -12,7 +12,7 @@ import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
 const stanjeOpcije = ['odlično', 'dobro', 'potrebuje popravilo']
 
 const MAX_SLIK = 20
-const MAX_VELIKOST_MB = 8
+const MAX_VELIKOST_MB = 30
 
 // Slovenski uporabniki pri ceni pogosto natipkajo piko kot ločilo tisočic
 // (npr. "135.000" za 135.000 €) — JS Number() bi to prebral kot 135 (pika =
@@ -391,23 +391,28 @@ function DodajPloviloContent() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Stanje</label>
-              <div className="flex gap-2">
-                {stanjeOpcije.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => posodobiFormo('stanje', s)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-medium capitalize transition-all ${
-                      forma.stanje === s ? 'bg-[#0c2340] text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+            {/* Stanje je smiselno samo pri prodaji — pri najemu plovilo ni
+                "rabljeno v takšnem in takšnem stanju", charter ga oddaja v
+                najem, zato se to vprašanje tam sploh ne postavi. */}
+            {tipOglasa === 'prodaja' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stanje</label>
+                <div className="flex gap-2">
+                  {stanjeOpcije.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => posodobiFormo('stanje', s)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-medium capitalize transition-all ${
+                        forma.stanje === s ? 'bg-[#0c2340] text-white' : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Urgentna prodaja — plačljivo, na voljo šele po objavi prek "Moja plovila" */}

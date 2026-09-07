@@ -5,7 +5,7 @@ import { CheckCircle, AlertCircle, User, Lock, Bell, Camera, X, Loader2 } from '
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 
-const MAX_SLIKA_MB = 8
+const MAX_SLIKA_MB = 30
 
 const NOTIFIKACIJE_OPCIJE = [
   { kljuc: 'novo_sporocilo', label: 'E-mail obvestila ob novem sporočilu', opis: 'Prejmite email ko prejmete novo sporočilo' },

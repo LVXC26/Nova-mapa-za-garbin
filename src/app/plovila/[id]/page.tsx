@@ -338,8 +338,9 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                     )}
                   </div>
 
-                  {/* Stanje */}
-                  {plovilo.stanje && (
+                  {/* Stanje — samo pri prodaji (obrazec ga za najem sploh ne
+                      vpraša, prikazana vrednost bi bila samo privzeta) */}
+                  {plovilo.tip_oglasa === 'prodaja' && plovilo.stanje && (
                     <span className={`inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full ${
                       plovilo.stanje === 'odlično' ? 'bg-emerald-50 text-emerald-700'
                         : plovilo.stanje === 'dobro' ? 'bg-blue-50 text-blue-700'
