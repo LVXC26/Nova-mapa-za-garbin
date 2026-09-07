@@ -189,6 +189,36 @@ function DodajPloviloContent() {
           model_3d_url: null,
         })
 
+    // Kdorkoli objavi plovilo "za najem", je s tem funkcionalno charter — a
+    // brez lastnega charterji profila (npr. ker je preskočil onboarding) ta
+    // oglas ne bi bil povezan z nobenim vnosom na /charterji, čeprav je
+    // javno viden na /plovila?oglas=najem. To je bilo zmedno: uporabnik je
+    // videl svoj oglas na enem mestu, na drugem (charter direktorij) pa ne.
+    // Ob prvi taki objavi zato ustvarimo minimalen charterji profil (če ga
+    // še nima) — podatke lahko kasneje dopolni na "Moj profil".
+    if (!error && !editId && tipOglasa === 'najem') {
+      const { data: obstojeciCharter } = await supabase.from('charterji').select('id').eq('user_id', user.id).maybeSingle()
+      if (!obstojeciCharter) {
+        await supabase.from('charterji').insert({
+          user_id: user.id,
+          naziv: user.user_metadata?.ime || 'Charter',
+          opis: '',
+          spletna_stran: null,
+          lokacija: forma.lokacija || 'Slovenija',
+          kontakt_email: forma.kontakt_email || user.email || '',
+          kontakt_tel: forma.kontakt_tel || '',
+          tip: (user.user_metadata?.tip_charterja as 'podjetje' | 'zasebnik' | undefined) ?? 'podjetje',
+          tip_plovila: [],
+          st_plovil: 0,
+          verified: false,
+          ocena: 0,
+          st_ocen: 0,
+          max_oseb: 0,
+          max_dolzina_m: 0,
+        })
+      }
+    }
+
     setNalaga(false)
     if (error) { setNapaka('Napaka pri shranjevanju. Preverite ali ste prijavljeni.'); return }
     setUspesno(true)
@@ -305,11 +335,11 @@ function DodajPloviloContent() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Opis</label>
               <textarea
-                rows={3}
+                rows={6}
                 value={forma.opis}
                 onChange={(e) => posodobiFormo('opis', e.target.value)}
                 placeholder="Opišite plovilo, zgodovino, posebnosti..."
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white resize-none"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white resize-y min-h-[120px]"
               />
             </div>
 
