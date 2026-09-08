@@ -1593,3 +1593,22 @@ revoke insert, update, delete, truncate, references, trigger
   from public, anon, authenticated;
 
 grant select on plovila_javno, charterji_javno, public_profiles to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POPRAVEK (najden pri razširjenem varnostnem testiranju, 2026-09-08):
+-- "Javni bralni dostop - slike plovil/profilne slike/slike objav" politike
+-- na storage.objects (using bucket_id = '...') dovolijo SELECT na CELOTNO
+-- vsebino bucketa, ne samo posamezno znano datoteko — kar prek Storage
+-- "list" API-ja (POST /storage/v1/object/list/<bucket>) komurkoli brez
+-- prijave razkrije seznam VSEH map (= user_id vsakega uporabnika, ki je
+-- kadarkoli naložil sliko) v bucketu. To ni potrebno za delovanje strani:
+-- javno prikazovanje slik gre prek "/object/public/..." URL-ja, ki ga
+-- omogoča že sam bucket-level "public = true" flag, NEODVISNO od te RLS
+-- politike (preverjeno: slika je dosegljiva tudi brez nje) — aplikacija
+-- pa nikjer ne kliče .list() na nobenem bucketu (grep po src/). Politiko
+-- torej varno odstranimo, brez vpliva na dejansko delovanje.
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Javni bralni dostop - slike plovil" on storage.objects;
+drop policy if exists "Javni bralni dostop - profilne slike" on storage.objects;
+drop policy if exists "Javni bralni dostop - slike objav" on storage.objects;
