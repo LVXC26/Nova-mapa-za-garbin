@@ -95,8 +95,8 @@ html {
   100% { transform: translateX(-50%); }
 }
 
-@keyframes premium-border-spin {
-  to { transform: rotate(1turn); }
+@keyframes premium-border-dash {
+  to { stroke-dashoffset: -100; }
 }
 
 .animate-fade-in-up {
@@ -121,35 +121,15 @@ html {
   animation: pulse-gold 2s ease-in-out infinite;
 }
 
-/* Premium kartica (PloviloKartica.tsx): namesto statične zlate obrobe zdaj
-   zlat lok počasi kroži okoli kartice in nikoli ne tvori popolnoma
-   sklenjenega kroga — vedno ostane vrzel, ki potuje naprej skupaj z njim.
-   ::before je večji od ovojnika (inset: -2px) in leži ZA njim (z-index -1),
-   zato skoznj vidimo samo tanek rob, ki ga notranja (neprozorna, bela)
-   kartica ne prekrije. */
-.premium-border {
-  isolation: isolate;
-}
-.premium-border::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  z-index: -1;
-  border-radius: inherit;
-  background: conic-gradient(
-    from 0deg,
-    #c9a84c 0deg,
-    #f5d98a 20deg,
-    #c9a84c 40deg,
-    #c9a84c 300deg,
-    transparent 330deg,
-    transparent 360deg
-  );
-  animation: premium-border-spin 5s linear infinite;
-  pointer-events: none;
+/* Premium kartica (PloviloKartica.tsx): tanka zlata črta potuje po robu
+   kartice (SVG <rect> obris, glej komponento) — kratka črtica (18 od 100
+   enot poti) proti dolgi vrzeli (82 enot), zato se nikoli ne strne v
+   sklenjen krog, podobno kot kača v igri "Snake". */
+.premium-border-snake {
+  animation: premium-border-dash 3s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .premium-border::before {
+  .premium-border-snake {
     animation: none;
   }
 }
