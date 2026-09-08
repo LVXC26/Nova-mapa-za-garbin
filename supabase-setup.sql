@@ -1505,3 +1505,64 @@ drop policy if exists "Admin brise katerikoli komentar" on objava_komentarji;
 create policy "Admin brise katerikoli komentar" on objava_komentarji for delete using (
   exists (select 1 from profiles where id = auth.uid() and is_admin = true)
 );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- VARNOSTNI POPRAVEK (najden pri splošnem varnostnem pregledu): "Uredi
+-- svoje plovilo"/"Uredi svoj rezervni del" politiki (using auth.uid() =
+-- user_id) dovolita lastniku UPDATE cele svoje vrstice — RLS je vrstično,
+-- ne stolpčno, zato nič ni preprečevalo, da bi lastnik prek neposrednega
+-- klica na Supabase REST API (mimo aplikacije, ki to polje sploh ne
+-- pošilja) sam sebi nastavil:
+--   PATCH /rest/v1/plovila?id=eq.<svoj-oglas>   { "potrjeno": true }
+-- in tako preskočil admin pregled/odobritev oglasa v celoti (enak razred
+-- napake, kot je bil "promoted"/"urgentno" — glej prevent_plovilo_self_boost
+-- zgoraj — ki pa "potrjeno" ni nikoli pokrival). Enako velja za
+-- rezervni_deli.potrjeno, ki ni imel NOBENEGA zaščitnega triggerja.
+-- Rešitev: razširimo obstoječi trigger za plovila in dodamo enakega za
+-- rezervne dele — nov vnos je vedno nepotrjen, obstoječega pa navaden
+-- lastnik ne more spremeniti (samo admin, prek "Admin ureja ..." politik).
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function prevent_plovilo_self_boost()
+returns trigger as $$
+declare
+  ima_auto_promocijo boolean;
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    select coalesce(auto_promocija, false) into ima_auto_promocijo from profiles where id = auth.uid();
+    if TG_OP = 'INSERT' then
+      new.promoted := coalesce(ima_auto_promocijo, false);
+      new.promoted_do := null;
+      new.urgentno := false;
+      new.urgentno_do := null;
+      new.potrjeno := false;
+    else
+      new.promoted := case when ima_auto_promocijo then true else old.promoted end;
+      new.promoted_do := case when ima_auto_promocijo then null else old.promoted_do end;
+      new.urgentno := old.urgentno;
+      new.urgentno_do := old.urgentno_do;
+      new.potrjeno := old.potrjeno;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create or replace function prevent_rezervni_del_self_potrditev()
+returns trigger as $$
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    if TG_OP = 'INSERT' then
+      new.potrjeno := false;
+    else
+      new.potrjeno := old.potrjeno;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_rezervni_del_self_potrditev on rezervni_deli;
+create trigger trg_prevent_rezervni_del_self_potrditev
+before insert or update on rezervni_deli
+for each row execute function prevent_rezervni_del_self_potrditev();

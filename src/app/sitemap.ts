@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { forumKategorije } from '@/data/forum'
 
-const BASE = 'https://garbin.si'
+const BASE = 'https://garbin.net'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = [
@@ -37,7 +37,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const [{ data: plovilaData }, { data: charterjiData }, { data: skiperjiData }, { data: noviceData }] = await Promise.all([
     supabase.from('plovila_javno').select('id'),
-    supabase.from('charterji').select('id'),
+    // "charterji" (osnovna tabela) je zaradi varnostnega popravka omejena na
+    // lastnika/admina (glej supabase-setup.sql) — z anon ključem (kot tu) je
+    // od takrat vedno vracala 0 vrstic, zato so charter strani ze nekaj casa
+    // tiho izpadle iz sitemapa. Javni pogled "charterji_javno" jih vrne.
+    supabase.from('charterji_javno').select('id'),
     supabase.from('skiperji').select('id'),
     supabase.from('novice').select('slug').not('published_at', 'is', null),
   ])

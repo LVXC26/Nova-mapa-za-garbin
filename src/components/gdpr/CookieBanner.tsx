@@ -13,6 +13,7 @@ export default function CookieBanner() {
 
   useEffect(() => {
     const saved = localStorage.getItem(COOKIE_KEY)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage ni na voljo med SSR
     if (!saved) setVisible(true)
   }, [])
 
@@ -23,6 +24,7 @@ export default function CookieBanner() {
       custom: { necessary: true, ...prefs },
     }[type]
     localStorage.setItem(COOKIE_KEY, JSON.stringify(consent))
+    window.dispatchEvent(new Event('garbin-cookie-consent-updated'))
     setVisible(false)
   }
 
