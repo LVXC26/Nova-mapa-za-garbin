@@ -10,7 +10,11 @@ import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { createClient } from '@/lib/supabase/client'
-import type { Charter, Plovilo, PloviloZasedenost } from '@/types/database'
+import type { Charter, Plovilo, PloviloZasedenost, Rating } from '@/types/database'
+
+interface OcenaZImenom extends Rating {
+  ime: string
+}
 
 const tipIkone: Record<string, string> = {
   jadrnica: '⛵',
@@ -29,6 +33,13 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
   const [plovila, setPlovila] = useState<Plovilo[]>([])
   const [zasedenostFlote, setZasedenostFlote] = useState<PloviloZasedenost[]>([])
   const [nalaga, setNalaga] = useState(true)
+  const [ocene, setOcene] = useState<OcenaZImenom[]>([])
+  const [nalagaOcen, setNalagaOcen] = useState(true)
+  const [dodajOceno, setDodajOceno] = useState(false)
+  const [novaOcena, setNovaOcena] = useState(5)
+  const [novKomentar, setNovKomentar] = useState('')
+  const [posiljaOceno, setPosiljaOceno] = useState(false)
+  const [ocenaNapaka, setOcenaNapaka] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
@@ -59,7 +70,59 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
     })
   }, [id])
 
+  async function nalozOcene() {
+    setNalagaOcen(true)
+    const supabase = createClient()
+    const { data } = await supabase.from('ratings').select('*').eq('rated_id', id).eq('rated_type', 'charter').order('created_at', { ascending: false })
+    const seznam = data ?? []
+    const raterIds = Array.from(new Set(seznam.map(r => r.rater_id)))
+    const imena = new Map<string, string>()
+    if (raterIds.length > 0) {
+      const { data: profili } = await supabase.from('public_profiles').select('id, ime').in('id', raterIds)
+      profili?.forEach(p => imena.set(p.id, p.ime ?? 'Uporabnik'))
+    }
+    setOcene(seznam.map(r => ({ ...r, ime: imena.get(r.rater_id) ?? 'Uporabnik' })))
+    setNalagaOcen(false)
+  }
+
+  useEffect(() => {
+    ;(async () => { await nalozOcene() })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  async function posljiOceno() {
+    if (!user) return
+    // Razlog (komentar) je obvezen — brez konteksta je gola zvezdica malo
+    // vredna, poleg tega bi lahko sicer sluzila za spam/lazne ocene brez
+    // obrazlozitve.
+    if (!novKomentar.trim()) { setOcenaNapaka('Prosimo, napišite kratko obrazložitev ocene.'); return }
+    setOcenaNapaka('')
+    setPosiljaOceno(true)
+    const supabase = createClient()
+    const { error } = await supabase.from('ratings').insert({
+      rater_id: user.id,
+      rated_id: id,
+      rated_type: 'charter',
+      score: novaOcena,
+      komentar: novKomentar.trim(),
+    })
+    setPosiljaOceno(false)
+    if (error) {
+      setOcenaNapaka(error.message.includes('duplicate') ? 'Tega charterja ste že ocenili.' : 'Napaka pri shranjevanju ocene.')
+      return
+    }
+    setDodajOceno(false)
+    setNovKomentar('')
+    setNovaOcena(5)
+    nalozOcene()
+  }
+
   const charter = realCharter ?? undefined
+  const zvezdiceOcena = Array.from({ length: 5 }, (_, i) => i < Math.round(
+    ocene.length ? ocene.reduce((a, o) => a + o.score, 0) / ocene.length : (charter?.ocena ?? 0)
+  ))
+  const povprecjeOcena = ocene.length ? ocene.reduce((a, o) => a + o.score, 0) / ocene.length : (charter?.ocena ?? 0)
+  const steviloOcenSkupaj = ocene.length || (charter?.st_ocen ?? 0)
 
   if (nalaga) {
     return (
@@ -202,6 +265,87 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   )}
                 </div>
+                {/* Ocene strank — DB (ratings + posodobi_oceno_po_oceni trigger)
+                    je vseskozi podpirala rated_type "charter", manjkal je samo
+                    obrazec na tej strani (skiperji ga imajo ze). */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="font-display text-lg font-semibold text-[#0c2340]">Ocene strank</h2>
+                    <div className="flex items-center gap-2">
+                      <div className="flex">
+                        {zvezdiceOcena.map((poln, i) => (
+                          <Star key={i} className={`w-4 h-4 ${poln ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                        ))}
+                      </div>
+                      <span className="font-bold text-[#0c2340]">{povprecjeOcena.toFixed(1)}</span>
+                      <span className="text-gray-400 text-sm">({steviloOcenSkupaj})</span>
+                    </div>
+                  </div>
+
+                  {nalagaOcen ? (
+                    <p className="text-sm text-gray-400 text-center py-8">Nalagam ocene...</p>
+                  ) : ocene.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-8">Ta charter še nima ocen.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {ocene.map((o) => (
+                        <div key={o.id} className="border-b border-gray-50 last:border-0 pb-4 last:pb-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-sm font-bold text-[#0c2340]">{o.ime[0]}</div>
+                              <span className="font-medium text-[#0c2340] text-sm">{o.ime}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex">
+                                {Array.from({ length: 5 }).map((_, j) => (
+                                  <Star key={j} className={`w-3 h-3 ${j < o.score ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                                ))}
+                              </div>
+                              <span className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })}</span>
+                            </div>
+                          </div>
+                          {o.komentar && <p className="text-sm text-gray-600 leading-relaxed ml-10">{o.komentar}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {user && !dodajOceno && (
+                    <button onClick={() => setDodajOceno(true)} className="mt-5 w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors font-medium">
+                      + Dodaj oceno
+                    </button>
+                  )}
+
+                  {user && dodajOceno && (
+                    <div className="mt-5 p-4 bg-gray-50 rounded-xl">
+                      {ocenaNapaka && <p className="text-sm text-red-600 mb-3">{ocenaNapaka}</p>}
+                      <label className="block text-sm font-semibold text-[#0c2340] mb-2">Vaša ocena</label>
+                      <div className="flex gap-1 mb-3">
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <button key={n} type="button" onClick={() => setNovaOcena(n)}>
+                            <Star className={`w-6 h-6 ${n <= novaOcena ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={novKomentar}
+                        onChange={e => setNovKomentar(e.target.value)}
+                        rows={3}
+                        placeholder="Delite svojo izkušnjo — obrazložitev je obvezna..."
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none mb-3"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={posljiOceno} disabled={posiljaOceno || !novKomentar.trim()} className="px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold text-sm rounded-full transition-all">
+                          {posiljaOceno ? 'Pošiljam...' : 'Objavi oceno'}
+                        </button>
+                        <button onClick={() => { setDodajOceno(false); setOcenaNapaka('') }} className="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-50">
+                          Prekliči
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Social feed */}
                 <div className="mt-8">
                   <FeedObjave title="Objave charterja" showAddPost={!!user} lastnikUserId={charter.user_id ?? null} />

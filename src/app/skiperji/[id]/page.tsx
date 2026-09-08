@@ -69,6 +69,10 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
 
   async function posljiOceno() {
     if (!user) return
+    // Razlog (komentar) je obvezen — brez konteksta je gola zvezdica malo
+    // vredna, poleg tega bi lahko sicer sluzila za spam/lazne ocene brez
+    // obrazlozitve.
+    if (!novKomentar.trim()) { setOcenaNapaka('Prosimo, napišite kratko obrazložitev ocene.'); return }
     setOcenaNapaka('')
     setPosiljaOceno(true)
     const supabase = createClient()
@@ -77,7 +81,7 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
       rated_id: id,
       rated_type: 'skipper',
       score: novaOcena,
-      komentar: novKomentar || null,
+      komentar: novKomentar.trim(),
     })
     setPosiljaOceno(false)
     if (error) {
@@ -379,11 +383,11 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                           value={novKomentar}
                           onChange={e => setNovKomentar(e.target.value)}
                           rows={3}
-                          placeholder="Delite svojo izkušnjo (neobvezno)..."
+                          placeholder="Delite svojo izkušnjo — obrazložitev je obvezna..."
                           className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none mb-3"
                         />
                         <div className="flex gap-2">
-                          <button onClick={posljiOceno} disabled={posiljaOceno} className="px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold text-sm rounded-full transition-all">
+                          <button onClick={posljiOceno} disabled={posiljaOceno || !novKomentar.trim()} className="px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold text-sm rounded-full transition-all">
                             {posiljaOceno ? 'Pošiljam...' : 'Objavi oceno'}
                           </button>
                           <button onClick={() => { setDodajOceno(false); setOcenaNapaka('') }} className="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-50">
