@@ -163,16 +163,26 @@ function CharterDashboard({ ime, userId }: { ime: string; userId: string | undef
           <div className="p-8 text-center text-sm text-gray-400">Nimate še nobenega plovila.</div>
         ) : (
           plovila.slice(0, 3).map((p, i) => (
-            <div key={p.id} className={`flex items-center gap-4 p-4 ${i < Math.min(plovila.length, 3) - 1 ? 'border-b border-gray-50' : ''}`}>
-              <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0">⛵</div>
+            <Link
+              key={p.id}
+              href={`/dashboard/dodaj-plovilo?edit=${p.id}`}
+              className={`flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors ${i < Math.min(plovila.length, 3) - 1 ? 'border-b border-gray-50' : ''}`}
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0 overflow-hidden">
+                {p.slike && p.slike[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.slike[0]} alt={p.naziv} className="w-full h-full object-cover" />
+                ) : '⛵'}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-[#0c2340] text-sm truncate">{p.naziv}</p>
                 <p className="text-xs text-gray-500">{p.lokacija} · {p.letnik}</p>
               </div>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${p.potrjeno ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${p.potrjeno ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                 {p.potrjeno ? 'Aktivno' : 'V pregledu'}
               </span>
-            </div>
+              <Pencil className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+            </Link>
           ))
         )}
         <div className="p-4 border-t border-gray-50">
