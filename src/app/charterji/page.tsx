@@ -160,8 +160,11 @@ export default function CharterjiPage() {
         {/* SEKUNDARNI FILTER (podjetje/zasebnik) + REZULTATI */}
         <section className="bg-white border-b border-gray-100 sticky top-16 z-30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between py-3">
-              <div className="flex gap-1">
+            <div className="flex items-center justify-between py-3 gap-3">
+              {/* Na ozkih zaslonih 3 pilulke ne gredo vedno v 375px — namesto
+                  da bi lomile stran (horizontalni scroll cele strani), naj
+                  raje ta vrstica sama scrolla vodoravno. */}
+              <div className="flex gap-1 overflow-x-auto flex-nowrap scrollbar-hide">
                 {([
                   { vrednost: 'vse', label: 'Vsi', ikona: '⚓' },
                   { vrednost: 'podjetje', label: 'Podjetja', ikona: '🏢' },
@@ -170,7 +173,7 @@ export default function CharterjiPage() {
                   <button
                     key={t.vrednost}
                     onClick={() => setFilter(t.vrednost)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 ${
                       filter === t.vrednost
                         ? 'bg-[#0c2340] text-white'
                         : 'text-gray-500 hover:text-[#0c2340] hover:bg-gray-50'

@@ -270,7 +270,11 @@ function MojaPlovilaContent() {
                     jeProdano ? 'border-gray-200 opacity-60' : 'border-gray-100'
                   }`}
                 >
-                <div className="p-5 flex items-center gap-5">
+                {/* flex-wrap — vrstica ima lahko do 7 akcijskih gumbov + ceno +
+                    naslov hkrati, kar na ozkih (mobilnih) zaslonih ne gre v eno
+                    vrstico brez preloma, enako kot je ze resenu spodaj (znacke,
+                    info vrstica) */}
+                <div className="p-5 flex flex-wrap items-center gap-4 sm:gap-5">
                   <div className="w-12 h-12 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-2xl shrink-0 relative overflow-hidden">
                     {plovilo.slike && plovilo.slike[0] ? (
                       // eslint-disable-next-line @next/next/no-img-element
