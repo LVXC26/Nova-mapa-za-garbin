@@ -124,7 +124,7 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
             <rect
               x="0" y="0" width="100%" height="100%" rx="16" ry="16"
               fill="none" stroke="#c9a84c" strokeWidth="3.5" strokeLinecap="round"
-              pathLength={100} strokeDasharray="18 82"
+              pathLength={100} strokeDasharray="35 65"
               className="premium-border-snake"
             />
           </svg>
