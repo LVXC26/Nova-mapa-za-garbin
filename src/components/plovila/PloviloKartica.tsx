@@ -111,7 +111,9 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
 
   return (
     <Link href={`/plovila/${plovilo.id}`} className="group block">
-      <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 group-hover:-translate-y-1">
+      <div className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1 ${
+        plovilo.urgentno && !plovilo.prodano ? 'border-2 border-[#c9a84c]' : 'border border-gray-100'
+      }`}>
         <div className="relative h-48 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] flex items-center justify-center overflow-hidden img-placeholder">
           {plovilo.slike && plovilo.slike.length > 0 ? (
             <Image
@@ -135,11 +137,6 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
           )}
 
           <div className="absolute top-3 left-3 flex gap-2 flex-wrap z-20">
-            {plovilo.urgentno && !plovilo.prodano && (
-              <span className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-red-600 text-white rounded-full shadow-lg">
-                ⚡ Nujno
-              </span>
-            )}
             {promoted && !plovilo.urgentno && !plovilo.prodano && (
               <span className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-[#c9a84c] text-[#0c2340] rounded-full shadow-lg">
                 ★ Promoted

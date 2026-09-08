@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { PlusCircle, Ship, MapPin, Calendar, CalendarRange, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon, Star, Trash2 } from 'lucide-react'
+import { PlusCircle, Ship, MapPin, Calendar, CalendarRange, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon, Star, Trash2, Info } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import UrediZasedenostKoledar from '@/components/plovila/UrediZasedenostKoledar'
@@ -289,8 +289,11 @@ function MojaPlovilaContent() {
                         <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#0c2340] text-white shrink-0">PRODANO</span>
                       )}
                       {jeUrgentno && !jeProdano && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-red-600 text-white shrink-0 flex items-center gap-1">
-                          <Zap className="w-3 h-3" /> Nujno
+                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#c9a84c] text-[#0c2340] shrink-0 flex items-center gap-1">
+                          <Zap className="w-3 h-3" /> Premium
+                          <span title="Premium: zlata obroba na kartici in prednost v prikazu za 30 dni." className="cursor-help">
+                            <Info className="w-3 h-3 opacity-70" />
+                          </span>
                         </span>
                       )}
                       {jePromovirano(plovilo) && !jeProdano && (
@@ -367,10 +370,10 @@ function MojaPlovilaContent() {
                         disabled={urgentnoNarocam === plovilo.id}
                         title={
                           isAdmin
-                            ? 'Označi kot urgentno — brezplačno (admin)'
+                            ? 'Označi kot premium — brezplačno (admin)'
                             : imaNeporabljenoUrgentno(plovilo)
                               ? `Vklopi nazaj — brezplačno (plačano do ${new Date(plovilo.urgentno_do as string).toLocaleDateString('sl-SI')})`
-                              : 'Označi kot urgentno — 30 €'
+                              : 'Označi kot premium — 30 €'
                         }
                         className={`p-2 rounded-xl transition-colors disabled:opacity-50 ${
                           imaNeporabljenoUrgentno(plovilo) || isAdmin
@@ -387,7 +390,7 @@ function MojaPlovilaContent() {
                       <button
                         onClick={() => odstraniUrgentno(plovilo.id)}
                         disabled={urgentnoNarocam === plovilo.id}
-                        title="Izklopi urgentno oznako"
+                        title="Izklopi premium oznako"
                         className="p-2 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
                       >
                         {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}

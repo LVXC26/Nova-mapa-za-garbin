@@ -452,9 +452,9 @@ function DodajPloviloContent() {
                 ⚡
               </div>
               <div>
-                <p className="font-semibold text-sm text-gray-700">Urgentna prodaja — na voljo po objavi</p>
+                <p className="font-semibold text-sm text-gray-700">Premium objava — na voljo po objavi</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Po objavi oglasa lahko v &bdquo;Moja plovila&ldquo; doplačate 30 € za rdeč &bdquo;Nujno&ldquo; badge in prioriteto v prikazu.
+                  Po objavi oglasa lahko v &bdquo;Moja plovila&ldquo; doplačate 30 € za zlato obrobo kartice in prioriteto v prikazu.
                 </p>
               </div>
             </div>
