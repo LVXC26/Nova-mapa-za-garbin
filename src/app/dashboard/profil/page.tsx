@@ -223,14 +223,15 @@ export default function ProfilPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-full w-fit mb-6">
+      {/* Tabs — "Specializacija" pri skipperju je predolga za 3 pilulke v
+          375px, zato naj vrstica scrolla vodoravno namesto da lomi stran. */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-full w-fit max-w-full overflow-x-auto flex-nowrap scrollbar-hide mb-6">
         {tabs.map(t => (
           <button
             key={t.vrednost}
             type="button"
             onClick={() => setTab(t.vrednost as typeof tab)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 ${
               tab === t.vrednost ? 'bg-white text-[#0c2340] shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >

@@ -205,8 +205,10 @@ export default function NastavitveProfilaPage() {
       <h1 className="font-display text-2xl font-bold text-[#0c2340] mb-1">Nastavitve profila</h1>
       <p className="text-gray-500 text-sm mb-8">Posodobite podatke vašega računa</p>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-full w-fit mb-8">
+      {/* Tabs — na ozkih zaslonih 3 pilulke (zlasti "Notifikacije") ne gredo
+          vedno v 375px, zato naj vrstica sama scrolla vodoravno namesto da
+          lomi stran (isti popravek kot na /charterji). */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-full w-fit max-w-full overflow-x-auto flex-nowrap scrollbar-hide mb-8">
         {([
           { vrednost: 'profil', label: 'Profil', ikona: User },
           { vrednost: 'geslo', label: 'Geslo', ikona: Lock },
@@ -215,7 +217,7 @@ export default function NastavitveProfilaPage() {
           <button
             key={vrednost}
             onClick={() => { setTab(vrednost); setNapaka(''); setUspesno('') }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 ${
               tab === vrednost ? 'bg-white text-[#0c2340] shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
