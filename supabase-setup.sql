@@ -887,15 +887,18 @@ before insert on ratings
 for each row execute function prevent_self_rating();
 
 -- ═══════════════════════════════════════════════════════════════════
--- VARNOSTNI POPRAVEK: omejitev tipa/velikosti slike (8 MB, samo slike)
--- je obstajala samo v JavaScript kodi obrazca — kdorkoli bi lahko prek
--- konzole poklical storage upload neposredno in naložil poljubno
--- (izvršljivo/ogromno) datoteko. To zdaj uveljavimo na nivoju bucketa,
--- česar odjemalec ne more zaobiti.
+-- VARNOSTNI POPRAVEK: omejitev tipa/velikosti slike (zdaj 30 MB, samo
+-- slike) je obstajala samo v JavaScript kodi obrazca — kdorkoli bi
+-- lahko prek konzole poklical storage upload neposredno in naložil
+-- poljubno (izvršljivo/ogromno) datoteko. To zdaj uveljavimo na nivoju
+-- bucketa, česar odjemalec ne more zaobiti.
+-- (Popravek: limit je bil ostal na 8 MB, ko je bil MAX_VELIKOST_MB v
+-- kodi dvignjen na 30 MB — nalaganje slik nad 8 MB je zato na nivoju
+-- Supabase Storage zavračalo, čeprav je JS validacija to dovolila.)
 -- ═══════════════════════════════════════════════════════════════════
 
 update storage.buckets
-set file_size_limit = 8388608, -- 8 MB, usklajeno z MAX_VELIKOST_MB v kodi
+set file_size_limit = 31457280, -- 30 MB, usklajeno z MAX_VELIKOST_MB v kodi
     allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 where id = 'plovila-slike';
 
