@@ -458,7 +458,12 @@ function ProdajalecDashboard({ ime, vloga, userId }: { ime: string; vloga: strin
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {plovila.slice(0, 5).map((p, i) => (
             <div key={p.id} className={`flex items-center gap-4 p-4 ${i < Math.min(plovila.length, 5) - 1 ? 'border-b border-gray-50' : ''}`}>
-              <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0">⚓</div>
+              <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0 overflow-hidden">
+                {p.slike && p.slike[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.slike[0]} alt={p.naziv} className="w-full h-full object-cover" />
+                ) : '⚓'}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-[#0c2340] text-sm truncate">{p.naziv}</p>
                 <p className="text-xs text-gray-500">{p.lokacija}</p>

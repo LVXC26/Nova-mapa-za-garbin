@@ -132,6 +132,7 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
   const [shareOpen, setShareOpen] = useState(false)
   const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
   const [lightboxIndeks, setLightboxIndeks] = useState<number | null>(null)
+  const [charter, setCharter] = useState<{ id: string; naziv: string; verified: boolean } | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -167,6 +168,13 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
         if (data.tip_oglasa === 'najem') {
           supabase.from('plovilo_zasedenost').select('*').eq('plovilo_id', id)
             .then(({ data: termini }) => { if (termini) setZasedenost(termini) })
+          // Kdo je objavil najem — skrivamo samo neposreden KONTAKT (glej
+          // spodaj), ne pa tudi identitete charterja; brez tega kupec ni
+          // videl, kateri charter sploh oddaja to plovilo.
+          if (data.user_id) {
+            supabase.from('charterji_javno').select('id, naziv, verified').eq('user_id', data.user_id).maybeSingle()
+              .then(({ data: c }) => { if (c) setCharter(c) })
+          }
         }
       }
     })
@@ -476,6 +484,29 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                     zasedenost={plovilo.tip_oglasa === 'najem' ? zasedenost : undefined}
                   />
                 </div>
+
+                {/* Charter, ki oddaja to plovilo — vidna je SAMO identiteta
+                    (ime + povezava na profil), nikoli kontakt (glej opombo
+                    zgoraj); prej je bila skrita cela kartica, zato ni bilo
+                    videti niti kdo sploh oddaja plovilo v najem. */}
+                {plovilo.tip_oglasa === 'najem' && charter && (
+                  <Link
+                    href={`/charterji/${charter.id}`}
+                    className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all"
+                  >
+                    <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Plovilo oddaja</h3>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-lg">🏢</div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-[#0c2340] text-sm truncate flex items-center gap-1.5">
+                          {charter.naziv}
+                          {charter.verified && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                        </p>
+                        <p className="text-xs text-[#c9a84c] font-medium">Ogled profila charterja →</p>
+                      </div>
+                    </div>
+                  </Link>
+                )}
 
                 {/* Prodajalec info — pri najemu se kontakt lastnika ne razkriva
                     kupcu (glej opombo zgoraj); Garbin ekipa ga dobi po mailu. */}
