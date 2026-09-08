@@ -95,6 +95,10 @@ html {
   100% { transform: translateX(-50%); }
 }
 
+@keyframes premium-border-spin {
+  to { transform: rotate(1turn); }
+}
+
 .animate-fade-in-up {
   animation: fadeInUp 0.6s ease-out forwards;
 }
@@ -115,6 +119,39 @@ html {
 
 .animate-pulse-gold {
   animation: pulse-gold 2s ease-in-out infinite;
+}
+
+/* Premium kartica (PloviloKartica.tsx): namesto statične zlate obrobe zdaj
+   zlat lok počasi kroži okoli kartice in nikoli ne tvori popolnoma
+   sklenjenega kroga — vedno ostane vrzel, ki potuje naprej skupaj z njim.
+   ::before je večji od ovojnika (inset: -2px) in leži ZA njim (z-index -1),
+   zato skoznj vidimo samo tanek rob, ki ga notranja (neprozorna, bela)
+   kartica ne prekrije. */
+.premium-border {
+  isolation: isolate;
+}
+.premium-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 0deg,
+    #c9a84c 0deg,
+    #f5d98a 20deg,
+    #c9a84c 40deg,
+    #c9a84c 300deg,
+    transparent 330deg,
+    transparent 360deg
+  );
+  animation: premium-border-spin 5s linear infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .premium-border::before {
+    animation: none;
+  }
 }
 
 /* Stagger delays */
