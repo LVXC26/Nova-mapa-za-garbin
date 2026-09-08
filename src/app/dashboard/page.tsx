@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import {
   PlusCircle, List, Ship, Heart, ArrowRight,
   MessageCircle, Compass, Calendar,
-  CheckCircle, Activity, Star, TrendingUp
+  CheckCircle, Activity, Star, TrendingUp, Pencil
 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -457,7 +457,11 @@ function ProdajalecDashboard({ ime, vloga, userId }: { ime: string; vloga: strin
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {plovila.slice(0, 5).map((p, i) => (
-            <div key={p.id} className={`flex items-center gap-4 p-4 ${i < Math.min(plovila.length, 5) - 1 ? 'border-b border-gray-50' : ''}`}>
+            <Link
+              key={p.id}
+              href={`/dashboard/dodaj-plovilo?edit=${p.id}`}
+              className={`flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors ${i < Math.min(plovila.length, 5) - 1 ? 'border-b border-gray-50' : ''}`}
+            >
               <div className="w-10 h-10 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-lg shrink-0 overflow-hidden">
                 {p.slike && p.slike[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -468,10 +472,11 @@ function ProdajalecDashboard({ ime, vloga, userId }: { ime: string; vloga: strin
                 <p className="font-medium text-[#0c2340] text-sm truncate">{p.naziv}</p>
                 <p className="text-xs text-gray-500">{p.lokacija}</p>
               </div>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${p.potrjeno ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${p.potrjeno ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                 {p.potrjeno ? 'Aktivno' : 'V pregledu'}
               </span>
-            </div>
+              <Pencil className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+            </Link>
           ))}
           <div className="p-4 border-t border-gray-50">
             <Link href="/dashboard/moja-plovila" className="text-sm text-[#c9a84c] font-medium hover:underline">
