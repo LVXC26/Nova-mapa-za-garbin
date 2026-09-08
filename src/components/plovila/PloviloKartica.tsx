@@ -123,7 +123,7 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" aria-hidden="true">
             <rect
               x="0" y="0" width="100%" height="100%" rx="16" ry="16"
-              fill="none" stroke="#c9a84c" strokeWidth="2" strokeLinecap="round"
+              fill="none" stroke="#c9a84c" strokeWidth="3.5" strokeLinecap="round"
               pathLength={100} strokeDasharray="18 82"
               className="premium-border-snake"
             />
