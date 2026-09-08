@@ -1566,3 +1566,30 @@ drop trigger if exists trg_prevent_rezervni_del_self_potrditev on rezervni_deli;
 create trigger trg_prevent_rezervni_del_self_potrditev
 before insert or update on rezervni_deli
 for each row execute function prevent_rezervni_del_self_potrditev();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- KRITIČEN VARNOSTNI POPRAVEK (najden 2026-09-08 med aktivnim testiranjem
+-- na zahtevo uporabnika: "preveri če lahko kako ulomiš do kakšnih podatkov
+-- skozi konzolo"): "plovila_javno"/"charterji_javno"/"public_profiles" so
+-- pogledi z "security_invoker = false" — to pomeni, da se PISANJE (ne samo
+-- branje) skozenj izvede s pravicami LASTNIKA pogleda, ki RLS na osnovni
+-- tabeli sploh ne pozna (lastniki tabel privzeto obidejo RLS). Vsem trem
+-- je bilo dano samo "grant select", a Supabase privzeto podeli širše
+-- sheme-nivojske pravice "anon"/"authenticated" vlogama na VSE relacije v
+-- "public" shemi (na tabelah to ni problem, ker jih RLS itak zapre) — na
+-- pogledu s "security_invoker = false" pa to pomeni, da je bil vsak
+-- avtomatsko-posodobljiv pogled dejansko pisljiv BREZ ikakršne prijave,
+-- prek gole anon (javne) API-ključa:
+--   PATCH /rest/v1/plovila_javno?id=eq.<katerokoli-plovilo>
+--   { "potrjeno": false }   (ali "promoted"/"prodano"/"cena"/karkoli...)
+-- To je bilo dejansko preizkušeno (na zahtevo uporabnika) in JE uspelo —
+-- eno pravo plovilo je bilo dejansko skrito s strani, dokler ni bilo
+-- ročno popravljeno nazaj. Popravek: eksplicitno odvzamemo VSE pisalne
+-- pravice na vseh treh javnih pogledih in pustimo samo branje.
+-- ═══════════════════════════════════════════════════════════════════
+
+revoke insert, update, delete, truncate, references, trigger
+  on plovila_javno, charterji_javno, public_profiles
+  from public, anon, authenticated;
+
+grant select on plovila_javno, charterji_javno, public_profiles to anon, authenticated;
