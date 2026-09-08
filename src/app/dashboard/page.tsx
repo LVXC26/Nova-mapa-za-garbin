@@ -142,12 +142,12 @@ function CharterDashboard({ ime, userId }: { ime: string; userId: string | undef
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md group ${cls}`}>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.includes('white') ? 'bg-gray-100' : 'bg-white/20'}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.startsWith('bg-white') ? 'bg-gray-100' : 'bg-white/20'}`}>
               <Ikona className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm">{label}</p>
-              <p className={`text-xs mt-0.5 ${cls.includes('white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
+              <p className={`text-xs mt-0.5 ${cls.startsWith('bg-white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
             </div>
             <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
           </Link>
@@ -242,7 +242,7 @@ function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undef
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.includes('white') ? 'bg-gray-100' : 'bg-white/20'}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.startsWith('bg-white') ? 'bg-gray-100' : 'bg-white/20'}`}>
               <Ikona className="w-5 h-5" />
             </div>
             <div className="flex-1">
@@ -326,12 +326,12 @@ function KupecDashboard({ ime, userId }: { ime: string; userId: string | undefin
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.includes('white') ? 'bg-gray-100' : 'bg-white/20'}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.startsWith('bg-white') ? 'bg-gray-100' : 'bg-white/20'}`}>
               <Ikona className="w-5 h-5" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-sm">{label}</p>
-              <p className={`text-xs mt-0.5 ${cls.includes('white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
+              <p className={`text-xs mt-0.5 ${cls.startsWith('bg-white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
             </div>
             <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
           </Link>
@@ -429,12 +429,12 @@ function ProdajalecDashboard({ ime, vloga, userId }: { ime: string; vloga: strin
         ].map(({ href, label, opis, ikona: Ikona, cls }) => (
           <Link key={href} href={href}
             className={`flex items-center gap-4 p-5 rounded-2xl shadow-sm transition-all hover:-translate-y-0.5 group ${cls}`}>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.includes('white') ? 'bg-gray-100' : 'bg-white/20'}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cls.startsWith('bg-white') ? 'bg-gray-100' : 'bg-white/20'}`}>
               <Ikona className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm">{label}</p>
-              <p className={`text-xs mt-0.5 ${cls.includes('white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
+              <p className={`text-xs mt-0.5 ${cls.startsWith('bg-white') ? 'text-gray-500' : 'opacity-70'}`}>{opis}</p>
             </div>
             <ArrowRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
           </Link>
