@@ -178,8 +178,10 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
           }
         } else if (data.user_id) {
           // Prava identiteta prodajalca namesto hardkodiranega "Zasebni
-          // prodajalec" — profiles je javno berljiv (glej supabase-setup.sql).
-          supabase.from('profiles').select('ime, created_at').eq('id', data.user_id).maybeSingle()
+          // prodajalec". Osnovna tabela "profiles" je zaradi varnostnega
+          // popravka omejena na lastnika (glej supabase-setup.sql) — zato
+          // varni javni pogled "public_profiles" (samo ime/created_at ...).
+          supabase.from('public_profiles').select('ime, created_at').eq('id', data.user_id).maybeSingle()
             .then(({ data: p }) => { if (p) setProdajalec(p) })
         }
       }
