@@ -271,8 +271,11 @@ function MojaPlovilaContent() {
                   }`}
                 >
                 <div className="p-5 flex items-center gap-5">
-                  <div className="w-12 h-12 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-2xl shrink-0 relative">
-                    {tipIkone[plovilo.tip] ?? '⚓'}
+                  <div className="w-12 h-12 rounded-xl bg-[#0c2340]/5 flex items-center justify-center text-2xl shrink-0 relative overflow-hidden">
+                    {plovilo.slike && plovilo.slike[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={plovilo.slike[0]} alt={plovilo.naziv} className="w-full h-full object-cover" />
+                    ) : (tipIkone[plovilo.tip] ?? '⚓')}
                     {jeProdano && (
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center">
                         <CheckCircle className="w-3 h-3 text-white" />
