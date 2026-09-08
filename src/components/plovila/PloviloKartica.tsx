@@ -113,24 +113,8 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
 
   return (
     <Link href={`/plovila/${plovilo.id}`} className="group block">
-      {/* Premium: tanka zlata črta potuje po robu kartice (kot "snake") in se
-          nikoli ne strne v sklenjen krog — glej .premium-border-snake v
-          globals.css. pathLength="100" naredi dolžino roba neodvisno od
-          dejanske velikosti kartice, zato dasharray/animacija delujeta
-          enako ne glede na višino vsebine. */}
-      <div className="relative rounded-2xl">
-        {jePremium && (
-          <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" aria-hidden="true">
-            <rect
-              x="0" y="0" width="100%" height="100%" rx="16" ry="16"
-              fill="none" stroke="#c9a84c" strokeWidth="3.5" strokeLinecap="round"
-              pathLength={100} strokeDasharray="35 65"
-              className="premium-border-snake"
-            />
-          </svg>
-        )}
       <div className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1 ${
-        jePremium ? '' : 'border border-gray-100'
+        jePremium ? 'border-2 border-[#c9a84c]' : 'border border-gray-100'
       }`}>
         <div className="relative h-48 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] flex items-center justify-center overflow-hidden img-placeholder">
           {plovilo.slike && plovilo.slike.length > 0 ? (
@@ -259,7 +243,6 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
             </div>
           </div>
         </div>
-      </div>
       </div>
     </Link>
   )

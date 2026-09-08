@@ -95,10 +95,6 @@ html {
   100% { transform: translateX(-50%); }
 }
 
-@keyframes premium-border-dash {
-  to { stroke-dashoffset: -100; }
-}
-
 .animate-fade-in-up {
   animation: fadeInUp 0.6s ease-out forwards;
 }
@@ -119,19 +115,6 @@ html {
 
 .animate-pulse-gold {
   animation: pulse-gold 2s ease-in-out infinite;
-}
-
-/* Premium kartica (PloviloKartica.tsx): tanka zlata črta potuje po robu
-   kartice (SVG <rect> obris, glej komponento) — kratka črtica (18 od 100
-   enot poti) proti dolgi vrzeli (82 enot), zato se nikoli ne strne v
-   sklenjen krog, podobno kot kača v igri "Snake". */
-.premium-border-snake {
-  animation: premium-border-dash 6s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .premium-border-snake {
-    animation: none;
-  }
 }
 
 /* Stagger delays */
