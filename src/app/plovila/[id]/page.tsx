@@ -133,6 +133,7 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
   const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
   const [lightboxIndeks, setLightboxIndeks] = useState<number | null>(null)
   const [charter, setCharter] = useState<{ id: string; naziv: string; verified: boolean } | null>(null)
+  const [prodajalec, setProdajalec] = useState<{ ime: string | null; created_at: string } | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -175,6 +176,11 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
             supabase.from('charterji_javno').select('id, naziv, verified').eq('user_id', data.user_id).maybeSingle()
               .then(({ data: c }) => { if (c) setCharter(c) })
           }
+        } else if (data.user_id) {
+          // Prava identiteta prodajalca namesto hardkodiranega "Zasebni
+          // prodajalec" — profiles je javno berljiv (glej supabase-setup.sql).
+          supabase.from('profiles').select('ime, created_at').eq('id', data.user_id).maybeSingle()
+            .then(({ data: p }) => { if (p) setProdajalec(p) })
         }
       }
     })
@@ -516,8 +522,10 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-10 h-10 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-lg">👤</div>
                       <div>
-                        <p className="font-medium text-[#0c2340] text-sm">Zasebni prodajalec</p>
-                        <p className="text-xs text-gray-400">Član od 2024</p>
+                        <p className="font-medium text-[#0c2340] text-sm">{prodajalec?.ime || 'Prodajalec'}</p>
+                        <p className="text-xs text-gray-400">
+                          Član od {prodajalec?.created_at ? new Date(prodajalec.created_at).getFullYear() : '—'}
+                        </p>
                       </div>
                     </div>
                     {plovilo.kontakt_email && (
