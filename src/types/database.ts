@@ -267,6 +267,20 @@ export interface ZemljevidTocka {
   created_at: string
 }
 
+// Uporabniško dodane točke ("posebnosti") — ločeno od zgornje, admin-only
+// urejane zemljevid_tocke (glej supabase-setup.sql).
+export interface ZemljevidPosebnost {
+  id: string
+  user_id: string
+  naziv: string
+  tip: 'sidrisce' | 'potapljanje' | 'plaza' | 'gostilna' | 'nevarnost' | 'drugo'
+  lat: number
+  lng: number
+  opis: string | null
+  slika: string | null
+  created_at: string
+}
+
 export type TipObjave = 'objava' | 'potovanje'
 
 export interface Objava {
@@ -336,6 +350,7 @@ export interface Database {
       promocije: { Row: Pick<Promocija, keyof Promocija>; Insert: Omit<Promocija, 'id' | 'created_at'>; Update: Partial<Promocija>; Relationships: [] }
       bannerji: { Row: Pick<Banner, keyof Banner>; Insert: Omit<Banner, 'id' | 'created_at'>; Update: Partial<Banner>; Relationships: [] }
       zemljevid_tocke: { Row: Pick<ZemljevidTocka, keyof ZemljevidTocka>; Insert: Omit<ZemljevidTocka, 'id' | 'created_at'>; Update: Partial<ZemljevidTocka>; Relationships: [] }
+      zemljevid_posebnosti: { Row: Pick<ZemljevidPosebnost, keyof ZemljevidPosebnost>; Insert: Omit<ZemljevidPosebnost, 'id' | 'created_at'>; Update: Partial<ZemljevidPosebnost>; Relationships: [] }
       objave: { Row: Pick<Objava, keyof Objava>; Insert: Omit<Objava, 'id' | 'created_at'>; Update: Partial<Objava>; Relationships: [] }
       objava_likes: { Row: Pick<ObjavaLike, keyof ObjavaLike>; Insert: Omit<ObjavaLike, 'id' | 'created_at'>; Update: Partial<ObjavaLike>; Relationships: [] }
       objava_komentarji: { Row: Pick<ObjavaKomentar, keyof ObjavaKomentar>; Insert: Omit<ObjavaKomentar, 'id' | 'created_at'>; Update: Partial<ObjavaKomentar>; Relationships: [] }

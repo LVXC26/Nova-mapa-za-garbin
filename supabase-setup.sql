@@ -1642,3 +1642,72 @@ create policy "Skipper upravlja svojo zasedenost" on skipper_zasedenost for all
   with check (exists (select 1 from skiperji where skiperji.id = skipper_zasedenost.skipper_id and skiperji.user_id = auth.uid()));
 
 create index if not exists idx_skipper_zasedenost_skipper_id on skipper_zasedenost(skipper_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POSEBNOSTI NA ZEMLJEVIDU — uporabniki sami dodajo svoje točke (sidrišča,
+-- potapljaški spoti, priporočene gostilne, nevarnosti ...), ločeno od
+-- obstoječe "zemljevid_tocke" (ta ostaja admin-only uredniška vsebina, glej
+-- /admin/zemljevid — ločitev je namerna, da se uradne/preverjene točke ne
+-- mešajo z uporabniškimi). Direktorjeva odločitev: kdorkoli prijavljen sme
+-- dodati, takoj javno vidno (brez čakanja na odobritev), izbriše lahko
+-- avtor ali moderator/admin (enak vzorec kot "objave").
+-- ═══════════════════════════════════════════════════════════════════
+
+create table if not exists zemljevid_posebnosti (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  naziv text not null,
+  tip text check (tip in ('sidrisce', 'potapljanje', 'plaza', 'gostilna', 'nevarnost', 'drugo')) not null,
+  lat double precision not null,
+  lng double precision not null,
+  opis text,
+  slika text,
+  created_at timestamptz default now()
+);
+
+alter table zemljevid_posebnosti enable row level security;
+
+drop policy if exists "Javni bralni dostop - posebnosti" on zemljevid_posebnosti;
+create policy "Javni bralni dostop - posebnosti" on zemljevid_posebnosti for select using (true);
+
+drop policy if exists "Prijavljeni dodajajo posebnost" on zemljevid_posebnosti;
+create policy "Prijavljeni dodajajo posebnost" on zemljevid_posebnosti for insert to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Avtor ureja svojo posebnost" on zemljevid_posebnosti;
+create policy "Avtor ureja svojo posebnost" on zemljevid_posebnosti for update
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Brisanje: avtor ALI moderator/admin (isti vzorec kot "Admin brise
+-- katerokoli objavo/komentar" pri objavah — glej FeedObjave.tsx).
+drop policy if exists "Avtor ali moderator brise posebnost" on zemljevid_posebnosti;
+create policy "Avtor ali moderator brise posebnost" on zemljevid_posebnosti for delete
+  using (
+    auth.uid() = user_id
+    or exists (select 1 from profiles where profiles.id = auth.uid() and (profiles.is_moderator or profiles.is_admin))
+  );
+
+create index if not exists idx_zemljevid_posebnosti_user_id on zemljevid_posebnosti(user_id);
+
+-- Slike posebnosti — enak vzorec kot "plovila-slike"/"objave-slike": bucket
+-- je javno berljiv prek svoje lastne "public: true" nastavitve (NE prek RLS
+-- select politike na storage.objects — taka politika bi po nepotrebnem
+-- odprla /object/list/ enumeracijo, glej varnostni popravek zgoraj), vsak
+-- nalaga/briše samo v svojo mapo (<user_id>/...).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('zemljevid-slike', 'zemljevid-slike', true, 31457280, array['image/jpeg','image/png','image/webp','image/gif'])
+on conflict (id) do nothing;
+
+drop policy if exists "Prijavljeni nalagajo slike svojih posebnosti" on storage.objects;
+create policy "Prijavljeni nalagajo slike svojih posebnosti" on storage.objects
+  for insert to authenticated with check (
+    bucket_id = 'zemljevid-slike'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "Prijavljeni brisejo svoje slike posebnosti" on storage.objects;
+create policy "Prijavljeni brisejo svoje slike posebnosti" on storage.objects
+  for delete using (
+    bucket_id = 'zemljevid-slike'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
