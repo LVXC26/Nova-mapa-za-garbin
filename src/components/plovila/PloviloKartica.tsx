@@ -145,7 +145,7 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
               </span>
             )}
             {!promoted && !plovilo.urgentno && (
-              <span className="px-2.5 py-1 text-xs font-semibold bg-white/20 backdrop-blur-sm text-white rounded-full">
+              <span className="px-2.5 py-1 text-xs font-semibold bg-[#0c2340]/80 backdrop-blur-sm text-white rounded-full shadow-lg">
                 {tipLabel[plovilo.tip] ?? plovilo.tip}
               </span>
             )}
