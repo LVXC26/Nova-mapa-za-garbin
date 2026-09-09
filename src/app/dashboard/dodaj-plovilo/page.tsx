@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { CheckCircle, Upload, AlertCircle, X, Star, Loader2 } from 'lucide-react'
+import { CheckCircle, Upload, AlertCircle, X, Star, Loader2, ImageOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { opremaKategorije } from '@/lib/oprema'
@@ -585,8 +585,26 @@ function DodajPloviloContent() {
             {slikePredogled.length > 0 && (
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {slikePredogled.map((url, i) => (
-                  <div key={url} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group">
-                    <img src={url} alt={`Predogled ${i + 1}`} className="w-full h-full object-cover" />
+                  <div key={url} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group bg-gray-50">
+                    <img
+                      src={url}
+                      alt={`Predogled ${i + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Nekaterih formatov (npr. HEIC iz iPhona) brskalnik ne
+                        // zna prikazati kot predogled — slika bo kljub temu
+                        // pravilno naložena (upload uporablja izvorno
+                        // datoteko, ne tega <img>), zato namesto počene
+                        // ikone prikažemo jasno pojasnilo namesto zavajanja
+                        // uporabnika, da nalaganje ni uspelo.
+                        e.currentTarget.style.display = 'none'
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                      }}
+                    />
+                    <div className="hidden absolute inset-0 flex flex-col items-center justify-center gap-1 text-center px-2 text-gray-400">
+                      <ImageOff className="w-5 h-5" />
+                      <span className="text-[10px] leading-tight">Predogled ni na voljo,<br />slika bo naložena</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => odstraniSliko(i)}
