@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle, AlertCircle, Upload, MapPin, Phone, Globe, Award, Ship } from 'lucide-react'
+import { CheckCircle, AlertCircle, Upload, MapPin, Phone, Globe, Award, Ship, CalendarRange } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import UrediSkipperZasedenostKoledar from '@/components/skiperji/UrediSkipperZasedenostKoledar'
 import type { TipCharterPlovila } from '@/types/database'
 
 const TIPI_PLOVIL = ['jadrnica', 'motorni', 'katamaran', 'jahta', 'gumenjak']
@@ -15,7 +16,7 @@ export default function ProfilPage() {
   const [napaka, setNapaka] = useState('')
   const [nalaga, setNalaga] = useState(false)
   const [nalagaProfil, setNalagaProfil] = useState(true)
-  const [tab, setTab] = useState<'osnovno' | 'specializacija' | 'certifikati'>('osnovno')
+  const [tab, setTab] = useState<'osnovno' | 'specializacija' | 'certifikati' | 'zasedenost'>('osnovno')
 
   const ime = user?.user_metadata?.ime ?? ''
   const email = user?.email ?? ''
@@ -36,6 +37,7 @@ export default function ProfilPage() {
   const [noviCertifikat, setNoviCertifikat] = useState('')
   const [stPlovil, setStPlovil] = useState(0)
   const [obstajaProfil, setObstajaProfil] = useState(false)
+  const [skipperId, setSkipperId] = useState<string | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -51,6 +53,7 @@ export default function ProfilPage() {
           setIzkusnjeLet(data.izkusnje_let)
           setCertifikati(data.certifikati)
           setObstajaProfil(true)
+          setSkipperId(data.id)
         }
         setNalagaProfil(false)
       } else if (vloga === 'charter' || vloga === 'oba') {
@@ -165,6 +168,7 @@ export default function ProfilPage() {
         { vrednost: 'osnovno', label: 'Osnovno' },
         { vrednost: 'specializacija', label: 'Specializacija' },
         { vrednost: 'certifikati', label: 'Certifikati' },
+        { vrednost: 'zasedenost', label: 'Razpoložljivost' },
       ]
     : [
         { vrednost: 'osnovno', label: 'Osnovno' },
@@ -373,6 +377,26 @@ export default function ProfilPage() {
               </button>
             </div>
             <p className="text-xs text-gray-400">Certifikati se prikazujejo na vašem javnem profilu.</p>
+          </div>
+        )}
+
+        {tab === 'zasedenost' && vloga === 'skipper' && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-display text-base font-semibold text-[#0c2340] mb-1 flex items-center gap-2">
+              <CalendarRange className="w-4 h-4 text-[#c9a84c]" /> Vaša razpoložljivost
+            </h2>
+            {skipperId ? (
+              <>
+                <p className="text-xs text-gray-400 mb-4">
+                  Označite dneve, ko niste na voljo — to se takoj (brez &quot;Shrani spremembe&quot;) prikaže na vašem javnem profilu, kjer lahko stranke izbirajo samo med prostimi termini.
+                </p>
+                <UrediSkipperZasedenostKoledar skipperId={skipperId} />
+              </>
+            ) : (
+              <p className="text-sm text-gray-400">
+                Najprej izpolnite in shranite osnovne podatke (zavihek &quot;Osnovno&quot;) — šele nato lahko urejate razpoložljivost.
+              </p>
+            )}
           </div>
         )}
 

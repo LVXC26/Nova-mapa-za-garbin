@@ -9,8 +9,9 @@ import { unsplashSkipperji } from '@/data/mock'
 import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
+import ZasedenostPrikaz from '@/components/shared/ZasedenostPrikaz'
 import { createClient } from '@/lib/supabase/client'
-import type { Skipper, Rating } from '@/types/database'
+import type { Skipper, Rating, SkipperZasedenost } from '@/types/database'
 
 interface OcenaZImenom extends Rating {
   ime: string
@@ -38,12 +39,17 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
   const [novKomentar, setNovKomentar] = useState('')
   const [posiljaOceno, setPosiljaOceno] = useState(false)
   const [ocenaNapaka, setOcenaNapaka] = useState('')
+  const [zasedenost, setZasedenost] = useState<SkipperZasedenost[]>([])
+  const [izbranTermin, setIzbranTermin] = useState('')
 
   useEffect(() => {
     const supabase = createClient()
     supabase.from('skiperji').select('*').eq('id', id).maybeSingle().then(({ data }) => {
       setRealSkipper(data)
       setNalaga(false)
+    })
+    supabase.from('skipper_zasedenost').select('*').eq('skipper_id', id).then(({ data }) => {
+      if (data) setZasedenost(data)
     })
   }, [id])
 
@@ -268,6 +274,16 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                       <p className="text-gray-600 leading-relaxed">{skipper.opis}</p>
                     </div>
 
+                    {/* Razpoložljivost — vedno odprt koledar, direktna zahteva
+                        direktorja; skipper svojo zasedenost ureja na "Moj
+                        profil" (glej UrediSkipperZasedenostKoledar.tsx). */}
+                    <ZasedenostPrikaz
+                      naslov="Razpoložljivost"
+                      zasedenost={zasedenost}
+                      vrednost={izbranTermin}
+                      onChange={setIzbranTermin}
+                    />
+
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                       <h2 className="font-display text-lg font-semibold text-[#0c2340] mb-4 flex items-center gap-2">
                         <Award className="w-5 h-5 text-[#c9a84c]" /> Certifikati & licence
@@ -426,7 +442,7 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                     Za rezervacijo izpolnite povpraševanje spodaj — kontaktirala vas bo naša ekipa.
                   </div>
                   <p className="text-xs font-semibold text-[#0c2340] mb-3">Pošlji povpraševanje</p>
-                  <PovprasevanjeForma tip="skipper" targetId={String(skipper.id)} />
+                  <PovprasevanjeForma tip="skipper" targetId={String(skipper.id)} terminZunaj={izbranTermin} />
                 </div>
 
                 {/* Stats */}

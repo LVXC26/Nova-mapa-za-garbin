@@ -1,24 +1,28 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Send, CheckCircle, AlertCircle, UserCircle2 } from 'lucide-react'
+import { Send, CheckCircle, AlertCircle, UserCircle2, CalendarDays } from 'lucide-react'
 import { oddajPovprasevanje, type PovprasevanjeInput } from '@/app/actions/povprasevanje'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
-import TerminPolje from '@/components/shared/TerminPolje'
-import type { PloviloZasedenost } from '@/types/database'
 
 type Props = {
   tip: PovprasevanjeInput['tip']
   targetId: string
-  // Za povpraševanja o najemu: če je podana zasedenost, se polje "Želen
-  // termin" spremeni v gumb, ki ob kliku odpre koledar razpoložljivosti.
-  zasedenost?: PloviloZasedenost[]
+  // Za plovila/charterje/skiperje z znano zasedenostjo je nad tem obrazcem
+  // (glej ZasedenostPrikaz.tsx) prikazan vedno-odprt koledar — izbran termin
+  // pride sem od zunaj, polje "Želen termin" pa je zato samo-za-branje
+  // prikaz te izbire (namesto navadnega besedilnega vnosa).
+  terminZunaj?: string
 }
 
-export default function PovprasevanjeForma({ tip, targetId, zasedenost }: Props) {
+export default function PovprasevanjeForma({ tip, targetId, terminZunaj }: Props) {
   const { user, demoMode } = useAuth()
   const [forma, setForma] = useState({ ime: '', email: '', telefon: '', termin: '', sporocilo: '', gdpr: false })
+  // Ko koledar (ZasedenostPrikaz) izbiro nadzira od zunaj, je to vir resnice
+  // za termin namesto forma.termin — polje spodaj je zato samo prikaz, brez
+  // lastnega urejanja (glej "Želen termin" spodaj in handleSubmit).
+  const termin = terminZunaj !== undefined ? terminZunaj : forma.termin
   const [stanje, setStanje] = useState<'idle' | 'poslano' | 'napaka'>('idle')
   const [napakaSporocilo, setNapakaSporocilo] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -56,7 +60,7 @@ export default function PovprasevanjeForma({ tip, targetId, zasedenost }: Props)
         ime: forma.ime,
         email: forma.email,
         telefon: forma.telefon,
-        termin: forma.termin,
+        termin,
         sporocilo: forma.sporocilo,
       })
 
@@ -131,12 +135,13 @@ export default function PovprasevanjeForma({ tip, targetId, zasedenost }: Props)
 
       <div>
         <label className="block text-xs font-semibold text-[#0c2340] mb-1.5">Želen termin</label>
-        {zasedenost ? (
-          <TerminPolje
-            zasedenost={zasedenost}
-            vrednost={forma.termin}
-            onChange={(termin) => setForma((f) => ({ ...f, termin }))}
-          />
+        {terminZunaj !== undefined ? (
+          <div className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50">
+            <CalendarDays className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className={termin ? 'text-[#0c2340]' : 'text-gray-400'}>
+              {termin || 'Izberite termin v koledarju zgoraj'}
+            </span>
+          </div>
         ) : (
           <input
             type="text" name="termin" value={forma.termin} onChange={handleChange}

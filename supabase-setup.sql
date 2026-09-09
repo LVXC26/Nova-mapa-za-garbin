@@ -1612,3 +1612,33 @@ grant select on plovila_javno, charterji_javno, public_profiles to anon, authent
 drop policy if exists "Javni bralni dostop - slike plovil" on storage.objects;
 drop policy if exists "Javni bralni dostop - profilne slike" on storage.objects;
 drop policy if exists "Javni bralni dostop - slike objav" on storage.objects;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- ZASEDENOST SKIPPERJA — enak vzorec kot "plovilo_zasedenost" (glej
+-- zgoraj), samo da skipper ni vezan na plovilo, ampak neposredno na svoj
+-- skiperji.id. Skipper na "Moj profil" ročno označi dneve, ko ni na
+-- voljo (UrediSkipperZasedenostKoledar.tsx); to se javno prikaže na
+-- /skiperji/[id] kot vedno-odprt interaktiven koledar, povezan s
+-- povpraševanjem (glej PovprasevanjeForma.tsx).
+-- ═══════════════════════════════════════════════════════════════════
+
+create table if not exists skipper_zasedenost (
+  id uuid primary key default gen_random_uuid(),
+  skipper_id uuid references skiperji(id) on delete cascade not null,
+  datum_od date not null,
+  datum_do date not null,
+  created_at timestamptz default now(),
+  constraint veljaven_datumski_razpon_skipper check (datum_do >= datum_od)
+);
+
+alter table skipper_zasedenost enable row level security;
+
+drop policy if exists "Javni bralni dostop - zasedenost skipperja" on skipper_zasedenost;
+create policy "Javni bralni dostop - zasedenost skipperja" on skipper_zasedenost for select using (true);
+
+drop policy if exists "Skipper upravlja svojo zasedenost" on skipper_zasedenost;
+create policy "Skipper upravlja svojo zasedenost" on skipper_zasedenost for all
+  using (exists (select 1 from skiperji where skiperji.id = skipper_zasedenost.skipper_id and skiperji.user_id = auth.uid()))
+  with check (exists (select 1 from skiperji where skiperji.id = skipper_zasedenost.skipper_id and skiperji.user_id = auth.uid()));
+
+create index if not exists idx_skipper_zasedenost_skipper_id on skipper_zasedenost(skipper_id);

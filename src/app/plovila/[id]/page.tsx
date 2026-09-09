@@ -8,6 +8,7 @@ import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
+import ZasedenostPrikaz from '@/components/shared/ZasedenostPrikaz'
 import { createClient } from '@/lib/supabase/client'
 import { opremaLabele } from '@/lib/oprema'
 import type { Plovilo, PloviloZasedenost } from '@/types/database'
@@ -131,6 +132,7 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
   const [nalaga, setNalaga] = useState(true)
   const [shareOpen, setShareOpen] = useState(false)
   const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
+  const [izbranTermin, setIzbranTermin] = useState('')
   const [lightboxIndeks, setLightboxIndeks] = useState<number | null>(null)
   const [charter, setCharter] = useState<{ id: string; naziv: string; verified: boolean } | null>(null)
   const [prodajalec, setProdajalec] = useState<{ ime: string | null; created_at: string } | null>(null)
@@ -394,6 +396,17 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 )}
 
+                {/* Razpoložljivost — vedno odprt koledar (ne skrit za klikom v
+                    obrazcu), direktna zahteva direktorja. Izbira tu se
+                    prenese v povpraševanje na desni (glej izbranTermin). */}
+                {plovilo.tip_oglasa === 'najem' && (
+                  <ZasedenostPrikaz
+                    zasedenost={zasedenost}
+                    vrednost={izbranTermin}
+                    onChange={setIzbranTermin}
+                  />
+                )}
+
                 {/* Oglaševalski banner placeholder */}
                 <div className="w-full h-[90px] bg-[#0c2340] rounded-2xl flex items-center justify-center border border-[#1e3a5f] relative overflow-hidden">
                   <div className="text-center">
@@ -482,14 +495,15 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                   )}
                 </div>
 
-                {/* Povpraševanje forma — pri najemu polje "Želen termin" ob
-                    kliku odpre koledar razpoložljivosti (glej TerminPolje). */}
+                {/* Povpraševanje forma — pri najemu je "Želen termin" povezan
+                    z vedno-odprtim koledarjem zgoraj v glavnem stolpcu
+                    (glej ZasedenostPrikaz). */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                   <h3 className="font-semibold text-[#0c2340] mb-4 text-sm">Pošlji povpraševanje</h3>
                   <PovprasevanjeForma
                     tip="plovilo"
                     targetId={plovilo.id}
-                    zasedenost={plovilo.tip_oglasa === 'najem' ? zasedenost : undefined}
+                    terminZunaj={plovilo.tip_oglasa === 'najem' ? izbranTermin : undefined}
                   />
                 </div>
 
