@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { CheckCircle, AlertCircle, User, Lock, Bell, Camera, X, Loader2 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import { stisniSliko } from '@/lib/stisniSliko'
 
 const MAX_SLIKA_MB = 30
 
@@ -113,9 +114,10 @@ export default function NastavitveProfilaPage() {
     if (datoteka.size > MAX_SLIKA_MB * 1024 * 1024) { setNapaka(`Slika presega ${MAX_SLIKA_MB} MB.`); return }
 
     setNalagaSliko(true)
+    const stisnjena = await stisniSliko(datoteka)
     const supabase = createClient()
-    const pot = `${user.id}/${crypto.randomUUID()}-${datoteka.name}`
-    const { error: uploadError } = await supabase.storage.from('profilne-slike').upload(pot, datoteka)
+    const pot = `${user.id}/${crypto.randomUUID()}-${stisnjena.name}`
+    const { error: uploadError } = await supabase.storage.from('profilne-slike').upload(pot, stisnjena)
     if (uploadError) {
       setNalagaSliko(false)
       setNapaka('Napaka pri nalaganju slike: ' + uploadError.message)

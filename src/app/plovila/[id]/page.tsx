@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft, MapPin, Calendar, Ruler, Phone, Mail, MessageCircle, CheckCircle, Share2, Copy, X, Printer, ChevronLeft, ChevronRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
@@ -257,11 +258,14 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                 onClick={() => plovilo.slike?.[0] && setLightboxIndeks(0)}
               >
                 {plovilo.slike && plovilo.slike[0] ? (
-                  <img
+                  <Image
                     src={plovilo.slike[0]}
                     alt={plovilo.naziv}
-                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                    onError={e => { (e.target as HTMLImageElement).src = '' }}
+                    fill
+                    quality={90}
+                    priority
+                    sizes="(max-width: 768px) 100vw, 75vw"
+                    className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -284,10 +288,13 @@ export default function PloviloDetailPage({ params }: { params: Promise<{ id: st
                       onClick={() => plovilo.slike?.[i] && setLightboxIndeks(i)}
                     >
                       {plovilo.slike && plovilo.slike[i] ? (
-                        <img
+                        <Image
                           src={plovilo.slike[i]}
                           alt={`${plovilo.naziv} ${i + 1}`}
-                          className="w-full h-full object-cover cursor-pointer group-hover:scale-[1.02] transition-transform duration-300"
+                          fill
+                          quality={90}
+                          sizes="15vw"
+                          className="object-cover cursor-pointer group-hover:scale-[1.02] transition-transform duration-300"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">

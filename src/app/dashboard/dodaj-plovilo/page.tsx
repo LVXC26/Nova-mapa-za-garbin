@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { CheckCircle, Upload, AlertCircle, X } from 'lucide-react'
+import { CheckCircle, Upload, AlertCircle, X, Star, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { opremaKategorije } from '@/lib/oprema'
+import { stisniSlike } from '@/lib/stisniSliko'
 import TipPlovilaFormaIzbirnik from '@/components/plovila/TipPlovilaFormaIzbirnik'
 import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
 
@@ -61,6 +62,11 @@ function DodajPloviloContent() {
   const [napaka, setNapaka] = useState('')
   const [nalaga, setNalaga] = useState(false)
   const [nalagaSlike, setNalagaSlike] = useState(false)
+  // Ločeno od nalagaSlike (ki upravlja besedilo na gumbu "Objavi oglas") —
+  // stiskanje se zgodi ob IZBIRI slik, precej prej kot se uporabnik sploh
+  // dotakne gumba za oddajo, zato bi si delila stanje pomenilo zavajajoč
+  // "Nalagam slike..." napis na gumbu med samim izbiranjem fotografij.
+  const [stiskamSlike, setStiskamSlike] = useState(false)
   const [uspesno, setUspesno] = useState(false)
   const [obstojeceSlike, setObstojeceSlike] = useState<string[]>([])
   const [slike, setSlike] = useState<File[]>([])
@@ -112,7 +118,7 @@ function DodajPloviloContent() {
     setOprema((o) => ({ ...o, [kljuc]: !o[kljuc] }))
   }
 
-  function dodajSlike(datoteke: FileList | null) {
+  async function dodajSlike(datoteke: FileList | null) {
     if (!datoteke) return
     const nove: File[] = []
     for (const datoteka of Array.from(datoteke)) {
@@ -122,7 +128,12 @@ function DodajPloviloContent() {
     }
     if (!nove.length) return
     setNapaka('')
-    setSlike((s) => [...s, ...nove].slice(0, Math.max(0, MAX_SLIK - obstojeceSlike.length)))
+    // Pomanjšaj/stisni pred nalaganjem (glej lib/stisniSliko.ts) — telefonske
+    // slike so pogosto 5-25MB, kar na spletu ni potrebno.
+    setStiskamSlike(true)
+    const stisnjene = await stisniSlike(nove)
+    setStiskamSlike(false)
+    setSlike((s) => [...s, ...stisnjene].slice(0, Math.max(0, MAX_SLIK - obstojeceSlike.length)))
   }
 
   function odstraniSliko(indeks: number) {
@@ -131,6 +142,30 @@ function DodajPloviloContent() {
     } else {
       const noviIndeks = indeks - obstojeceSlike.length
       setSlike((s) => s.filter((_, i) => i !== noviIndeks))
+    }
+  }
+
+  // Uporabnik lahko sam določi, katera slika je naslovna (prikazana na
+  // karticah/v vrhu galerije) — to je vedno slika na indeksu 0 v
+  // slikePredogled, zato jo tja premaknemo. Ker so obstoječe (že naložene)
+  // slike v prikazu vedno pred novimi (glej slikePredogled zgoraj), nova,
+  // še ne naložena slika ob urejanju obstoječega oglasa ne more "prehiteti"
+  // obstoječih — v tem primeru je treba najprej shraniti, nato urediti znova.
+  function nastaviNaslovno(indeks: number) {
+    if (indeks === 0) return
+    if (indeks < obstojeceSlike.length) {
+      setObstojeceSlike((s) => {
+        const kopija = [...s]
+        const [izbrana] = kopija.splice(indeks, 1)
+        return [izbrana, ...kopija]
+      })
+    } else {
+      const noviIndeks = indeks - obstojeceSlike.length
+      setSlike((s) => {
+        const kopija = [...s]
+        const [izbrana] = kopija.splice(noviIndeks, 1)
+        return [izbrana, ...kopija]
+      })
     }
   }
 
@@ -541,6 +576,12 @@ function DodajPloviloContent() {
               className="hidden"
             />
 
+            {stiskamSlike && (
+              <div className="flex items-center justify-center gap-2 mt-3 text-xs text-gray-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Optimiziram slike...
+              </div>
+            )}
+
             {slikePredogled.length > 0 && (
               <div className="grid grid-cols-4 gap-3 mt-4">
                 {slikePredogled.map((url, i) => (
@@ -549,14 +590,24 @@ function DodajPloviloContent() {
                     <button
                       type="button"
                       onClick={() => odstraniSliko(i)}
+                      title="Odstrani sliko"
                       className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                    {i === 0 && (
+                    {i === 0 ? (
                       <span className="absolute bottom-1 left-1 bg-[#c9a84c] text-[#0c2340] text-[10px] font-semibold px-1.5 py-0.5 rounded">
                         Naslovna
                       </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => nastaviNaslovno(i)}
+                        title="Nastavi kot naslovno sliko"
+                        className="absolute bottom-1 left-1 w-6 h-6 rounded-full bg-black/60 hover:bg-[#c9a84c] text-white hover:text-[#0c2340] flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                      >
+                        <Star className="w-3.5 h-3.5" />
+                      </button>
                     )}
                   </div>
                 ))}

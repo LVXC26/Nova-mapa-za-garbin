@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor, CheckCircle, X, Clock, Trash2, Loader2, Camera } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import { stisniSliko } from '@/lib/stisniSliko'
 import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
 
 const MAX_SLIK_OBJAVA = 6
@@ -236,8 +237,9 @@ export default function FeedObjave({
     for (const datoteka of datoteke) {
       if (!datoteka.type.startsWith('image/')) { setSlikeNapaka(`"${datoteka.name}" ni slikovna datoteka.`); continue }
       if (datoteka.size > MAX_SLIKA_MB * 1024 * 1024) { setSlikeNapaka(`Slika "${datoteka.name}" presega ${MAX_SLIKA_MB} MB.`); continue }
-      const pot = `${user.id}/${crypto.randomUUID()}-${datoteka.name}`
-      const { error: uploadError } = await supabase.storage.from('objave-slike').upload(pot, datoteka)
+      const stisnjena = await stisniSliko(datoteka)
+      const pot = `${user.id}/${crypto.randomUUID()}-${stisnjena.name}`
+      const { error: uploadError } = await supabase.storage.from('objave-slike').upload(pot, stisnjena)
       if (uploadError) { setSlikeNapaka('Napaka pri nalaganju slike: ' + uploadError.message); continue }
       const { data } = supabase.storage.from('objave-slike').getPublicUrl(pot)
       nove.push(data.publicUrl)
