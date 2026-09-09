@@ -562,7 +562,12 @@ export default function FeedObjave({
                   <div className={`grid gap-1.5 mb-4 rounded-xl overflow-hidden ${o.slike.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                     {o.slike.map((url, i) => (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img key={i} src={url} alt="" className="w-full h-48 object-cover" />
+                      <img
+                        key={i}
+                        src={url}
+                        alt=""
+                        className={`w-full object-cover ${o.slike!.length === 1 ? 'h-96' : 'h-48'}`}
+                      />
                     ))}
                   </div>
                 )}

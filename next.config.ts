@@ -36,7 +36,11 @@ const csp = [
   // URL je vedno generiran s strani lastnega JS iz datoteke, ki jo je
   // uporabnik sam izbral, ne zunanji vir.
   "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com",
-  "connect-src 'self' https://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com",
+  // wss://*.supabase.co je nujen za Realtime (chat uporablja
+  // supabase.channel(...).on('postgres_changes', ...) — WebSocket, ločena
+  // shema od https:, CSP ju obravnava kot različna vira) — brez tega je bila
+  // chat stran tiho pokvarjena.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com",
 ].join('; ')
 
 const nextConfig: NextConfig = {

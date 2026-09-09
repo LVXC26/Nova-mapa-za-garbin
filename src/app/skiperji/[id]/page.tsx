@@ -31,7 +31,7 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
   const { user } = useAuth()
   const [realSkipper, setRealSkipper] = useState<Skipper | null>(null)
   const [nalaga, setNalaga] = useState(true)
-  const [tab, setTab] = useState<'objave' | 'o_meni' | 'ocene' | 'ekipa'>('o_meni')
+  const [tab, setTab] = useState<'objave' | 'o_meni' | 'ekipa'>('o_meni')
   const [ocene, setOcene] = useState<OcenaZImenom[]>([])
   const [nalagaOcen, setNalagaOcen] = useState(true)
   const [dodajOceno, setDodajOceno] = useState(false)
@@ -225,12 +225,10 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                         { id: 'ekipa', label: `Ekipa (${skipper.ekipa?.length ?? 0})` },
                         { id: 'objave', label: 'Objave' },
                         { id: 'o_meni', label: 'O nas' },
-                        { id: 'ocene', label: 'Ocene' },
                       ]
                     : [
                         { id: 'o_meni', label: 'O meni' },
                         { id: 'objave', label: 'Objave' },
-                        { id: 'ocene', label: 'Ocene' },
                       ]
                   ).map(t => (
                     <button key={t.id} onClick={() => setTab(t.id as typeof tab)}
@@ -322,69 +320,59 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Tab: Objave */}
-                {tab === 'objave' && (
-                  <FeedObjave
-                    title="Objave"
-                    showAddPost={!!user}
-                    lastnikUserId={skipper.user_id ?? null}
-                  />
-                )}
+                    {/* Ocene — prej ločen zavihek, zdaj vedno vidno tukaj
+                        (isti razlog kot pri razpoložljivosti: direktor noče,
+                        da je ocena "posebej" skrita za dodatnim klikom). */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h2 className="font-display text-lg font-semibold text-[#0c2340]">Ocene strank</h2>
+                        <div className="flex items-center gap-2">
+                          <div className="flex">
+                            {zvezdice.map((poln, i) => (
+                              <Star key={i} className={`w-4 h-4 ${poln ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                            ))}
+                          </div>
+                          <span className="font-bold text-[#0c2340]">{povprecje.toFixed(1)}</span>
+                          <span className="text-gray-400 text-sm">({steviloOcen})</span>
+                        </div>
+                      </div>
 
-                {/* Tab: Ocene */}
-                {tab === 'ocene' && (
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="font-display text-lg font-semibold text-[#0c2340]">Ocene strank</h2>
-                      <div className="flex items-center gap-2">
-                        <div className="flex">
-                          {zvezdice.map((poln, i) => (
-                            <Star key={i} className={`w-4 h-4 ${poln ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                      {nalagaOcen ? (
+                        <p className="text-sm text-gray-400 text-center py-8">Nalagam ocene...</p>
+                      ) : ocene.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-8">Ta skipper še nima ocen.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {ocene.map((o) => (
+                            <div key={o.id} className="border-b border-gray-50 last:border-0 pb-4 last:pb-0">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-sm font-bold text-[#0c2340]">{o.ime[0]}</div>
+                                  <span className="font-medium text-[#0c2340] text-sm">{o.ime}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex">
+                                    {Array.from({length: 5}).map((_, j) => (
+                                      <Star key={j} className={`w-3 h-3 ${j < o.score ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })}</span>
+                                </div>
+                              </div>
+                              {o.komentar && <p className="text-sm text-gray-600 leading-relaxed ml-10">{o.komentar}</p>}
+                            </div>
                           ))}
                         </div>
-                        <span className="font-bold text-[#0c2340]">{povprecje.toFixed(1)}</span>
-                        <span className="text-gray-400 text-sm">({steviloOcen})</span>
-                      </div>
-                    </div>
+                      )}
 
-                    {nalagaOcen ? (
-                      <p className="text-sm text-gray-400 text-center py-8">Nalagam ocene...</p>
-                    ) : ocene.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-8">Ta skipper še nima ocen.</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {ocene.map((o) => (
-                          <div key={o.id} className="border-b border-gray-50 last:border-0 pb-4 last:pb-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-sm font-bold text-[#0c2340]">{o.ime[0]}</div>
-                                <span className="font-medium text-[#0c2340] text-sm">{o.ime}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex">
-                                  {Array.from({length: 5}).map((_, j) => (
-                                    <Star key={j} className={`w-3 h-3 ${j < o.score ? 'text-[#c9a84c] fill-[#c9a84c]' : 'text-gray-200 fill-gray-200'}`} />
-                                  ))}
-                                </div>
-                                <span className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })}</span>
-                              </div>
-                            </div>
-                            {o.komentar && <p className="text-sm text-gray-600 leading-relaxed ml-10">{o.komentar}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                      {user && !dodajOceno && (
+                        <button onClick={() => setDodajOceno(true)} className="mt-5 w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors font-medium">
+                          + Dodaj oceno
+                        </button>
+                      )}
 
-                    {user && !dodajOceno && (
-                      <button onClick={() => setDodajOceno(true)} className="mt-5 w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors font-medium">
-                        + Dodaj oceno
-                      </button>
-                    )}
-
-                    {user && dodajOceno && (
+                      {user && dodajOceno && (
                       <div className="mt-5 p-4 bg-gray-50 rounded-xl">
                         {ocenaNapaka && <p className="text-sm text-red-600 mb-3">{ocenaNapaka}</p>}
                         <label className="block text-sm font-semibold text-[#0c2340] mb-2">Vaša ocena</label>
@@ -411,8 +399,18 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                           </button>
                         </div>
                       </div>
-                    )}
+                      )}
+                    </div>
                   </div>
+                )}
+
+                {/* Tab: Objave */}
+                {tab === 'objave' && (
+                  <FeedObjave
+                    title="Objave"
+                    showAddPost={!!user}
+                    lastnikUserId={skipper.user_id ?? null}
+                  />
                 )}
 
               </div>
