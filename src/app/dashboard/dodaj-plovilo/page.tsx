@@ -128,12 +128,32 @@ function DodajPloviloContent() {
     }
     if (!nove.length) return
     setNapaka('')
-    // Pomanjšaj/stisni pred nalaganjem (glej lib/stisniSliko.ts) — telefonske
-    // slike so pogosto 5-25MB, kar na spletu ni potrebno.
+
+    // Najprej takoj prikažemo izvirne datoteke — predogled se pojavi brez
+    // zakasnitve, tudi za velike fotografije. Stiskanje (glej
+    // lib/stisniSliko.ts — telefonske slike so pogosto 5-25MB) teče v
+    // ozadju in jih zamenja, ko je gotovo. Prej je nalaganje čakalo na
+    // stiskanje PREDEN se je slika sploh pojavila v predogledu, kar je bilo
+    // videti, kot da izbrane slike ni mogoče naložiti/prikazati.
+    const prostor = Math.max(0, MAX_SLIK - obstojeceSlike.length - slike.length)
+    const dodane = nove.slice(0, prostor)
+    if (!dodane.length) return
+    setSlike((s) => [...s, ...dodane])
+
     setStiskamSlike(true)
-    const stisnjene = await stisniSlike(nove)
+    const stisnjene = await stisniSlike(dodane)
     setStiskamSlike(false)
-    setSlike((s) => [...s, ...stisnjene].slice(0, Math.max(0, MAX_SLIK - obstojeceSlike.length)))
+    // Ujemanje po referenci, ne po indeksu — med stiskanjem bi uporabnik
+    // lahko sliko odstranil ali jo nastavil za naslovno (spremeni vrstni
+    // red), zato bi bil fiksen indeks lahko že napačen.
+    setSlike((s) => {
+      const kopija = [...s]
+      dodane.forEach((izvirna, i) => {
+        const idx = kopija.indexOf(izvirna)
+        if (idx !== -1) kopija[idx] = stisnjene[i]
+      })
+      return kopija
+    })
   }
 
   function odstraniSliko(indeks: number) {
@@ -635,10 +655,10 @@ function DodajPloviloContent() {
 
           <button
             type="submit"
-            disabled={nalaga}
+            disabled={nalaga || stiskamSlike}
             className="w-full py-4 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-bold rounded-2xl transition-all hover:scale-[1.01] shadow-sm text-base"
           >
-            {nalagaSlike ? 'Nalagam slike...' : nalaga ? 'Shranjujem...' : editId ? '✓ Shrani spremembe' : '✓ Objavi oglas'}
+            {stiskamSlike ? 'Optimiziram slike...' : nalagaSlike ? 'Nalagam slike...' : nalaga ? 'Shranjujem...' : editId ? '✓ Shrani spremembe' : '✓ Objavi oglas'}
           </button>
         </form>
       </div>
