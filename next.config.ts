@@ -29,7 +29,13 @@ const csp = [
   `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net${jeRazvoj ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com",
+  // blob: je nujen za predogled lokalno izbranih slik (URL.createObjectURL v
+  // obrazcih za nalaganje slik/stiskanje pred nalaganjem) — brez njega CSP
+  // tiho blokira <img>/Image() na blob: URL, kar je izgledalo kot da se
+  // izbrane slike sploh ne prikažejo/naložijo. Ni varnostno tveganje: blob:
+  // URL je vedno generiran s strani lastnega JS iz datoteke, ki jo je
+  // uporabnik sam izbral, ne zunanji vir.
+  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com",
   "connect-src 'self' https://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com",
 ].join('; ')
 
