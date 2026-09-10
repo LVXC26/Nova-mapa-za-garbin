@@ -42,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // od takrat vedno vracala 0 vrstic, zato so charter strani ze nekaj casa
     // tiho izpadle iz sitemapa. Javni pogled "charterji_javno" jih vrne.
     supabase.from('charterji_javno').select('id'),
-    supabase.from('skiperji').select('id'),
+    supabase.from('skiperji_javno').select('id'),
     supabase.from('novice').select('slug').not('published_at', 'is', null),
   ])
 
