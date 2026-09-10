@@ -336,10 +336,10 @@ function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undef
             </div>
             <div className="flex flex-wrap gap-2 mt-3">
               {[
-                { href: '/dashboard/profil', label: 'Osnovno', ikona: Pencil },
-                { href: '/dashboard/profil#specializacija', label: 'Specializacija', ikona: Ship },
-                { href: '/dashboard/profil#certifikati', label: 'Certifikati', ikona: Award },
-                { href: '/dashboard/profil#zasedenost', label: 'Razpoložljivost', ikona: Calendar },
+                { href: '/dashboard/profil?zavihek=osnovno', label: 'Osnovno', ikona: Pencil },
+                { href: '/dashboard/profil?zavihek=specializacija', label: 'Specializacija', ikona: Ship },
+                { href: '/dashboard/profil?zavihek=certifikati', label: 'Certifikati', ikona: Award },
+                { href: '/dashboard/profil?zavihek=zasedenost', label: 'Razpoložljivost', ikona: Calendar },
               ].map(({ href, label, ikona: Ikona }) => (
                 <Link
                   key={label}

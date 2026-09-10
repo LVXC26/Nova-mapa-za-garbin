@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { CheckCircle, AlertCircle, Upload, MapPin, Phone, Globe, Award, Ship, CalendarRange } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -10,20 +11,38 @@ import type { TipCharterPlovila } from '@/types/database'
 const TIPI_PLOVIL = ['jadrnica', 'motorni', 'katamaran', 'jahta', 'gumenjak']
 const JEZIKI = ['slovenščina', 'angleščina', 'hrvaščina', 'nemščina', 'italijanščina']
 
+type Zavihek = 'osnovno' | 'specializacija' | 'certifikati' | 'zasedenost'
+function veljavenZavihek(v: string | null): Zavihek | null {
+  return v === 'osnovno' || v === 'specializacija' || v === 'certifikati' || v === 'zasedenost' ? v : null
+}
+
 export default function ProfilPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-8 max-w-3xl flex items-center justify-center min-h-[40vh]">
+        <div className="w-8 h-8 rounded-full border-4 border-[#c9a84c] border-t-transparent animate-spin" />
+      </div>
+    }>
+      <ProfilContent />
+    </Suspense>
+  )
+}
+
+function ProfilContent() {
   const { user, vloga, demoMode } = useAuth()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [uspesno, setUspesno] = useState(false)
   const [napaka, setNapaka] = useState('')
   const [nalaga, setNalaga] = useState(false)
   const [nalagaProfil, setNalagaProfil] = useState(true)
-  // Globoka povezava iz dashboarda (npr. /dashboard/profil#certifikati) odpre
-  // pravi zavihek. Hash namesto ?tab= da se izognemo Suspense zahtevi pri
-  // useSearchParams. Lazy initializer — brez učinka, brez lint opozorila.
-  const [tab, setTab] = useState<'osnovno' | 'specializacija' | 'certifikati' | 'zasedenost'>(() => {
-    if (typeof window === 'undefined') return 'osnovno'
-    const h = window.location.hash.replace('#', '')
-    return (h === 'specializacija' || h === 'certifikati' || h === 'zasedenost') ? h : 'osnovno'
-  })
+  // Zavihek je izpeljan iz URL-ja (?zavihek=…) — en sam vir resnice, brez
+  // sinhronizacijskega učinka. Klik na zavihek posodobi URL (spodaj), globoka
+  // povezava iz dashboarda pa deluje takoj.
+  const tab: Zavihek = veljavenZavihek(searchParams.get('zavihek')) ?? 'osnovno'
+  function nastaviZavihek(t: Zavihek) {
+    router.replace(`/dashboard/profil?zavihek=${t}`, { scroll: false })
+  }
 
   const ime = user?.user_metadata?.ime ?? ''
   const email = user?.email ?? ''
@@ -244,7 +263,7 @@ export default function ProfilPage() {
           <button
             key={t.vrednost}
             type="button"
-            onClick={() => setTab(t.vrednost as typeof tab)}
+            onClick={() => nastaviZavihek(t.vrednost as Zavihek)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 ${
               tab === t.vrednost ? 'bg-white text-[#0c2340] shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
