@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { CheckCircle, Upload, AlertCircle, X, Star, Loader2, ImageOff } from 'lucide-react'
+import { CheckCircle, Upload, AlertCircle, X, Star, Loader2, ImageOff, Crown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { opremaKategorije } from '@/lib/oprema'
@@ -504,7 +504,7 @@ function DodajPloviloContent() {
           {tipOglasa === 'prodaja' && (
             <div className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-100 bg-gray-50 text-left">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gray-100 text-gray-400">
-                ⚡
+                <Crown className="w-5 h-5" />
               </div>
               <div>
                 <p className="font-semibold text-sm text-gray-700">Premium objava — na voljo po objavi</p>

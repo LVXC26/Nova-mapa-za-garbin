@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { PlusCircle, Ship, MapPin, Calendar, CalendarRange, Pencil, Eye, EyeOff, Loader2, CheckCircle, Zap, Eye as EyeIcon, Star, Trash2, Info } from 'lucide-react'
+import { PlusCircle, Ship, MapPin, Calendar, CalendarRange, Pencil, Eye, EyeOff, Loader2, CheckCircle, Crown, Eye as EyeIcon, Star, Trash2, Info } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import UrediZasedenostKoledar from '@/components/plovila/UrediZasedenostKoledar'
@@ -299,7 +299,7 @@ function MojaPlovilaContent() {
                       )}
                       {jeUrgentno && !jeProdano && (
                         <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#c9a84c] text-[#0c2340] shrink-0 flex items-center gap-1">
-                          <Zap className="w-3 h-3" /> Premium
+                          <Crown className="w-3 h-3" /> Premium
                           <span title="Premium: zlata obroba na kartici in prednost v prikazu za 30 dni." className="cursor-help">
                             <Info className="w-3 h-3 opacity-70" />
                           </span>
@@ -390,7 +390,7 @@ function MojaPlovilaContent() {
                             : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
                         }`}
                       >
-                        {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                        {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
                       </button>
                     )}
                     {/* Izklop urgentne oznake — na voljo vsakemu lastniku (brezplačno,
@@ -402,7 +402,7 @@ function MojaPlovilaContent() {
                         title="Izklopi premium oznako"
                         className="p-2 rounded-xl text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
                       >
-                        {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                        {urgentnoNarocam === plovilo.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
                       </button>
                     )}
                     {/* Prodano */}
