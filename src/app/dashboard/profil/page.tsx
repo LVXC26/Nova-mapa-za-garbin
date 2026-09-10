@@ -38,6 +38,7 @@ export default function ProfilPage() {
   const [stPlovil, setStPlovil] = useState(0)
   const [obstajaProfil, setObstajaProfil] = useState(false)
   const [skipperId, setSkipperId] = useState<string | null>(null)
+  const [aktiven, setAktiven] = useState(true)
 
   useEffect(() => {
     ;(async () => {
@@ -52,6 +53,7 @@ export default function ProfilPage() {
           setJeziki(data.jeziki)
           setIzkusnjeLet(data.izkusnje_let)
           setCertifikati(data.certifikati)
+          setAktiven(data.aktiven !== false)
           setObstajaProfil(true)
           setSkipperId(data.id)
         }
@@ -114,6 +116,7 @@ export default function ProfilPage() {
         tip_plovila: tipPlovila,
         jeziki,
         certifikati,
+        aktiven,
       }
       const { error } = obstajaProfil
         ? await supabase.from('skiperji').update(polja).eq('user_id', user.id)
@@ -305,6 +308,26 @@ export default function ProfilPage() {
               <textarea rows={4} value={forma.opis} onChange={e => setForma(f => ({...f, opis: e.target.value}))}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none" />
             </div>
+
+            {vloga === 'skipper' && (
+              <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => setAktiven(v => !v)}
+                  className={`w-11 h-6 rounded-full relative transition-colors shrink-0 mt-0.5 ${aktiven ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${aktiven ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+                <div>
+                  <p className="text-sm font-semibold text-[#0c2340]">Profil je {aktiven ? 'aktiven' : 'neaktiven'}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                    {aktiven
+                      ? 'Vaš profil je viden v javnem seznamu skiperjev in iskanju.'
+                      : 'Vaš profil je skrit iz javnega seznama in iskanja — primerno za daljšo odsotnost. Ponovno ga vklopite, ko boste spet na voljo.'}
+                  </p>
+                </div>
+              </div>
+            )}
           </>
         )}
 

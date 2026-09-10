@@ -19,6 +19,7 @@ interface UrediForma {
   jeziki: string[]
   certifikati: string[]
   verified: boolean
+  aktiven: boolean
 }
 
 export default function AdminSkiperjiPage() {
@@ -68,6 +69,7 @@ export default function AdminSkiperjiPage() {
       jeziki: s.jeziki ?? [],
       certifikati: s.certifikati ?? [],
       verified: !!s.verified,
+      aktiven: s.aktiven !== false,
     })
   }
 
@@ -107,6 +109,7 @@ export default function AdminSkiperjiPage() {
       jeziki: forma.jeziki,
       certifikati: forma.certifikati,
       verified: forma.verified,
+      aktiven: forma.aktiven,
     }).eq('id', urejaId)
     setShranjuje(false)
     if (error) { setNapaka('Napaka pri shranjevanju: ' + error.message); return }
@@ -148,10 +151,15 @@ export default function AdminSkiperjiPage() {
                   </td>
                   <td className="px-5 py-3.5 text-gray-700">{s.cena_dan ?? 0} €</td>
                   <td className="px-5 py-3.5">
-                    <span className={`flex items-center gap-1 text-xs font-medium w-fit px-2.5 py-1 rounded-full ${s.verified ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {s.verified && <BadgeCheck className="w-3.5 h-3.5" />}
-                      {s.verified ? 'Preverjeno' : 'V pregledu'}
-                    </span>
+                    <div className="flex flex-col gap-1 items-start">
+                      <span className={`flex items-center gap-1 text-xs font-medium w-fit px-2.5 py-1 rounded-full ${s.verified ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {s.verified && <BadgeCheck className="w-3.5 h-3.5" />}
+                        {s.verified ? 'Preverjeno' : 'V pregledu'}
+                      </span>
+                      {s.aktiven === false && (
+                        <span className="text-xs font-medium w-fit px-2.5 py-1 rounded-full bg-red-50 text-red-600">Neaktiven</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-2">
@@ -248,10 +256,16 @@ export default function AdminSkiperjiPage() {
                           </div>
                         </div>
 
-                        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                          <input type="checkbox" checked={forma.verified} onChange={e => setForma(f => f && ({ ...f, verified: e.target.checked }))} className="rounded" />
-                          Preverjen (verified badge)
-                        </label>
+                        <div className="flex flex-col gap-2">
+                          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <input type="checkbox" checked={forma.verified} onChange={e => setForma(f => f && ({ ...f, verified: e.target.checked }))} className="rounded" />
+                            Preverjen (verified badge)
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <input type="checkbox" checked={forma.aktiven} onChange={e => setForma(f => f && ({ ...f, aktiven: e.target.checked }))} className="rounded" />
+                            Aktiven — prikazan v javnem seznamu (/skiperji, iskanje)
+                          </label>
+                        </div>
 
                         <div className="flex gap-2 pt-1">
                           <button onClick={shrani} disabled={shranjuje} className="px-4 py-2 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold text-sm rounded-full">

@@ -235,6 +235,11 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
         {/* VSEBINA */}
         <section className="py-12 bg-[#f8fafc]">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            {skipper.aktiven === false && (
+              <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                Ta skipper trenutno ni aktiven in ni prikazan v javnem seznamu ali iskanju.
+              </div>
+            )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
               {/* LEVA — tabs */}

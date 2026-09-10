@@ -37,8 +37,9 @@ export default function SkiperjiPage() {
   useEffect(() => {
     const supabase = createClient()
     // skiperji_javno — javni pogled brez cena_dan (osnovna tabela skiperji
-    // je omejena na lastnika + admina, glej supabase-setup.sql).
-    supabase.from('skiperji_javno').select('*').order('created_at', { ascending: false })
+    // je omejena na lastnika + admina, glej supabase-setup.sql). aktiven=true
+    // — neaktivni skiperji (daljša odsotnost) se ne prikažejo.
+    supabase.from('skiperji_javno').select('*').eq('aktiven', true).order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setRealSkiperji(data) })
   }, [])
 
