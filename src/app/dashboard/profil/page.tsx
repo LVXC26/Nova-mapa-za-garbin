@@ -313,12 +313,18 @@ export default function ProfilPage() {
               <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50">
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={aktiven}
                   onClick={() => setAktiven(v => !v)}
-                  className={`w-11 h-6 rounded-full relative transition-colors shrink-0 mt-0.5 ${aktiven ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                  className={`relative shrink-0 mt-0.5 rounded-full transition-colors focus:outline-none ${aktiven ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                  style={{ width: 44, height: 24 }}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${aktiven ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  <span
+                    className="absolute rounded-full bg-white shadow transition-all"
+                    style={{ width: 20, height: 20, top: 2, left: aktiven ? 22 : 2 }}
+                  />
                 </button>
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#0c2340]">Profil je {aktiven ? 'aktiven' : 'neaktiven'}</p>
                   <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
                     {aktiven

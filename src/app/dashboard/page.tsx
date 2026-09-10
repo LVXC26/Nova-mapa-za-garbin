@@ -213,12 +213,22 @@ function useLastniSkipper(userId: string | undefined) {
     })()
   }, [userId])
 
-  return { skipper, nalaga }
+  return { skipper, nalaga, setSkipper }
 }
 
 function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undefined }) {
-  const { skipper: lastniSkipper, nalaga: nalagaSkipper } = useLastniSkipper(userId)
+  const { skipper: lastniSkipper, nalaga: nalagaSkipper, setSkipper } = useLastniSkipper(userId)
   const povprasevanjaCount = usePovprasevanjaCount('skipper', lastniSkipper ? [lastniSkipper.id] : [])
+  const [preklapljaAktiven, setPreklapljaAktiven] = useState(false)
+
+  async function preklopiAktiven() {
+    if (!lastniSkipper || preklapljaAktiven) return
+    const nova = lastniSkipper.aktiven === false
+    setPreklapljaAktiven(true)
+    const { error } = await createClient().from('skiperji').update({ aktiven: nova }).eq('id', lastniSkipper.id)
+    setPreklapljaAktiven(false)
+    if (!error) setSkipper({ ...lastniSkipper, aktiven: nova })
+  }
 
   return (
     <div className="p-8">
@@ -303,12 +313,31 @@ function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undef
                 <span key={c} className="text-xs px-2.5 py-1 bg-[#0c2340]/5 text-[#0c2340] rounded-full font-medium">{c}</span>
               ))}
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-              <p className="text-sm text-gray-500">Cena: <span className="font-bold text-[#0c2340]">{lastniSkipper.cena_dan} € / dan</span></p>
-              <Link href={`/skiperji/${lastniSkipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline">
-                Oglej profil →
-              </Link>
+            <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={lastniSkipper.aktiven !== false}
+                  onClick={preklopiAktiven}
+                  disabled={preklapljaAktiven}
+                  className={`relative shrink-0 rounded-full transition-colors focus:outline-none disabled:opacity-60 ${lastniSkipper.aktiven !== false ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                  style={{ width: 40, height: 22 }}
+                >
+                  <span className="absolute rounded-full bg-white shadow transition-all" style={{ width: 18, height: 18, top: 2, left: lastniSkipper.aktiven !== false ? 20 : 2 }} />
+                </button>
+                <span className="text-sm text-gray-600 truncate">
+                  {lastniSkipper.aktiven !== false ? 'Profil aktiven' : 'Profil skrit'}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 shrink-0">
+                <Link href="/dashboard/profil" className="text-sm text-[#0c2340] font-medium hover:underline">Uredi</Link>
+                <Link href={`/skiperji/${lastniSkipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline">
+                  Oglej profil →
+                </Link>
+              </div>
             </div>
+            <p className="text-xs text-gray-400 mt-2">Cena: {lastniSkipper.cena_dan ?? 0} € / dan &middot; vidi le Garbin ekipa, strankam piše &bdquo;po dogovoru&ldquo;</p>
           </>
         )}
       </div>
