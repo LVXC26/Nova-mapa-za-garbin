@@ -167,6 +167,10 @@ export interface Skipper {
   // supabase-setup.sql). Zato je tu neobvezen.
   cena_dan?: number | null
   verified: boolean
+  // false = profil skrit iz javnih seznamov (/skiperji, iskanje). Preklopi
+  // admin ali skipper sam. Privzeto true (DB default) — zato neobvezen pri
+  // vstavljanju. Glej supabase-setup.sql.
+  aktiven?: boolean
   tip_skiper: TipSkiper
   naziv_agencije?: string | null
   ekipa?: { ime: string; specializacija: string; ocena: number }[] | null

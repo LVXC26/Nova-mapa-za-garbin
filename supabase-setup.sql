@@ -1733,11 +1733,19 @@ create policy "Admin bere vse skiperje" on skiperji for select using (
   exists (select 1 from profiles where id = auth.uid() and is_admin = true)
 );
 
+-- "aktiven" — če je false, se skipper ne prikaže v javnih seznamih
+-- (/skiperji, iskanje). Preklopi ga admin (v /admin/skiperji) ali skipper
+-- sam (Moj profil) — npr. daljša odsotnost, začasna prekinitev. Default
+-- true, da se obstoječi profili obnašajo kot doslej. Ni admin-only stolpec
+-- (prevent_skipper_self_escalation ga NAMENOMA ne ščiti — skipper sme
+-- pauzirati svoj profil), zato ni potrebe po posebnem triggerju.
+alter table skiperji add column if not exists aktiven boolean not null default true;
+
 create or replace view skiperji_javno
 with (security_invoker = false)
 as select
   id, user_id, ime, lokacija, izkusnje_let, jeziki, certifikati, tip_plovila,
-  opis, ocena, st_ocen, verified, tip_skiper, naziv_agencije, ekipa, created_at
+  opis, ocena, st_ocen, verified, aktiven, tip_skiper, naziv_agencije, ekipa, created_at
 from skiperji;
 
 -- Isti razred napake kot pri plovila_javno/charterji_javno: security_invoker
