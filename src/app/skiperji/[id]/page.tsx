@@ -47,9 +47,11 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     const supabase = createClient()
-    // skiperji_javno — brez cena_dan (glej supabase-setup.sql).
-    supabase.from('skiperji_javno').select('*').eq('id', id).maybeSingle().then(({ data }) => {
-      setRealSkipper(data as Skipper | null)
+    // TODO: preklopi na 'skiperji_javno' (brez cena_dan), ko bo migracija iz
+    // supabase-setup.sql pognana. Cena je že skrita v UI ("Cena po dogovoru");
+    // admin jo vidi prek posebne poizvedbe spodaj.
+    supabase.from('skiperji').select('*').eq('id', id).maybeSingle().then(({ data }) => {
+      setRealSkipper(data)
       setNalaga(false)
     })
     supabase.from('skipper_zasedenost').select('*').eq('skipper_id', id).then(({ data }) => {

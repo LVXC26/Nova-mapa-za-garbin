@@ -36,9 +36,10 @@ export default function SkiperjiPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    // skiperji_javno namesto skiperji — brez cena_dan (javno "po dogovoru",
-    // glej supabase-setup.sql).
-    supabase.from('skiperji_javno').select('*').order('created_at', { ascending: false })
+    // TODO: preklopi na 'skiperji_javno' (brez cena_dan), ko bo migracija
+    // iz supabase-setup.sql pognana v Supabase. Cena je itak že skrita v UI
+    // spodaj ("Cena po dogovoru").
+    supabase.from('skiperji').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setRealSkiperji(data) })
   }, [])
 
