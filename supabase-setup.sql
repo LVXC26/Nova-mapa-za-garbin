@@ -1741,7 +1741,13 @@ create policy "Admin bere vse skiperje" on skiperji for select using (
 -- pauzirati svoj profil), zato ni potrebe po posebnem triggerju.
 alter table skiperji add column if not exists aktiven boolean not null default true;
 
-create or replace view skiperji_javno
+-- drop + create (ne "create or replace") — če pogled že obstaja iz prejšnje
+-- različice te datoteke BREZ stolpca "aktiven", ga "create or replace" ne
+-- more vriniti na sredino seznama (Postgres ujema stolpce po poziciji:
+-- ERROR 42P16 "cannot change name of view column").
+drop view if exists skiperji_javno;
+
+create view skiperji_javno
 with (security_invoker = false)
 as select
   id, user_id, ime, lokacija, izkusnje_let, jeziki, certifikati, tip_plovila,
