@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import {
   PlusCircle, List, Ship, Heart, ArrowRight,
   MessageCircle, Compass, Calendar,
-  CheckCircle, Activity, Star, TrendingUp, Pencil
+  CheckCircle, Activity, Star, TrendingUp, Pencil, Award
 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -330,14 +330,27 @@ function SkipperDashboard({ ime, userId }: { ime: string; userId: string | undef
                   {lastniSkipper.aktiven !== false ? 'Profil aktiven' : 'Profil skrit'}
                 </span>
               </div>
-              <div className="flex items-center gap-4 shrink-0">
-                <Link href="/dashboard/profil" className="text-sm text-[#0c2340] font-medium hover:underline">Uredi</Link>
-                <Link href={`/skiperji/${lastniSkipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline">
-                  Oglej profil →
-                </Link>
-              </div>
+              <Link href={`/skiperji/${lastniSkipper.id}`} className="text-sm text-[#c9a84c] font-medium hover:underline shrink-0">
+                Oglej profil →
+              </Link>
             </div>
-            <p className="text-xs text-gray-400 mt-2">Cena: {lastniSkipper.cena_dan ?? 0} € / dan &middot; vidi le Garbin ekipa, strankam piše &bdquo;po dogovoru&ldquo;</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {[
+                { href: '/dashboard/profil', label: 'Osnovno', ikona: Pencil },
+                { href: '/dashboard/profil#specializacija', label: 'Specializacija', ikona: Ship },
+                { href: '/dashboard/profil#certifikati', label: 'Certifikati', ikona: Award },
+                { href: '/dashboard/profil#zasedenost', label: 'Razpoložljivost', ikona: Calendar },
+              ].map(({ href, label, ikona: Ikona }) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0c2340]/5 hover:bg-[#0c2340]/10 text-[#0c2340] text-xs font-medium transition-colors"
+                >
+                  <Ikona className="w-3.5 h-3.5" /> {label}
+                </Link>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Cena: {lastniSkipper.cena_dan ?? 0} € / dan &middot; vidi le Garbin ekipa, strankam piše &bdquo;po dogovoru&ldquo;</p>
           </>
         )}
       </div>

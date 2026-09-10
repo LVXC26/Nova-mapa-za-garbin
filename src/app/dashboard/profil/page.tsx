@@ -16,7 +16,14 @@ export default function ProfilPage() {
   const [napaka, setNapaka] = useState('')
   const [nalaga, setNalaga] = useState(false)
   const [nalagaProfil, setNalagaProfil] = useState(true)
-  const [tab, setTab] = useState<'osnovno' | 'specializacija' | 'certifikati' | 'zasedenost'>('osnovno')
+  // Globoka povezava iz dashboarda (npr. /dashboard/profil#certifikati) odpre
+  // pravi zavihek. Hash namesto ?tab= da se izognemo Suspense zahtevi pri
+  // useSearchParams. Lazy initializer — brez učinka, brez lint opozorila.
+  const [tab, setTab] = useState<'osnovno' | 'specializacija' | 'certifikati' | 'zasedenost'>(() => {
+    if (typeof window === 'undefined') return 'osnovno'
+    const h = window.location.hash.replace('#', '')
+    return (h === 'specializacija' || h === 'certifikati' || h === 'zasedenost') ? h : 'osnovno'
+  })
 
   const ime = user?.user_metadata?.ime ?? ''
   const email = user?.email ?? ''
