@@ -69,15 +69,26 @@ export default function HomePage() {
       .then(({ data }) => { if (data) setRealneNovice(data as NovicaZKategorijo[]) })
   }, [])
 
+  // Vrtenje premium (promoted) oglasov: vsakih 5 ur se seznam zavrti za eno
+  // mesto — po vrsti, ne naključno, in enako za vse obiskovalce ob istem
+  // času. Tako čez čas vsak plačnik pride na vrh, ne le tisti z najstarejšim
+  // oglasom. Izračunano enkrat ob nalaganju strani.
+  const [rotacijaBlok] = useState(() => Math.floor(Date.now() / (5 * 60 * 60 * 1000)))
+  function zavrti<T>(arr: T[]): T[] {
+    if (arr.length <= 1) return arr
+    const zamik = rotacijaBlok % arr.length
+    return [...arr.slice(zamik), ...arr.slice(0, zamik)]
+  }
+
   // Enak vrstni red kot na /plovila: urgentno > promoted > ostali, prodana na konec —
   // brez tega bi "Urgentna prodaja" (plačana/označena prioriteta) na naslovnici
-  // pomenila nič, ker se je tu prikazovalo zgolj zadnjih 6 dodanih oglasov.
+  // pomenila nič. Prikaže se do 50 oglasov (prej samo 6).
   function razvrsti(seznam: Plovilo[]): Plovilo[] {
     return [
       ...seznam.filter(p => p.urgentno && !p.prodano),
-      ...seznam.filter(p => p.promoted && !p.urgentno && !p.prodano),
+      ...zavrti(seznam.filter(p => p.promoted && !p.urgentno && !p.prodano)),
       ...seznam.filter(p => !p.promoted && !p.urgentno && !p.prodano),
-    ].slice(0, 6)
+    ].slice(0, 50)
   }
   // Hero "Kupi/Najemi" preklop krmili tudi to sekcijo — ni razloga za
   // prikaz prodajnih plovil, ko stranko zanima najem, in obratno.
