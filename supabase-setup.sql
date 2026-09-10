@@ -1711,3 +1711,38 @@ create policy "Prijavljeni brisejo svoje slike posebnosti" on storage.objects
     bucket_id = 'zemljevid-slike'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- CENA SKIPERJA — javno "po dogovoru", pravi znesek vidita samo lastnik
+-- in admin. Direktorjeva odločitev: Garbin ekipa vodi pogajanja o ceni
+-- (enako kot je skrit neposreden kontakt s skiperjem). Vzorec je natanko
+-- kot charterji_javno / plovila_javno: ozek javni pogled skiperji_javno
+-- BREZ cena_dan, osnovna tabela skiperji omejena na lastnika + admina.
+-- Brez tega je cena_dan vsakega skiperja berljiva mimo aplikacije prek
+--   curl ".../rest/v1/skiperji?select=ime,cena_dan"
+-- ne glede na to, kaj kaže UI.
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Javni bralni dostop - skiperji" on skiperji;
+
+drop policy if exists "Lastnik bere svoj skipper profil" on skiperji;
+create policy "Lastnik bere svoj skipper profil" on skiperji for select using (auth.uid() = user_id);
+
+drop policy if exists "Admin bere vse skiperje" on skiperji;
+create policy "Admin bere vse skiperje" on skiperji for select using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
+
+create or replace view skiperji_javno
+with (security_invoker = false)
+as select
+  id, user_id, ime, lokacija, izkusnje_let, jeziki, certifikati, tip_plovila,
+  opis, ocena, st_ocen, verified, tip_skiper, naziv_agencije, ekipa, created_at
+from skiperji;
+
+-- Isti razred napake kot pri plovila_javno/charterji_javno: security_invoker
+-- = false pomeni, da bi bil pogled prek Supabase privzetih grantov tudi
+-- PISLJIV mimo RLS osnovne tabele — pisanje zato izrecno odvzamemo, pustimo
+-- samo branje.
+revoke insert, update, delete, truncate, references, trigger on skiperji_javno from public, anon, authenticated;
+grant select on skiperji_javno to anon, authenticated;

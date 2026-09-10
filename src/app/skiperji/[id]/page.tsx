@@ -41,17 +41,35 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
   const [ocenaNapaka, setOcenaNapaka] = useState('')
   const [zasedenost, setZasedenost] = useState<SkipperZasedenost[]>([])
   const [izbranTermin, setIzbranTermin] = useState('')
+  // Cena je javno "po dogovoru"; pravi znesek dobi samo admin (posebna
+  // poizvedba na osnovno tabelo skiperji, ki jo RLS dovoli le adminu).
+  const [cenaZaAdmina, setCenaZaAdmina] = useState<number | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('skiperji').select('*').eq('id', id).maybeSingle().then(({ data }) => {
-      setRealSkipper(data)
+    // skiperji_javno — brez cena_dan (glej supabase-setup.sql).
+    supabase.from('skiperji_javno').select('*').eq('id', id).maybeSingle().then(({ data }) => {
+      setRealSkipper(data as Skipper | null)
       setNalaga(false)
     })
     supabase.from('skipper_zasedenost').select('*').eq('skipper_id', id).then(({ data }) => {
       if (data) setZasedenost(data)
     })
   }, [id])
+
+  useEffect(() => {
+    let preklic = false
+    ;(async () => {
+      if (!user) return
+      const supabase = createClient()
+      const { data: profil } = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+      if (preklic) return
+      if (!profil?.is_admin) { setCenaZaAdmina(null); return }
+      const { data: s } = await supabase.from('skiperji').select('cena_dan').eq('id', id).maybeSingle()
+      if (!preklic) setCenaZaAdmina(typeof s?.cena_dan === 'number' ? s.cena_dan : null)
+    })()
+    return () => { preklic = true }
+  }, [id, user])
 
   async function nalozOcene() {
     setNalagaOcen(true)
@@ -201,10 +219,13 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
 
-              {/* Cena — desktop */}
+              {/* Cena — desktop. Javno "po dogovoru"; admin dodatno vidi
+                  pravi znesek (cenaZaAdmina). */}
               <div className="hidden sm:block text-right shrink-0">
-                <p className="text-3xl font-display font-bold text-[#c9a84c]">{skipper.cena_dan} €</p>
-                <p className="text-white/50 text-sm">/ dan</p>
+                <p className="text-2xl font-display font-bold text-[#c9a84c]">Po dogovoru</p>
+                {cenaZaAdmina !== null && (
+                  <p className="text-white/50 text-xs mt-1">skipper pričakuje {cenaZaAdmina} € / dan <span className="opacity-70">(vidno le adminom)</span></p>
+                )}
               </div>
             </div>
           </div>
@@ -420,15 +441,15 @@ export default function SkipperDetailPage({ params }: { params: Promise<{ id: st
 
                 {/* Kontakt kartica */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-20">
-                  {/* Cena mobile */}
-                  <div className="sm:hidden mb-4">
-                    <p className="text-3xl font-display font-bold text-[#0c2340]">{skipper.cena_dan} €</p>
-                    <p className="text-gray-400 text-sm">/ dan</p>
-                  </div>
-
-                  <div className="hidden sm:block mb-5">
-                    <p className="text-3xl font-display font-bold text-[#0c2340]">{skipper.cena_dan} €</p>
-                    <p className="text-gray-400 text-sm">/ dan</p>
+                  {/* Cena — javno "po dogovoru", admin vidi tudi pravi znesek */}
+                  <div className="mb-5">
+                    <p className="text-2xl font-display font-bold text-[#0c2340]">Cena po dogovoru</p>
+                    <p className="text-gray-400 text-sm mt-0.5">Ceno uskladi Garbin ekipa prek povpraševanja.</p>
+                    {cenaZaAdmina !== null && (
+                      <p className="text-xs text-[#9a7a2e] bg-[#c9a84c]/10 border border-[#c9a84c]/30 rounded-lg px-2.5 py-1.5 mt-2">
+                        Skipper pričakuje <span className="font-bold">{cenaZaAdmina} € / dan</span> · vidno le adminom
+                      </p>
+                    )}
                   </div>
 
                   {/* Neposreden kontakt s skiperjem je skrit — enak koncept kot

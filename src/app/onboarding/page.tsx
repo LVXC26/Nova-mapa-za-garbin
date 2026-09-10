@@ -278,6 +278,10 @@ export default function OnboardingPage() {
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors" />
                   </div>
                 </div>
+                <p className="text-xs text-gray-500 -mt-2 leading-relaxed">
+                  Cena / dan se obiskovalcem <span className="font-semibold">ne prikaže</span> — na profilu piše
+                  &bdquo;Cena po dogovoru&ldquo;. Vidi jo samo Garbin ekipa, ki na njeni podlagi uskladi ceno s stranko.
+                </p>
                 <div>
                   <label className="block text-sm font-semibold text-[#0c2340] mb-2">Jeziki</label>
                   <div className="flex flex-wrap gap-2">

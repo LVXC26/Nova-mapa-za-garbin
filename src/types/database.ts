@@ -162,7 +162,10 @@ export interface Skipper {
   opis: string
   ocena: number
   st_ocen: number
-  cena_dan: number
+  // Ni v javnem pogledu skiperji_javno — javno se prikaže "Cena po
+  // dogovoru", pravi znesek vidita samo lastnik in admin (glej
+  // supabase-setup.sql). Zato je tu neobvezen.
+  cena_dan?: number | null
   verified: boolean
   tip_skiper: TipSkiper
   naziv_agencije?: string | null
@@ -373,6 +376,12 @@ export interface Database {
       }
       charterji_javno: {
         Row: Pick<Charter, keyof Charter>
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      skiperji_javno: {
+        Row: Omit<Skipper, 'cena_dan'>
         Insert: never
         Update: never
         Relationships: []

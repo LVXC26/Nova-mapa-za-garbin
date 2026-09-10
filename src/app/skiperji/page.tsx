@@ -36,7 +36,9 @@ export default function SkiperjiPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('skiperji').select('*').order('created_at', { ascending: false })
+    // skiperji_javno namesto skiperji — brez cena_dan (javno "po dogovoru",
+    // glej supabase-setup.sql).
+    supabase.from('skiperji_javno').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setRealSkiperji(data) })
   }, [])
 
@@ -276,10 +278,7 @@ export default function SkiperjiPage() {
                       </div>
 
                       <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
-                        <div>
-                          <span className="font-bold text-[#0c2340] text-lg">{skipper.cena_dan} €</span>
-                          <span className="text-xs text-gray-400"> / dan</span>
-                        </div>
+                        <span className="font-semibold text-[#0c2340] text-sm">Cena po dogovoru</span>
                         <span className="px-4 py-2 bg-[#0c2340] group-hover:bg-[#1e3a5f] text-white text-sm font-semibold rounded-full transition-colors">
                           Poglej profil
                         </span>

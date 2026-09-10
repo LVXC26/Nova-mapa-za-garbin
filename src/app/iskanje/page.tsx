@@ -41,7 +41,7 @@ function IskanjeContent() {
       const [plovilaRes, charterjiRes, skiperjiRes, noviceRes] = await Promise.all([
         supabase.from('plovila_javno').select('*').ilike('naziv', `%${initQ}%`),
         supabase.from('charterji_javno').select('*').ilike('naziv', `%${initQ}%`),
-        supabase.from('skiperji').select('*').ilike('ime', `%${initQ}%`),
+        supabase.from('skiperji_javno').select('*').ilike('ime', `%${initQ}%`),
         supabase.from('novice').select('*').not('published_at', 'is', null).ilike('naslov', `%${initQ}%`),
       ])
       setRealnaPlovila(plovilaRes.data ?? [])
@@ -213,7 +213,7 @@ function IskanjeContent() {
                               <p className="font-semibold text-[#0c2340] group-hover:text-[#c9a84c] transition-colors truncate">{s.ime}</p>
                               <p className="text-xs text-gray-500">{s.lokacija} · {s.izkusnje_let} let · {s.ocena.toFixed(1)} ★</p>
                             </div>
-                            <p className="font-bold text-[#0c2340] shrink-0 text-sm">{s.cena_dan} € / dan</p>
+                            <p className="text-gray-500 shrink-0 text-xs font-medium">Po dogovoru</p>
                           </Link>
                         ))}
                       </div>

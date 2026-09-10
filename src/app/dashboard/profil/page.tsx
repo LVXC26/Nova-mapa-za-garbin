@@ -290,6 +290,11 @@ export default function ProfilPage() {
                   <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Cena / dan (€)</label>
                   <input type="number" value={forma.cena_dan} onChange={e => setForma(f => ({...f, cena_dan: e.target.value}))}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]" />
+                  <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                    Obiskovalcem se ta znesek <span className="font-semibold">ne prikaže</span> — na vašem profilu piše
+                    &bdquo;Cena po dogovoru&ldquo;. Vidi ga samo Garbin ekipa, ki na podlagi njega uskladi ceno s stranko
+                    ob povpraševanju. Tako je pogajanje enotno, vi pa ostanete zaščiteni pred podcenjevanjem.
+                  </p>
                 </div>
               )}
             </div>
