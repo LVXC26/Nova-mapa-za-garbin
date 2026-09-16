@@ -3,10 +3,9 @@
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Ship, Anchor, Compass, BookOpen, MessageSquare, ArrowRight } from 'lucide-react'
+import { Search, Ship, Anchor, Compass, BookOpen, ArrowRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { forumNiti } from '@/data/forum'
 import { formatCena } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Plovilo, Charter, Skipper, Novica } from '@/types/database'
@@ -16,7 +15,7 @@ function IskanjeContent() {
   const router = useRouter()
   const initQ = params.get('q') ?? ''
   const [q, setQ] = useState(initQ)
-  const [tab, setTab] = useState<'vse' | 'plovila' | 'charterji' | 'skiperji' | 'novice' | 'forum'>('vse')
+  const [tab, setTab] = useState<'vse' | 'plovila' | 'charterji' | 'skiperji' | 'novice'>('vse')
 
   useEffect(() => {
     setQ(params.get('q') ?? '')
@@ -52,17 +51,16 @@ function IskanjeContent() {
   }, [qL, initQ])
 
   const results = useMemo(() => {
-    if (!qL) return { plovila: [], charterji: [], skiperji: [], novice: [], forum: [] }
+    if (!qL) return { plovila: [], charterji: [], skiperji: [], novice: [] }
     return {
       plovila: realnaPlovila,
       charterji: realniCharterji,
       skiperji: realniSkiperji,
       novice: realneNovice,
-      forum: forumNiti.filter(f => f.naslov.toLowerCase().includes(qL) || f.vsebina.toLowerCase().includes(qL)),
     }
   }, [qL, realnaPlovila, realniCharterji, realniSkiperji, realneNovice])
 
-  const skupaj = results.plovila.length + results.charterji.length + results.skiperji.length + results.novice.length + results.forum.length
+  const skupaj = results.plovila.length + results.charterji.length + results.skiperji.length + results.novice.length
 
   const tabs = [
     { id: 'vse', label: 'Vse', count: skupaj, ikona: Search },
@@ -70,14 +68,12 @@ function IskanjeContent() {
     { id: 'charterji', label: 'Charterji', count: results.charterji.length, ikona: Anchor },
     { id: 'skiperji', label: 'Skiperji', count: results.skiperji.length, ikona: Compass },
     { id: 'novice', label: 'Novice', count: results.novice.length, ikona: BookOpen },
-    { id: 'forum', label: 'Forum', count: results.forum.length, ikona: MessageSquare },
   ]
 
   const prikaziPlovila = tab === 'vse' || tab === 'plovila'
   const prikaziCharterje = tab === 'vse' || tab === 'charterji'
   const prikaziSkiperje = tab === 'vse' || tab === 'skiperji'
   const prikaziNovice = tab === 'vse' || tab === 'novice'
-  const prikaziForum = tab === 'vse' || tab === 'forum'
 
   return (
     <>
@@ -234,27 +230,6 @@ function IskanjeContent() {
                             <div className="flex-1 min-w-0">
                               <p className="font-semibold text-[#0c2340] group-hover:text-[#c9a84c] transition-colors line-clamp-1">{n.naslov}</p>
                               {n.povzetek && <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{n.povzetek}</p>}
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Forum */}
-                  {prikaziForum && results.forum.length > 0 && (
-                    <div>
-                      <h2 className="font-display text-lg font-bold text-[#0c2340] flex items-center gap-2 mb-4">
-                        <MessageSquare className="w-5 h-5 text-[#c9a84c]" /> Forum ({results.forum.length})
-                      </h2>
-                      <div className="space-y-3">
-                        {results.forum.slice(0, tab === 'forum' ? 20 : 3).map(f => (
-                          <Link key={f.id} href={`/forum/${f.kategorija}/${f.id}`}
-                            className="group flex items-start gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
-                            <div className="w-10 h-10 rounded-xl bg-[#0c2340]/8 flex items-center justify-center text-xl shrink-0">💬</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-[#0c2340] group-hover:text-[#c9a84c] transition-colors line-clamp-1">{f.naslov}</p>
-                              <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{f.vsebina}</p>
                             </div>
                           </Link>
                         ))}
