@@ -1,0 +1,578 @@
+'use client'
+
+import { use, useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { ArrowLeft, MapPin, Calendar, Ruler, Phone, Mail, MessageCircle, CheckCircle, Share2, Copy, X, Printer, ChevronLeft, ChevronRight } from 'lucide-react'
+import Navbar from '@/components/layout/Navbar'
+import Footer from '@/components/layout/Footer'
+import PloviloKartica from '@/components/plovila/PloviloKartica'
+import { useAuth } from '@/components/providers/AuthProvider'
+import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
+import ZasedenostPrikaz from '@/components/shared/ZasedenostPrikaz'
+import { createClient } from '@/lib/supabase/client'
+import { opremaLabele } from '@/lib/oprema'
+import type { Plovilo, PloviloZasedenost } from '@/types/database'
+
+function ShareModal({ naziv, onClose }: { naziv: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+  const url = typeof window !== 'undefined' ? window.location.href : ''
+
+  function copyLink() {
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50" />
+      <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display text-lg font-bold text-[#0c2340]">Deli plovilo</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mb-5 truncate">"{naziv}"</p>
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {[
+            { label: 'WhatsApp', ikona: '📱', href: `https://wa.me/?text=${encodeURIComponent(`Poglej to plovilo: ${naziv} ${url}`)}`, barva: 'bg-green-500' },
+            { label: 'Facebook', ikona: '👥', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, barva: 'bg-blue-600' },
+            { label: 'E-mail', ikona: '📧', href: `mailto:?subject=${encodeURIComponent(`Plovilo: ${naziv}`)}&body=${encodeURIComponent(url)}`, barva: 'bg-gray-600' },
+          ].map(({ label, ikona, href, barva }) => (
+            <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+              className={`flex flex-col items-center gap-2 p-3 ${barva} text-white rounded-xl hover:opacity-90 transition-opacity text-sm font-medium`}>
+              <span className="text-2xl">{ikona}</span>
+              {label}
+            </a>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input readOnly value={url} className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-500 bg-gray-50 focus:outline-none truncate" />
+          <button onClick={copyLink}
+            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${copied ? 'bg-emerald-500 text-white' : 'bg-[#0c2340] text-white hover:bg-[#1e3a5f]'}`}>
+            <Copy className="w-4 h-4" />
+            {copied ? 'Kopirano!' : 'Kopiraj'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const tipIkone: Record<string, string> = {
+  jadrnica: '⛵', motorni: '🚤', gumenjak: '🛟', katamaran: '⛵', jet: '💨', drugo: '⚓',
+}
+
+// Polnozaslonski pregledovalnik slik — odpre se ob kliku na katerokoli sliko
+// v galeriji (glavno ali eno od sličic), s puščicami/tipkovnico za listanje
+// med VSEMI naloženimi slikami (ne samo tistimi vidnimi v mreži).
+function GalerijaLightbox({ slike, naziv, zacetniIndeks, onClose }: {
+  slike: string[]
+  naziv: string
+  zacetniIndeks: number
+  onClose: () => void
+}) {
+  const [indeks, setIndeks] = useState(zacetniIndeks)
+
+  const naprej = useCallback(() => setIndeks(i => (i + 1) % slike.length), [slike.length])
+  const nazaj = useCallback(() => setIndeks(i => (i - 1 + slike.length) % slike.length), [slike.length])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowRight') naprej()
+      if (e.key === 'ArrowLeft') nazaj()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose, naprej, nazaj])
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors z-10">
+        <X className="w-7 h-7" />
+      </button>
+      <div className="absolute top-4 left-4 text-white/70 text-sm">{indeks + 1} / {slike.length}</div>
+
+      {slike.length > 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); nazaj() }}
+          className="absolute left-2 sm:left-6 text-white/70 hover:text-white transition-colors z-10 p-2"
+        >
+          <ChevronLeft className="w-8 h-8 sm:w-10 sm:h-10" />
+        </button>
+      )}
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={slike[indeks]}
+        alt={`${naziv} — slika ${indeks + 1}`}
+        className="max-w-[92vw] max-h-[88vh] object-contain"
+        onClick={e => e.stopPropagation()}
+      />
+
+      {slike.length > 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); naprej() }}
+          className="absolute right-2 sm:right-6 text-white/70 hover:text-white transition-colors z-10 p-2"
+        >
+          <ChevronRight className="w-8 h-8 sm:w-10 sm:h-10" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+export default function PloviloVsebina({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const { user } = useAuth()
+  const [realPlovilo, setRealPlovilo] = useState<Plovilo | null>(null)
+  const [podobna, setPodobna] = useState<Plovilo[]>([])
+  const [nalaga, setNalaga] = useState(true)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
+  const [izbranTermin, setIzbranTermin] = useState('')
+  const [lightboxIndeks, setLightboxIndeks] = useState<number | null>(null)
+  const [charter, setCharter] = useState<{ id: string; naziv: string; verified: boolean } | null>(null)
+  const [prodajalec, setProdajalec] = useState<{ ime: string | null; created_at: string } | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    // Najprej poskusimo pravo tabelo — nanjo se ujameta samo lastnik (tudi za
+    // svoj še nepotrjen oglas) ali admin. Za vse ostale (javni obiskovalci)
+    // pravo tabelo ne vrne nič (kontakt lastnika ni več javno berljiv), zato
+    // v tem primeru padeva na "plovila_javno" (potrjena, kontakt zamaskiran
+    // za najem) — glej varnostni popravek v supabase-setup.sql.
+    supabase.from('plovila').select('*').eq('id', id).maybeSingle().then(async ({ data: privatno }) => {
+      const data = privatno ?? (await supabase.from('plovila_javno').select('*').eq('id', id).maybeSingle()).data
+      setRealPlovilo(data)
+      setNalaga(false)
+      if (data) {
+        // Najprej naberemo širši nabor istega tipa/oglasa, nato jih uredimo
+        // sami: promovirani vedno na vrh, znotraj tega pa po ceni najbližji
+        // ogledanemu plovilu (lahko malo višja ali malo nižja cena) — Supabase
+        // poizvedba sama po sebi ne zna razvrščati po absolutni razliki cen.
+        supabase.from('plovila_javno').select('*').eq('tip', data.tip).eq('tip_oglasa', data.tip_oglasa).neq('id', id).limit(50)
+          .then(({ data: sorodna }) => {
+            if (!sorodna) return
+            const izhodiscnaCena = data.cena_na_zahtevo ? null : data.cena
+            const razvrsceno = [...sorodna].sort((a, b) => {
+              if (a.promoted !== b.promoted) return a.promoted ? -1 : 1
+              if (izhodiscnaCena) {
+                const razlikaA = Math.abs((a.cena_na_zahtevo ? Infinity : a.cena) - izhodiscnaCena)
+                const razlikaB = Math.abs((b.cena_na_zahtevo ? Infinity : b.cena) - izhodiscnaCena)
+                return razlikaA - razlikaB
+              }
+              return 0
+            })
+            setPodobna(razvrsceno.slice(0, 3))
+          })
+        if (data.tip_oglasa === 'najem') {
+          supabase.from('plovilo_zasedenost').select('*').eq('plovilo_id', id)
+            .then(({ data: termini }) => { if (termini) setZasedenost(termini) })
+          // Kdo je objavil najem — skrivamo samo neposreden KONTAKT (glej
+          // spodaj), ne pa tudi identitete charterja; brez tega kupec ni
+          // videl, kateri charter sploh oddaja to plovilo.
+          if (data.user_id) {
+            supabase.from('charterji_javno').select('id, naziv, verified').eq('user_id', data.user_id).maybeSingle()
+              .then(({ data: c }) => { if (c) setCharter(c) })
+          }
+        } else if (data.user_id) {
+          // Prava identiteta prodajalca namesto hardkodiranega "Zasebni
+          // prodajalec". Osnovna tabela "profiles" je zaradi varnostnega
+          // popravka omejena na lastnika (glej supabase-setup.sql) — zato
+          // varni javni pogled "public_profiles" (samo ime/created_at ...).
+          supabase.from('public_profiles').select('ime, created_at').eq('id', data.user_id).maybeSingle()
+            .then(({ data: p }) => { if (p) setProdajalec(p) })
+        }
+      }
+    })
+  }, [id])
+
+  const plovilo = realPlovilo ?? undefined
+
+  if (nalaga) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 pt-16 flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 rounded-full border-4 border-[#c9a84c] border-t-transparent animate-spin" />
+        </main>
+        <Footer />
+      </>
+    )
+  }
+
+  if (!plovilo) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 pt-16">
+          <div className="max-w-4xl mx-auto px-4 py-24 text-center">
+            <p className="text-4xl mb-4">⚓</p>
+            <h1 className="font-display text-2xl font-bold text-[#0c2340] mb-2">Plovilo ni najdeno</h1>
+            <p className="text-gray-500 mb-8">To plovilo ne obstaja ali je bilo odstranjeno.</p>
+            <Link href="/plovila" className="inline-flex items-center gap-2 px-6 py-3 bg-[#0c2340] text-white font-medium rounded-full hover:bg-[#1e3a5f] transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Nazaj na plovila
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </>
+    )
+  }
+
+  const aktivnaOprema = plovilo.oprema
+    ? Object.entries(plovilo.oprema).filter(([, v]) => v).map(([k]) => ({ kljuc: k, label: opremaLabele[k] ?? k }))
+    : []
+
+  return (
+    <>
+      <Navbar />
+      {shareOpen && plovilo && <ShareModal naziv={plovilo.naziv} onClose={() => setShareOpen(false)} />}
+      {lightboxIndeks !== null && plovilo?.slike && (
+        <GalerijaLightbox
+          slike={plovilo.slike}
+          naziv={plovilo.naziv}
+          zacetniIndeks={lightboxIndeks}
+          onClose={() => setLightboxIndeks(null)}
+        />
+      )}
+      <main className="flex-1 pt-16">
+
+        {/* HERO */}
+        <section className="bg-[#0c2340] py-10">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Link href="/plovila" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm mb-6 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Vsa plovila
+            </Link>
+
+            {/* Galerija — klik na katerokoli sliko odpre polnozaslonski pregledovalnik
+                z vsemi naloženimi slikami (do 20), ne samo tistimi vidnimi tukaj. */}
+            <div className="grid grid-cols-4 gap-3">
+              {/* Glavna slika — povečana za boljšo vidljivost */}
+              <div
+                className="col-span-4 md:col-span-3 h-80 md:h-[520px] rounded-2xl overflow-hidden relative bg-[#1e3a5f] cursor-pointer group"
+                onClick={() => plovilo.slike?.[0] && setLightboxIndeks(0)}
+              >
+                {plovilo.slike && plovilo.slike[0] ? (
+                  <Image
+                    src={plovilo.slike[0]}
+                    alt={plovilo.naziv}
+                    fill
+                    quality={90}
+                    priority
+                    sizes="(max-width: 768px) 100vw, 75vw"
+                    className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-8xl opacity-20">{tipIkone[plovilo.tip] ?? '⚓'}</span>
+                  </div>
+                )}
+                <div className="absolute bottom-4 left-4 bg-black/50 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm">
+                  📷 {plovilo.slike?.length ?? 0} fotografij
+                </div>
+              </div>
+              {/* Sličice — mreža 2×2, zadnja s "+N" prekritjem, če je slik več kot 5 */}
+              <div className="hidden md:grid grid-cols-2 grid-rows-2 gap-3 h-[520px]">
+                {[1, 2, 3, 4].map(i => {
+                  const zadnjaVidna = i === 4
+                  const steviloSkritih = (plovilo.slike?.length ?? 0) - 5
+                  return (
+                    <div
+                      key={i}
+                      className="rounded-xl overflow-hidden relative bg-[#1e3a5f] cursor-pointer group"
+                      onClick={() => plovilo.slike?.[i] && setLightboxIndeks(i)}
+                    >
+                      {plovilo.slike && plovilo.slike[i] ? (
+                        <Image
+                          src={plovilo.slike[i]}
+                          alt={`${plovilo.naziv} ${i + 1}`}
+                          fill
+                          quality={90}
+                          sizes="15vw"
+                          className="object-cover cursor-pointer group-hover:scale-[1.02] transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-2xl opacity-20">{tipIkone[plovilo.tip] ?? '⚓'}</span>
+                        </div>
+                      )}
+                      {zadnjaVidna && steviloSkritih > 0 && (
+                        <div className="absolute inset-0 bg-black/55 flex items-center justify-center text-white font-semibold text-lg">
+                          +{steviloSkritih}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* VSEBINA */}
+        <section className="py-12 bg-[#f8fafc]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+              {/* LEVA — info */}
+              <div className="lg:col-span-2 space-y-6">
+
+                {/* Naslov */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">{tipIkone[plovilo.tip]}</span>
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                          plovilo.tip_oglasa === 'najem' ? 'bg-[#c9a84c]/15 text-[#9a7a2e]' : 'bg-[#0c2340]/10 text-[#0c2340]'
+                        }`}>
+                          {plovilo.tip_oglasa === 'najem' ? 'Za najem' : 'Za prodajo'}
+                        </span>
+                      </div>
+                      <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#0c2340]">{plovilo.naziv}</h1>
+                    </div>
+                    <button onClick={() => setShareOpen(true)} className="p-2 rounded-xl text-gray-400 hover:text-[#c9a84c] hover:bg-[#c9a84c]/10 transition-colors shrink-0" title="Deli plovilo">
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => window.print()} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0 print:hidden" title="Natisni oglas">
+                      <Printer className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Meta */}
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
+                    {plovilo.lokacija && (
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-[#c9a84c]" /> {plovilo.lokacija}
+                      </span>
+                    )}
+                    {plovilo.letnik && (
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-[#c9a84c]" /> Letnik {plovilo.letnik}
+                      </span>
+                    )}
+                    {plovilo.dolzina_m && (
+                      <span className="flex items-center gap-1.5">
+                        <Ruler className="w-4 h-4 text-[#c9a84c]" /> {plovilo.dolzina_m} m
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Stanje — samo pri prodaji (obrazec ga za najem sploh ne
+                      vpraša, prikazana vrednost bi bila samo privzeta) */}
+                  {plovilo.tip_oglasa === 'prodaja' && plovilo.stanje && (
+                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full ${
+                      plovilo.stanje === 'odlično' ? 'bg-emerald-50 text-emerald-700'
+                        : plovilo.stanje === 'dobro' ? 'bg-blue-50 text-blue-700'
+                        : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      <CheckCircle className="w-3 h-3" />
+                      Stanje: {plovilo.stanje}
+                    </span>
+                  )}
+                </div>
+
+                {/* Opis */}
+                {plovilo.opis && (
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <h2 className="font-display text-lg font-semibold text-[#0c2340] mb-3">Opis</h2>
+                    {/* whitespace-pre-wrap ohrani odstavke/prazne vrstice točno tako,
+                        kot jih je prodajalec napisal — navaden <p> bi vse presledke
+                        in nove vrstice po HTML pravilih tiho strnil v enega. */}
+                    <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{plovilo.opis}</p>
+                  </div>
+                )}
+
+                {/* Oprema */}
+                {aktivnaOprema.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <h2 className="font-display text-lg font-semibold text-[#0c2340] mb-4">Oprema</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {aktivnaOprema.map(({ kljuc, label }) => (
+                        <div key={kljuc} className="flex items-center gap-2 p-3 bg-[#0c2340]/5 rounded-xl">
+                          <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span className="text-sm text-[#0c2340] font-medium">{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Razpoložljivost — vedno odprt koledar (ne skrit za klikom v
+                    obrazcu), direktna zahteva direktorja. Izbira tu se
+                    prenese v povpraševanje na desni (glej izbranTermin). */}
+                {plovilo.tip_oglasa === 'najem' && (
+                  <ZasedenostPrikaz
+                    zasedenost={zasedenost}
+                    vrednost={izbranTermin}
+                    onChange={setIzbranTermin}
+                  />
+                )}
+
+                {/* Oglaševalski banner placeholder */}
+                <div className="w-full h-[90px] bg-[#0c2340] rounded-2xl flex items-center justify-center border border-[#1e3a5f] relative overflow-hidden">
+                  <div className="text-center">
+                    <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">728 × 90</p>
+                    <p className="text-white/50 text-sm">Oglaševalski prostor</p>
+                  </div>
+                </div>
+
+                {/* Podobna plovila */}
+                {podobna.length > 0 && (
+                  <div>
+                    <h2 className="font-display text-xl font-bold text-[#0c2340] mb-4">Podobna plovila</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {podobna.map(p => <PloviloKartica key={p.id} plovilo={p} />)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* DESNA — cena + kontakt */}
+              <div className="space-y-4">
+                {/* Cena kartica */}
+                {/* Namenoma NE sticky — kartica naj ostane na svojem mestu, ne
+                    "lebdi" med skrolanjem po strani. */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                  <div className="mb-5">
+                    <p className="text-3xl font-display font-bold text-[#0c2340]">
+                      {plovilo.cena.toLocaleString('sl-SI')} €
+                    </p>
+                    {plovilo.tip_oglasa === 'najem' && (
+                      <p className="text-sm text-gray-400">/ teden</p>
+                    )}
+                  </div>
+
+                  {/* Kontaktni gumbi — pri najemu (charter) kupec NE sme imeti
+                      neposrednega stika (chat/telefon) z lastnikom; vsako
+                      povpraševanje mora iti prek Garbin ekipe (glej obrazec
+                      spodaj, ki pošlje mail na matej@lumavx.com). */}
+                  {plovilo.tip_oglasa === 'najem' ? (
+                    plovilo.user_id === user?.id ? (
+                      <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+                        <p className="text-xs text-gray-500 font-medium">To je vaš oglas</p>
+                      </div>
+                    ) : (
+                      <div className="bg-[#0c2340]/5 border border-[#0c2340]/10 rounded-xl p-3 text-center">
+                        <p className="text-xs text-gray-500 font-medium">Za rezervacijo izpolnite povpraševanje spodaj — kontaktirala vas bo naša ekipa.</p>
+                      </div>
+                    )
+                  ) : user ? (
+                    <div className="space-y-3">
+                      {plovilo.user_id && plovilo.user_id !== user.id ? (
+                        <Link
+                          href={`/chat?to=${plovilo.user_id}`}
+                          className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.02]"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          Kontaktiraj prodajalca
+                        </Link>
+                      ) : plovilo.user_id === user.id ? (
+                        <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
+                          <p className="text-xs text-gray-500 font-medium">To je vaš oglas</p>
+                        </div>
+                      ) : null}
+                      {plovilo.kontakt_tel && (
+                        <a
+                          href={`tel:${plovilo.kontakt_tel}`}
+                          className="w-full flex items-center justify-center gap-2 py-3.5 border-2 border-[#0c2340] text-[#0c2340] font-semibold rounded-full hover:bg-[#0c2340] hover:text-white transition-all"
+                        >
+                          <Phone className="w-4 h-4" />
+                          {plovilo.kontakt_tel}
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center mb-3">
+                        <p className="text-xs text-amber-700 font-medium">Za kontakt se morate prijaviti</p>
+                      </div>
+                      <Link
+                        href="/prijava?redirect=/plovila"
+                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-semibold rounded-full transition-all"
+                      >
+                        Prijava za kontakt
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
+                {/* Povpraševanje forma — pri najemu je "Želen termin" povezan
+                    z vedno-odprtim koledarjem zgoraj v glavnem stolpcu
+                    (glej ZasedenostPrikaz). */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                  <h3 className="font-semibold text-[#0c2340] mb-4 text-sm">Pošlji povpraševanje</h3>
+                  <PovprasevanjeForma
+                    tip="plovilo"
+                    targetId={plovilo.id}
+                    terminZunaj={plovilo.tip_oglasa === 'najem' ? izbranTermin : undefined}
+                  />
+                </div>
+
+                {/* Charter, ki oddaja to plovilo — vidna je SAMO identiteta
+                    (ime + povezava na profil), nikoli kontakt (glej opombo
+                    zgoraj); prej je bila skrita cela kartica, zato ni bilo
+                    videti niti kdo sploh oddaja plovilo v najem. */}
+                {plovilo.tip_oglasa === 'najem' && charter && (
+                  <Link
+                    href={`/charterji/${charter.id}`}
+                    className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all"
+                  >
+                    <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Plovilo oddaja</h3>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-lg">🏢</div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-[#0c2340] text-sm truncate flex items-center gap-1.5">
+                          {charter.naziv}
+                          {charter.verified && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                        </p>
+                        <p className="text-xs text-[#c9a84c] font-medium">Ogled profila charterja →</p>
+                      </div>
+                    </div>
+                  </Link>
+                )}
+
+                {/* Prodajalec info — pri najemu se kontakt lastnika ne razkriva
+                    kupcu (glej opombo zgoraj); Garbin ekipa ga dobi po mailu. */}
+                {plovilo.tip_oglasa !== 'najem' && (
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Prodajalec</h3>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-lg">👤</div>
+                      <div>
+                        <p className="font-medium text-[#0c2340] text-sm">{prodajalec?.ime || 'Prodajalec'}</p>
+                        <p className="text-xs text-gray-400">
+                          Član od {prodajalec?.created_at ? new Date(prodajalec.created_at).getFullYear() : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    {plovilo.kontakt_email && (
+                      <a href={`mailto:${plovilo.kontakt_email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#0c2340] transition-colors">
+                        <Mail className="w-3.5 h-3.5 text-[#c9a84c]" />
+                        {plovilo.kontakt_email}
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Banner placeholder 300x250 */}
+                <div className="w-full h-[250px] bg-[#0c2340] rounded-2xl flex flex-col items-center justify-center border border-[#1e3a5f]">
+                  <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">300 × 250</p>
+                  <p className="text-white/50 text-sm">Oglaševalski prostor</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+      </main>
+      <Footer />
+    </>
+  )
+}
