@@ -1,7 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
-import { forumKategorije } from '@/data/forum'
 
 const BASE = 'https://garbin.net'
 
@@ -13,7 +12,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/skiperji`, priority: 0.9, changeFrequency: 'weekly' as const },
     { url: `${BASE}/rezervni-deli`, priority: 0.7, changeFrequency: 'daily' as const },
     { url: `${BASE}/novice`, priority: 0.8, changeFrequency: 'daily' as const },
-    { url: `${BASE}/forum`, priority: 0.8, changeFrequency: 'daily' as const },
+    // "/forum" NAMENOMA izpuscen — stran je zacasno izklopljena (glej
+    // src/app/forum/page.tsx, vraca notFound()), zato bi sitemap Googlu
+    // ponujal mrtve povezave.
     { url: `${BASE}/zemljevid`, priority: 0.7, changeFrequency: 'monthly' as const },
     { url: `${BASE}/paketi`, priority: 0.6, changeFrequency: 'monthly' as const },
     { url: `${BASE}/promocije`, priority: 0.7, changeFrequency: 'weekly' as const },
@@ -26,11 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return [...staticPages, ...forumKategorije.map(k => ({
-      url: `${BASE}/forum/${k.slug}`,
-      priority: 0.6,
-      changeFrequency: 'daily' as const,
-    }))]
+    return staticPages
   }
 
   const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
@@ -70,11 +67,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly' as const,
   }))
 
-  const forumKat = forumKategorije.map(k => ({
-    url: `${BASE}/forum/${k.slug}`,
-    priority: 0.6,
-    changeFrequency: 'daily' as const,
-  }))
-
-  return [...staticPages, ...plovila, ...charterji, ...skiperji, ...novice, ...forumKat]
+  return [...staticPages, ...plovila, ...charterji, ...skiperji, ...novice]
 }
