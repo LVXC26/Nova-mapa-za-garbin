@@ -25,6 +25,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Inter', sans-serif;
+  /* Dekorativni zamegljeni "glow" krogi (blur-3xl) na več straneh so pozicionirani
+     s "right-0" in presegajo širino strani, kar je ustvarilo vodoraven scroll in
+     tanko belo črto na desnem robu (osnovno ozadje strani, ki posveti skozi). */
+  overflow-x: hidden;
 }
 
 h1, h2, h3 {
