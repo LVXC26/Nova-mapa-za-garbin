@@ -30,8 +30,11 @@ const csp = [
   "frame-ancestors 'self'",
   "form-action 'self'",
   `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to${jeRazvoj ? " 'unsafe-eval'" : ''}`,
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  // Tawk.to widget nalaga svoje CSS datoteke neposredno v strani (ne samo
+  // znotraj svojega iframe-a) — brez https://*.tawk.to tu je bil gumb za
+  // klepet viden, a povsem nestiliziran/pokvarjen.
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to",
+  "font-src 'self' https://fonts.gstatic.com https://*.tawk.to",
   // blob: je nujen za predogled lokalno izbranih slik (URL.createObjectURL v
   // obrazcih za nalaganje slik/stiskanje pred nalaganjem) — brez njega CSP
   // tiho blokira <img>/Image() na blob: URL, kar je izgledalo kot da se
