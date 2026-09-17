@@ -4,6 +4,7 @@ import { AuthProvider } from '@/components/providers/AuthProvider'
 import { PrimerjaProvider } from '@/context/PrimerjaContext'
 import CookieBanner from '@/components/gdpr/CookieBanner'
 import AnalyticsScripts from '@/components/gdpr/AnalyticsScripts'
+import TawkChat from '@/components/support/TawkChat'
 
 export const metadata: Metadata = {
   title: 'Garbin — Vaš zaupanja vredni pomorski portal',
@@ -42,6 +43,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <CookieBanner />
             {/* Naložita se šele, ko uporabnik dejansko privoli — glej AnalyticsScripts.tsx */}
             <AnalyticsScripts />
+            {/* Živi klepet za podporo — naložen vedno, glej TawkChat.tsx zakaj ni vezan na GDPR soglasje */}
+            <TawkChat />
           </PrimerjaProvider>
         </AuthProvider>
       </body>

@@ -23,10 +23,13 @@ const csp = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
-  "frame-src 'none'",
+  // Tawk.to (zivi klepet za podporo) svoj vmesnik izriše v iframe-u s svoje
+  // domene — brez tega bi se widget naložil (script-src), a se okno klepeta
+  // nikoli ne bi odprlo.
+  "frame-src https://*.tawk.to",
   "frame-ancestors 'self'",
   "form-action 'self'",
-  `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net${jeRazvoj ? " 'unsafe-eval'" : ''}`,
+  `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to${jeRazvoj ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   // blob: je nujen za predogled lokalno izbranih slik (URL.createObjectURL v
@@ -35,12 +38,12 @@ const csp = [
   // izbrane slike sploh ne prikažejo/naložijo. Ni varnostno tveganje: blob:
   // URL je vedno generiran s strani lastnega JS iz datoteke, ki jo je
   // uporabnik sam izbral, ne zunanji vir.
-  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com https://*.tawk.to",
   // wss://*.supabase.co je nujen za Realtime (chat uporablja
   // supabase.channel(...).on('postgres_changes', ...) — WebSocket, ločena
   // shema od https:, CSP ju obravnava kot različna vira) — brez tega je bila
-  // chat stran tiho pokvarjena.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com",
+  // chat stran tiho pokvarjena. Enako wss://*.tawk.to za widget podpore.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://*.tawk.to wss://*.tawk.to",
 ].join('; ')
 
 const nextConfig: NextConfig = {
