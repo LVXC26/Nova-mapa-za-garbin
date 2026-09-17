@@ -29,7 +29,10 @@ const csp = [
   "frame-src https://*.tawk.to",
   "frame-ancestors 'self'",
   "form-action 'self'",
-  `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to${jeRazvoj ? " 'unsafe-eval'" : ''}`,
+  // cdn.jsdelivr.net: Tawk.to od tam naloži "emojione" knjižnico za izris
+  // emojijev v sporočilih (npr. 👋 v pozdravnem sporočilu) — brez tega se
+  // sporočilo z emojijem sploh ne izpiše.
+  `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to https://cdn.jsdelivr.net${jeRazvoj ? " 'unsafe-eval'" : ''}`,
   // Tawk.to widget nalaga svoje CSS datoteke neposredno v strani (ne samo
   // znotraj svojega iframe-a) — brez https://*.tawk.to tu je bil gumb za
   // klepet viden, a povsem nestiliziran/pokvarjen.
@@ -41,7 +44,7 @@ const csp = [
   // izbrane slike sploh ne prikažejo/naložijo. Ni varnostno tveganje: blob:
   // URL je vedno generiran s strani lastnega JS iz datoteke, ki jo je
   // uporabnik sam izbral, ne zunanji vir.
-  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com https://*.tawk.to",
+  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com https://*.tawk.to https://cdn.jsdelivr.net",
   // wss://*.supabase.co je nujen za Realtime (chat uporablja
   // supabase.channel(...).on('postgres_changes', ...) — WebSocket, ločena
   // shema od https:, CSP ju obravnava kot različna vira) — brez tega je bila
