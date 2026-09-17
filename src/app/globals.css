@@ -41,12 +41,19 @@ html {
 }
 
 /* Custom scrollbar */
+/* Track je "transparent" v resnici pokaze osnovno (svetlo) ozadje body-ja, ne
+   vsebine pod njim - na temni strani je bilo to vidno kot tanka bela crta ob
+   desnem robu skozi celo stran (v Chromium brskalnikih: Chrome/Brave/Edge). */
+html {
+  scrollbar-color: #c9a84c80 var(--morska);
+  scrollbar-width: thin;
+}
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--morska);
 }
 ::-webkit-scrollbar-thumb {
   background: #c9a84c40;
