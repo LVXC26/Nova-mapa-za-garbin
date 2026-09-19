@@ -537,6 +537,8 @@ export default function HomePage() {
           </div>
         </section>
 
+        <OglasniBanner pozicija="Homepage bottom" className="block w-full max-w-4xl h-[90px] sm:h-[120px] mx-auto my-6 px-4" />
+
       </main>
       <Footer />
     </>

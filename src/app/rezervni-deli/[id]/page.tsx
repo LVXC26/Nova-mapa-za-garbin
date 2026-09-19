@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft, MapPin, Mail, Phone, Tag, ChevronRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { formatCena } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/server'
 import type { RezervniDel } from '@/types/database'
@@ -192,6 +193,8 @@ export default async function RezervniDelDetailPage({ params }: { params: Promis
                   className="flex items-center justify-center gap-2 w-full py-3 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-all">
                   <ArrowLeft className="w-4 h-4" /> Vsi rezervni deli
                 </Link>
+
+                <OglasniBanner pozicija="Rezervni deli detail" className="w-full h-[600px]" />
               </div>
 
             </div>

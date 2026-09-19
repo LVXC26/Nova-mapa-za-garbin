@@ -10,6 +10,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import ZasedenostPrikaz from '@/components/shared/ZasedenostPrikaz'
+import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { createClient } from '@/lib/supabase/client'
 import type { Skipper, Rating, SkipperZasedenost } from '@/types/database'
 
@@ -512,6 +513,8 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
                     ))}
                   </div>
                 </div>
+
+                <OglasniBanner pozicija="Skiperji sidebar" className="w-full h-[600px]" />
 
               </div>
 
