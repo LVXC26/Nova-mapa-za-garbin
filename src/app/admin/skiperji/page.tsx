@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react'
 import Link from 'next/link'
-import { CheckCircle, XCircle, Eye, BadgeCheck, Star, Pencil, X, Award } from 'lucide-react'
+import { CheckCircle, XCircle, Eye, BadgeCheck, Star, Pencil, X, Award, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Skipper } from '@/types/database'
 
@@ -52,6 +52,18 @@ export default function AdminSkiperjiPage() {
   async function zavrni(id: string) {
     if (!confirm('Odstrani verified status oziroma zavrni ta profil?')) return
     await supabase.from('skiperji').update({ verified: false }).eq('id', id)
+    nalozi()
+  }
+
+  async function izbrisi(s: Skipper) {
+    if (!confirm(`Izbrišete profil "${s.ime}" in vse njegove objave (feed)? Tega ni mogoče razveljaviti.`)) return
+    // Objave (feed) se ne izbrišejo same od sebe — vezane so na
+    // lastnik_user_id (auth.users), ne na skiperji.id, zato jih zbrišemo
+    // izrecno pred profilom, sicer bi na strani obiskovalca ostale
+    // "osirotele" objave brez profila, na katerega so vezane.
+    if (s.user_id) await supabase.from('objave').delete().eq('lastnik_user_id', s.user_id)
+    const { error } = await supabase.from('skiperji').delete().eq('id', s.id)
+    if (error) { alert('Napaka pri brisanju: ' + error.message); return }
     nalozi()
   }
 
@@ -169,6 +181,7 @@ export default function AdminSkiperjiPage() {
                         <button onClick={() => potrdi(s.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="Potrdi (verified)"><CheckCircle className="w-4 h-4" /></button>
                       )}
                       <button onClick={() => zavrni(s.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Odstrani verified"><XCircle className="w-4 h-4" /></button>
+                      <button onClick={() => izbrisi(s)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors" title="Izbriši profil in njegove objave"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>

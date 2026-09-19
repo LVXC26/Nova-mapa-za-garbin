@@ -1841,3 +1841,16 @@ create policy "Prijavljeni brisejo svoje slike delov" on storage.objects
     bucket_id = 'rezervni-deli-slike'
     and auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- MANJKAJOČA DELETE POLITIKA — skiperji (uporabnik: "vidim da nemorm v
+-- admin panelu izbrisati skipperjev ... ko ga izbrišem se mi pokaže tisto
+-- za potrditi a mi ga ne izbriše"). Tabela skiperji ni imela NOBENE delete
+-- politike (ne za lastnika, ne za admina) — tudi z dodano "Izbriši" akcijo
+-- v kodi bi RLS brisanje tiho zavrnil (0 vrstic prizadetih, brez napake,
+-- kar je izgledalo natanko kot opisano: gumb "deluje", a nič se ne zgodi).
+-- ═══════════════════════════════════════════════════════════════════
+
+create policy "Admin brise skiperje" on skiperji for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);
