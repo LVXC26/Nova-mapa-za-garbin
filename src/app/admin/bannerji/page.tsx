@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Banner } from '@/types/database'
 
-const pozicije = ['Homepage top', 'Homepage mid', 'Plovila sidebar', 'Charterji sidebar', 'Detail stran']
+const pozicije = ['Homepage top', 'Homepage mid', 'Plovila sidebar', 'Charterji sidebar', 'Detail stran', 'Stranski pas levo', 'Stranski pas desno']
 
 const PRAZNA_FORMA = { naziv: '', pozicija: pozicije[0], dimenzije: '', slika_url: '', link_url: '' }
 

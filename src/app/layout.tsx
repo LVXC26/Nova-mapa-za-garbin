@@ -5,6 +5,7 @@ import { PrimerjaProvider } from '@/context/PrimerjaContext'
 import CookieBanner from '@/components/gdpr/CookieBanner'
 import AnalyticsScripts from '@/components/gdpr/AnalyticsScripts'
 import TawkChat from '@/components/support/TawkChat'
+import OglasniBanner from '@/components/oglasi/OglasniBanner'
 
 export const metadata: Metadata = {
   title: 'Garbin — Vaš zaupanja vredni pomorski portal',
@@ -40,6 +41,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <AuthProvider initialUser={user}>
           <PrimerjaProvider>
             {children}
+            {/* Stranska "skyscraper" bannerja — fiksno pripeta na rob
+                zaslona, vidna samo na zelo širokih zaslonih (2xl = 1536px+),
+                kjer je poleg vsebine (max-w-7xl = 1280px) dovolj prostora,
+                da ne prekrivata ničesar. */}
+            <div className="hidden 2xl:block fixed left-4 top-1/2 -translate-y-1/2 z-20">
+              <OglasniBanner pozicija="Stranski pas levo" className="w-[160px] h-[600px]" />
+            </div>
+            <div className="hidden 2xl:block fixed right-4 top-1/2 -translate-y-1/2 z-20">
+              <OglasniBanner pozicija="Stranski pas desno" className="w-[160px] h-[600px]" />
+            </div>
             <CookieBanner />
             {/* Naložita se šele, ko uporabnik dejansko privoli — glej AnalyticsScripts.tsx */}
             <AnalyticsScripts />
