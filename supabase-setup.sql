@@ -1868,3 +1868,30 @@ create policy "Admin brise skiperje" on skiperji for delete using (
 create policy "Admin brise charterje" on charterji for delete using (
   exists (select 1 from profiles where id = auth.uid() and is_admin = true)
 );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- STORAGE — slike novic (uporabnik: "dodaj da lahko objavimo tudi slike").
+-- Novice ureja SAMO admin (za razliko od plovila-slike/rezervni-deli-slike,
+-- kjer vsak lastnik nalaga v svojo mapo), zato tu ni per-user mape/RLS na
+-- ime datoteke — nalaganje/brisanje je dovoljeno vsakemu adminu, enako kot
+-- ze velja za samo "novice" tabelo (Admin doda/ureja/brise novico zgoraj).
+-- ═══════════════════════════════════════════════════════════════════
+
+insert into storage.buckets (id, name, public)
+values ('novice-slike', 'novice-slike', true)
+on conflict (id) do nothing;
+
+create policy "Javni bralni dostop - slike novic" on storage.objects
+  for select using (bucket_id = 'novice-slike');
+
+create policy "Admin naklada slike novic" on storage.objects
+  for insert with check (
+    bucket_id = 'novice-slike'
+    and exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+  );
+
+create policy "Admin brise slike novic" on storage.objects
+  for delete using (
+    bucket_id = 'novice-slike'
+    and exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+  );
