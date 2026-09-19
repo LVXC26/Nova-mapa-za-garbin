@@ -44,12 +44,16 @@ export default function RezervniDeliPage() {
 
   const vsiDeli = realniDeli
 
-  const filtrirani = vsiDeli.filter((del) => {
-    if (kategorija !== 'vse' && del.kategorija !== kategorija) return false
-    if (stanje !== 'vse' && del.stanje !== stanje) return false
-    if (iskanje && !del.naziv.toLowerCase().includes(iskanje.toLowerCase()) && !(del.opis ?? '').toLowerCase().includes(iskanje.toLowerCase())) return false
-    return true
-  })
+  const filtrirani = vsiDeli
+    .filter((del) => {
+      if (kategorija !== 'vse' && del.kategorija !== kategorija) return false
+      if (stanje !== 'vse' && del.stanje !== stanje) return false
+      if (iskanje && !del.naziv.toLowerCase().includes(iskanje.toLowerCase()) && !(del.opis ?? '').toLowerCase().includes(iskanje.toLowerCase())) return false
+      return true
+    })
+    // Prodani deli ostanejo vidni (kupci lahko preverijo, da je res prodan),
+    // a se pomaknejo na konec seznama — enak vzorec kot pri plovilih.
+    .sort((a, b) => Number(a.prodano ?? false) - Number(b.prodano ?? false))
 
   return (
     <>
@@ -157,13 +161,23 @@ export default function RezervniDeliPage() {
                     className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:-translate-y-1 group block"
                   >
                     <div className="h-40 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] flex items-center justify-center relative">
-                      <span className="text-4xl opacity-30">
-                        {del.kategorija === 'motor' ? '⚙️' :
-                         del.kategorija === 'elektronika' ? '📡' :
-                         del.kategorija === 'jadra' ? '⛵' :
-                         del.kategorija === 'trup' ? '🚢' :
-                         del.kategorija === 'sidrna oprema' ? '⚓' : '📦'}
-                      </span>
+                      {del.slika_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={del.slika_url} alt={del.naziv} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-4xl opacity-30">
+                          {del.kategorija === 'motor' ? '⚙️' :
+                           del.kategorija === 'elektronika' ? '📡' :
+                           del.kategorija === 'jadra' ? '⛵' :
+                           del.kategorija === 'trup' ? '🚢' :
+                           del.kategorija === 'sidrna oprema' ? '⚓' : '📦'}
+                        </span>
+                      )}
+                      {del.prodano && (
+                        <div className="absolute inset-0 bg-black/55 flex items-center justify-center z-10">
+                          <span className="px-4 py-2 bg-[#0c2340] text-white font-bold text-sm rounded-full border-2 border-white/30 rotate-[-8deg]">PRODANO</span>
+                        </div>
+                      )}
                       <div className="absolute top-3 left-3 flex gap-2">
                         <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${stanjeKlasa[del.stanje]}`}>
                           {del.stanje === 'novo' ? 'Novo' : 'Rabljeno'}

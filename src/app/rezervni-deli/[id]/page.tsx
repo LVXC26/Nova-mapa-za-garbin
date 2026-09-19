@@ -82,9 +82,18 @@ export default async function RezervniDelDetailPage({ params }: { params: Promis
             </div>
 
             {/* Slika */}
-            <div className="h-64 bg-gradient-to-br from-[#1e3a5f] to-[#2e6b9e] rounded-2xl flex items-center justify-center text-7xl opacity-40 mb-6">
-              {kategorijaIkone[del.kategorija] ?? '📦'}
-            </div>
+            {del.slika_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={del.slika_url}
+                alt={del.naziv}
+                className="w-full h-64 object-cover rounded-2xl mb-6"
+              />
+            ) : (
+              <div className="h-64 bg-gradient-to-br from-[#1e3a5f] to-[#2e6b9e] rounded-2xl flex items-center justify-center text-7xl opacity-40 mb-6">
+                {kategorijaIkone[del.kategorija] ?? '📦'}
+              </div>
+            )}
           </div>
         </section>
 
@@ -137,7 +146,12 @@ export default async function RezervniDelDetailPage({ params }: { params: Promis
                       {podobni.map(d => (
                         <Link key={d.id} href={`/rezervni-deli/${d.id}`}
                           className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-4">
-                          <div className="text-3xl mb-2">{kategorijaIkone[d.kategorija] ?? '📦'}</div>
+                          {d.slika_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={d.slika_url} alt={d.naziv} className="w-full h-20 object-cover rounded-lg mb-2" />
+                          ) : (
+                            <div className="text-3xl mb-2">{kategorijaIkone[d.kategorija] ?? '📦'}</div>
+                          )}
                           <p className="font-semibold text-[#0c2340] text-sm group-hover:text-[#c9a84c] transition-colors line-clamp-2">{d.naziv}</p>
                           <p className="text-[#c9a84c] font-bold text-sm mt-1">{formatCena(d.cena)}</p>
                         </Link>

@@ -233,6 +233,7 @@ export interface RezervniDel {
   kontakt_tel: string | null
   lokacija: string | null
   potrjeno: boolean
+  prodano?: boolean
   user_id: string | null
   created_at: string
 }

@@ -1789,3 +1789,55 @@ where potrjeno = true;
 -- prek gole anon/authenticated vloge (glej "KRITIČEN VARNOSTNI POPRAVEK" zgoraj).
 revoke insert, update, delete, truncate, references, trigger on plovila_javno from public, anon, authenticated;
 grant select on plovila_javno to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- REZERVNI DELI — objava brez admin potrditve (uporabnik: "admin potrdila
+-- objava ne potrebuje tako kot za plovila"). Obrazec /rezervni-deli/novo je
+-- ze prej pošiljal potrjeno:true in trdil "oglas je objavljen in takoj
+-- viden", A trigger trg_prevent_rezervni_del_self_potrditev (dodan pri
+-- splošnem varnostnem popravku 2026-09-08, glej zgoraj) je to VEDNO tiho
+-- prisilil nazaj na false — ker za rezervni_deli ne obstaja NOBENA admin
+-- stran za odobritev, so vsi novi oglasi za dele ostali za vedno nevidni.
+-- Ker je zdaj eksplicitna poslovna odločitev, da deli ne potrebujejo
+-- pregleda (drugače kot plovila/charterji/skiperji), trigger odstranimo v
+-- celoti namesto da bi gradili admin-odobritveni UI, ki ga nihce ne bo
+-- uporabljal. To NE odpira nazaj prvotne varnostne luknje (moznost, da
+-- lastnik prek REST API sam potrdi TUJ oglas) — RLS "Uredi svoj rezervni
+-- del" je in ostaja vrstično omejen na auth.uid() = user_id, torej lahko
+-- vsak še vedno spreminja samo svoje lastne vrstice.
+-- ═══════════════════════════════════════════════════════════════════
+
+drop trigger if exists trg_prevent_rezervni_del_self_potrditev on rezervni_deli;
+
+-- Manjkajoča DELETE politika — obstajale so select/insert/update, a lastnik
+-- svojega oglasa ni mogel izbrisati (RLS privzeto vse zavrne, kar ni
+-- eksplicitno dovoljeno).
+create policy "Lastnik brise svoj rezervni del" on rezervni_deli for delete using (auth.uid() = user_id);
+
+-- "prodano" — manjkajoč stolpec, isti vzorec kot plovila.prodano, za "Moji
+-- deli" upravljalno stran.
+alter table rezervni_deli add column if not exists prodano boolean default false;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- STORAGE — slike rezervnih delov (do zdaj obrazec sploh ni omogočal
+-- nalaganja slike, slika_url je bil vedno trdo kodiran na null)
+-- ═══════════════════════════════════════════════════════════════════
+
+insert into storage.buckets (id, name, public)
+values ('rezervni-deli-slike', 'rezervni-deli-slike', true)
+on conflict (id) do nothing;
+
+create policy "Javni bralni dostop - slike rezervnih delov" on storage.objects
+  for select using (bucket_id = 'rezervni-deli-slike');
+
+create policy "Prijavljeni nalagajo slike delov v svojo mapo" on storage.objects
+  for insert with check (
+    bucket_id = 'rezervni-deli-slike'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+create policy "Prijavljeni brisejo svoje slike delov" on storage.objects
+  for delete using (
+    bucket_id = 'rezervni-deli-slike'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );

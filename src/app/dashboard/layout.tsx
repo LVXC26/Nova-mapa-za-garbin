@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Anchor, LayoutDashboard, Ship, PlusCircle, List, Settings, LogOut, ChevronRight, ChevronDown,
-  UserCircle, MessageCircle, Star, Heart, Zap, Image
+  UserCircle, MessageCircle, Star, Heart, Zap, Image, Wrench
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -19,6 +19,7 @@ function getNavLinks(vloga: string | null): NavItem[] {
         { href: '/dashboard', label: 'Pregled', ikona: LayoutDashboard, exact: true },
         { href: '/dashboard/moja-plovila', label: 'Moja plovila', ikona: Ship },
         { href: '/dashboard/dodaj-plovilo?tip=najem', label: 'Dodaj plovilo', ikona: PlusCircle },
+        { href: '/dashboard/moji-deli', label: 'Moji deli', ikona: Wrench },
         { href: '/dashboard/profil', label: 'Moj profil', ikona: UserCircle },
         { href: '/dashboard/feed', label: 'Feed & objave', ikona: Image },
         { href: '/dashboard/paket', label: 'Paket', ikona: Zap },
@@ -29,6 +30,7 @@ function getNavLinks(vloga: string | null): NavItem[] {
         { href: '/dashboard', label: 'Pregled', ikona: LayoutDashboard, exact: true },
         { href: '/dashboard/profil', label: 'Moj profil', ikona: UserCircle },
         { href: '/dashboard/feed', label: 'Feed & objave', ikona: Image },
+        { href: '/dashboard/moji-deli', label: 'Moji deli', ikona: Wrench },
         { href: '/dashboard/ocene', label: 'Moje ocene', ikona: Star },
         { href: '/dashboard/paket', label: 'Paket', ikona: Zap },
         { href: '/dashboard/nastavitve', label: 'Nastavitve', ikona: Settings },
@@ -37,6 +39,7 @@ function getNavLinks(vloga: string | null): NavItem[] {
       return [
         { href: '/dashboard', label: 'Pregled', ikona: LayoutDashboard, exact: true },
         { href: '/dashboard/priljubljeni', label: 'Priljubljeni', ikona: Heart },
+        { href: '/dashboard/moji-deli', label: 'Moji deli', ikona: Wrench },
         { href: '/chat', label: 'Sporočila', ikona: MessageCircle },
         { href: '/dashboard/nastavitve', label: 'Nastavitve', ikona: Settings },
       ]
@@ -45,6 +48,7 @@ function getNavLinks(vloga: string | null): NavItem[] {
         { href: '/dashboard', label: 'Pregled', ikona: LayoutDashboard, exact: true },
         { href: '/dashboard/moja-plovila', label: 'Moji oglasi', ikona: List },
         { href: '/dashboard/dodaj-plovilo', label: 'Dodaj oglas', ikona: PlusCircle },
+        { href: '/dashboard/moji-deli', label: 'Moji deli', ikona: Wrench },
         { href: '/chat', label: 'Sporočila', ikona: MessageCircle },
         { href: '/dashboard/paket', label: 'Paket', ikona: Zap },
         { href: '/dashboard/nastavitve', label: 'Nastavitve', ikona: Settings },
