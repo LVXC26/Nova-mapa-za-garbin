@@ -134,7 +134,7 @@ export default function Footer() {
                 { label: 'Objavi plovilo', href: '/dashboard/dodaj-plovilo' },
                 { label: 'Paketi & cenik', href: '/paketi' },
                 { label: 'Oglaševanje', href: '/paketi' },
-                { label: 'O nas', href: '/' },
+                { label: 'O nas', href: '/o-nas' },
               ].map(({ label, href }) => (
                 <li key={label}>
                   <Link href={href} className="hover:text-[#c9a84c] hover:pl-1 transition-all duration-200">{label}</Link>
@@ -148,11 +148,11 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wide">Informacije</h4>
             <ul className="space-y-2.5 text-sm">
               {[
-                { label: 'Pogoji uporabe', href: '/' },
-                { label: 'Politika zasebnosti', href: '/' },
-                { label: 'Politika piškotkov', href: '/' },
-                { label: 'Kontakt', href: '/' },
-                { label: 'GDPR', href: '/' },
+                { label: 'Pogoji uporabe', href: '/pogoji-uporabe' },
+                { label: 'Politika zasebnosti', href: '/zasebnost' },
+                { label: 'Politika piškotkov', href: '/zasebnost#piskotki' },
+                { label: 'Kontakt', href: '/kontakt' },
+                { label: 'GDPR', href: '/zasebnost#vase-pravice' },
               ].map(({ label, href }) => (
                 <li key={label}>
                   <Link href={href} className="hover:text-[#c9a84c] hover:pl-1 transition-all duration-200">{label}</Link>
@@ -165,9 +165,9 @@ export default function Footer() {
         <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
           <p>© {new Date().getFullYear()} Garbin d.o.o. Vse pravice pridržane.</p>
           <div className="flex items-center gap-4">
-            <Link href="/" className="hover:text-white/70 transition-colors">Pogoji</Link>
-            <Link href="/" className="hover:text-white/70 transition-colors">Zasebnost</Link>
-            <Link href="/" className="hover:text-white/70 transition-colors">Piškotki</Link>
+            <Link href="/pogoji-uporabe" className="hover:text-white/70 transition-colors">Pogoji</Link>
+            <Link href="/zasebnost" className="hover:text-white/70 transition-colors">Zasebnost</Link>
+            <Link href="/zasebnost#piskotki" className="hover:text-white/70 transition-colors">Piškotki</Link>
           </div>
         </div>
       </div>

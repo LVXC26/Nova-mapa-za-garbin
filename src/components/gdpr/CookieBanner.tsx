@@ -49,9 +49,9 @@ export default function CookieBanner() {
                 <p className="text-white/60 text-xs leading-relaxed mb-4">
                   Uporabljamo piškotke za boljšo uporabniško izkušnjo, analitiko in personalizirane vsebine.
                   Preberite našo{' '}
-                  <Link href="/" className="text-[#c9a84c] hover:underline">politiko zasebnosti</Link>{' '}
+                  <Link href="/zasebnost" className="text-[#c9a84c] hover:underline">politiko zasebnosti</Link>{' '}
                   in{' '}
-                  <Link href="/" className="text-[#c9a84c] hover:underline">politiko piškotkov</Link>.
+                  <Link href="/zasebnost#piskotki" className="text-[#c9a84c] hover:underline">politiko piškotkov</Link>.
                 </p>
 
                 {showSettings && (

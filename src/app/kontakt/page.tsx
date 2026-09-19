@@ -176,7 +176,7 @@ export default function KontaktPage() {
                             placeholder="Opišite vaše vprašanje ali težavo čim podrobneje..."
                             className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none transition-colors" />
                         </div>
-                        <p className="text-xs text-gray-400">Z oddajo obrazca se strinjate z našo <Link href="/" className="text-[#c9a84c] hover:underline">politiko zasebnosti</Link>.</p>
+                        <p className="text-xs text-gray-400">Z oddajo obrazca se strinjate z našo <Link href="/zasebnost" className="text-[#c9a84c] hover:underline">politiko zasebnosti</Link>.</p>
                         <button type="submit" disabled={nalaga}
                           className="flex items-center justify-center gap-2 px-6 py-3.5 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.02]">
                           <Send className="w-4 h-4" />
