@@ -69,6 +69,13 @@ export default function AdminNovicePage() {
       kategorija_id: forma.kategorija_id || null,
     }
 
+    // Nova novica se objavi TAKOJ ob shranjevanju (published_at = zdaj), ne
+    // kot skrit osnutek — prej je bilo published_at:null, kar je zahtevalo
+    // se dodaten, nikjer pojasnjen klik na znacko "Osnutek" na seznamu, da
+    // je novica sploh postala vidna na /novice. Admin je ze zaupanja vreden
+    // (enak sklep kot pri rezervnih delih), zato dodaten korak ni potreben.
+    // Znacko "Objavljeno"/"Osnutek" na seznamu se vedno lahko uporabi za
+    // kasnejse zacasno skritje novice.
     const { error } = urejaId
       ? await supabase.from('novice').update(polja).eq('id', urejaId)
       : await supabase.from('novice').insert({
@@ -76,7 +83,7 @@ export default function AdminNovicePage() {
           slug: slugify(forma.naslov) + '-' + Date.now().toString(36),
           avtor: user?.user_metadata?.ime ?? user?.email ?? 'Admin',
           slika_url: null,
-          published_at: null,
+          published_at: new Date().toISOString(),
         })
 
     if (error) { setNapaka('Napaka pri shranjevanju.'); return }
