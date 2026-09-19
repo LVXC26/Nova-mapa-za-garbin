@@ -1851,6 +1851,33 @@ create policy "Prijavljeni brisejo svoje slike delov" on storage.objects
 -- kar je izgledalo natanko kot opisano: gumb "deluje", a nič se ne zgodi).
 -- ═══════════════════════════════════════════════════════════════════
 
+-- ═══════════════════════════════════════════════════════════════════
+-- STORAGE — slike bannerjev (uporabnik je v "URL slike" prej vnesel
+-- povezavo do CLANKA namesto do slike same, ker je bilo prelahko zamenjati
+-- - "URL slike" je bil navadno besedilno polje. Zdaj admin namesto tega
+-- naklada pravo datoteko, enak vzorec kot novice-slike (admin upravlja vso
+-- vsebino skupno, ni per-user mape).
+-- ═══════════════════════════════════════════════════════════════════
+
+insert into storage.buckets (id, name, public)
+values ('bannerji-slike', 'bannerji-slike', true)
+on conflict (id) do nothing;
+
+create policy "Javni bralni dostop - slike bannerjev" on storage.objects
+  for select using (bucket_id = 'bannerji-slike');
+
+create policy "Admin naklada slike bannerjev" on storage.objects
+  for insert with check (
+    bucket_id = 'bannerji-slike'
+    and exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+  );
+
+create policy "Admin brise slike bannerjev" on storage.objects
+  for delete using (
+    bucket_id = 'bannerji-slike'
+    and exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+  );
+
 create policy "Admin brise skiperje" on skiperji for delete using (
   exists (select 1 from profiles where id = auth.uid() and is_admin = true)
 );

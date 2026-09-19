@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X, Upload, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { stisniSlike } from '@/lib/stisniSliko'
 import type { Banner } from '@/types/database'
+
+const MAX_VELIKOST_MB = 30
 
 const pozicije = ['Homepage top', 'Homepage mid', 'Plovila sidebar', 'Charterji sidebar', 'Detail stran', 'Stranski pas levo', 'Stranski pas desno']
 
@@ -16,6 +19,15 @@ export default function AdminBannerjiPage() {
   const [urejaId, setUrejaId] = useState<string | null>(null)
   const [obrazecOdprt, setObrazecOdprt] = useState(false)
   const [forma, setForma] = useState(PRAZNA_FORMA)
+  const [obstojecaSlika, setObstojecaSlika] = useState<string | null>(null)
+  const [novaSlika, setNovaSlika] = useState<File | null>(null)
+  const [stiskamSliko, setStiskamSliko] = useState(false)
+  const novaSlikaPredogled = useMemo(() => novaSlika ? URL.createObjectURL(novaSlika) : null, [novaSlika])
+  const slikaPredogled = novaSlikaPredogled ?? obstojecaSlika
+
+  useEffect(() => {
+    return () => { if (novaSlikaPredogled) URL.revokeObjectURL(novaSlikaPredogled) }
+  }, [novaSlikaPredogled])
 
   const supabase = createClient()
 
@@ -38,7 +50,9 @@ export default function AdminBannerjiPage() {
 
   function zacniUrejanje(b: Banner) {
     setUrejaId(b.id)
-    setForma({ naziv: b.naziv, pozicija: b.pozicija, dimenzije: b.dimenzije ?? '', slika_url: b.slika_url ?? '', link_url: b.link_url ?? '' })
+    setForma({ naziv: b.naziv, pozicija: b.pozicija, dimenzije: b.dimenzije ?? '', slika_url: '', link_url: b.link_url ?? '' })
+    setObstojecaSlika(b.slika_url)
+    setNovaSlika(null)
     setObrazecOdprt(true)
   }
 
@@ -46,18 +60,46 @@ export default function AdminBannerjiPage() {
     setObrazecOdprt(false)
     setUrejaId(null)
     setForma(PRAZNA_FORMA)
+    setObstojecaSlika(null)
+    setNovaSlika(null)
     setNapaka('')
+  }
+
+  async function izberiSliko(datoteke: FileList | null) {
+    const datoteka = datoteke?.[0]
+    if (!datoteka) return
+    if (!datoteka.type.startsWith('image/')) { setNapaka(`"${datoteka.name}" ni slikovna datoteka.`); return }
+    if (datoteka.size > MAX_VELIKOST_MB * 1024 * 1024) { setNapaka(`Slika presega ${MAX_VELIKOST_MB} MB.`); return }
+    setNapaka('')
+    setStiskamSliko(true)
+    const [stisnjena] = await stisniSlike([datoteka])
+    setStiskamSliko(false)
+    setNovaSlika(stisnjena)
+  }
+
+  function odstraniSliko() {
+    setNovaSlika(null)
+    setObstojecaSlika(null)
   }
 
   async function shrani() {
     setNapaka('')
     if (!forma.naziv) { setNapaka('Vpišite naziv.'); return }
 
+    let slikaUrl = obstojecaSlika
+    if (novaSlika) {
+      const pot = `${crypto.randomUUID()}-${novaSlika.name}`
+      const { error: uploadError } = await supabase.storage.from('bannerji-slike').upload(pot, novaSlika)
+      if (uploadError) { setNapaka('Napaka pri nalaganju slike: ' + uploadError.message); return }
+      const { data } = supabase.storage.from('bannerji-slike').getPublicUrl(pot)
+      slikaUrl = data.publicUrl
+    }
+
     const polja = {
       naziv: forma.naziv,
       pozicija: forma.pozicija,
       dimenzije: forma.dimenzije || null,
-      slika_url: forma.slika_url || null,
+      slika_url: slikaUrl,
       link_url: forma.link_url || null,
     }
 
@@ -128,12 +170,37 @@ export default function AdminBannerjiPage() {
               <input value={forma.link_url} onChange={e => setForma(f => ({ ...f, link_url: e.target.value }))} placeholder="https://..." className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">URL slike</label>
-              <input value={forma.slika_url} onChange={e => setForma(f => ({ ...f, slika_url: e.target.value }))} placeholder="https://..." className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]" />
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Slika</label>
+              {slikaPredogled ? (
+                <div className="relative w-48 h-24 rounded-lg overflow-hidden border border-gray-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={slikaPredogled} alt="Predogled" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={odstraniSliko}
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-48 h-24 rounded-lg border-2 border-dashed border-gray-200 hover:border-[#c9a84c] cursor-pointer transition-colors text-gray-400 hover:text-[#c9a84c]">
+                  {stiskamSliko ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 mb-1" />
+                      <span className="text-xs font-medium">Naloži sliko</span>
+                    </>
+                  )}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => izberiSliko(e.target.files)} disabled={stiskamSliko} />
+                </label>
+              )}
+              <p className="text-xs text-gray-400 mt-1.5">Naložite slikovno datoteko — NE povezave do strani, kjer je slika objavljena.</p>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
-            <button onClick={shrani} className="px-4 py-2 bg-[#c9a84c] text-[#0c2340] font-semibold text-sm rounded-full">Shrani</button>
+            <button onClick={shrani} disabled={stiskamSliko} className="px-4 py-2 bg-[#c9a84c] disabled:opacity-60 text-[#0c2340] font-semibold text-sm rounded-full">Shrani</button>
             <button onClick={preklici} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm rounded-full hover:bg-gray-50">Prekliči</button>
           </div>
         </div>
