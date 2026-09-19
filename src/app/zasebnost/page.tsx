@@ -34,7 +34,7 @@ export default function ZasebnostPage() {
 
             <Razdelek naslov="1. Upravljavec osebnih podatkov">
               <p>
-                Upravljavec osebnih podatkov je <strong>Garbin d.o.o.</strong>, Obala 14, 6320 Portorož, Slovenija
+                Upravljavec osebnih podatkov je <strong>LUMAVX s.p.</strong> (platforma Garbin), Obala 14, 6320 Portorož, Slovenija
                 (matična in davčna številka: <em>[vpiše se pred objavo]</em>).
               </p>
               <p>

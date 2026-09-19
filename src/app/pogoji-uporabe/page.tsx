@@ -35,7 +35,7 @@ export default function PogojiUporabePage() {
             <Razdelek naslov="1. Splošno">
               <p>
                 Ti pogoji uporabe urejajo uporabo spletne strani garbin.net ("Garbin", "platforma"), ki jo upravlja
-                Garbin d.o.o., Obala 14, 6320 Portorož. Z registracijo ali uporabo platforme sprejemate te pogoje.
+                LUMAVX s.p., Obala 14, 6320 Portorož. Z registracijo ali uporabo platforme sprejemate te pogoje.
                 Če se z njimi ne strinjate, platforme ne uporabljajte.
               </p>
             </Razdelek>
@@ -82,7 +82,7 @@ export default function PogojiUporabePage() {
 
             <Razdelek naslov="6. Intelektualna lastnina">
               <p>
-                Znamka Garbin, logotip in oblikovanje spletne strani so last Garbin d.o.o. Vsebino, ki jo objavite
+                Znamka Garbin, logotip in oblikovanje spletne strani so last LUMAVX s.p. Vsebino, ki jo objavite
                 (fotografije, opise), obdržite v lasti, a Garbinu podeljujete pravico do njene prikazave na platformi
                 za namen delovanja storitve.
               </p>

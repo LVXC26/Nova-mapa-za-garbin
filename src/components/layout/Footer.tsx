@@ -163,7 +163,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
-          <p>© {new Date().getFullYear()} Garbin d.o.o. Vse pravice pridržane.</p>
+          <p>© {new Date().getFullYear()} LUMAVX s.p. Vse pravice pridržane.</p>
           <div className="flex items-center gap-4">
             <Link href="/pogoji-uporabe" className="hover:text-white/70 transition-colors">Pogoji</Link>
             <Link href="/zasebnost" className="hover:text-white/70 transition-colors">Zasebnost</Link>
