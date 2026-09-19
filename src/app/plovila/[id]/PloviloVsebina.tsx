@@ -10,6 +10,7 @@ import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import ZasedenostPrikaz from '@/components/shared/ZasedenostPrikaz'
+import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { createClient } from '@/lib/supabase/client'
 import { opremaLabele } from '@/lib/oprema'
 import type { Plovilo, PloviloZasedenost } from '@/types/database'
@@ -570,11 +571,7 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
                   </div>
                 )}
 
-                {/* Banner placeholder 300x250 */}
-                <div className="w-full h-[250px] bg-[#0c2340] rounded-2xl flex flex-col items-center justify-center border border-[#1e3a5f]">
-                  <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">300 × 250</p>
-                  <p className="text-white/50 text-sm">Oglaševalski prostor</p>
-                </div>
+                <OglasniBanner pozicija="Plovila sidebar" className="w-full h-[250px]" />
               </div>
 
             </div>

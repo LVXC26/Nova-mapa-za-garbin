@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Clock, User, Tag, Share2, ArrowRight, BookOpen, CheckCircle, AlertCircle } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -243,11 +244,7 @@ export default function NovicaVsebina({ params }: { params: Promise<{ slug: stri
                   </div>
                 )}
 
-                {/* Banner placeholder */}
-                <div className="w-full h-[250px] bg-[#0c2340] rounded-2xl flex flex-col items-center justify-center border border-[#1e3a5f]">
-                  <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">300 × 250</p>
-                  <p className="text-white/50 text-sm">Oglaševalski prostor</p>
-                </div>
+                <OglasniBanner pozicija="Detail stran" className="w-full h-[250px]" />
               </div>
             </div>
 

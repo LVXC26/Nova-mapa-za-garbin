@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { MapPin, Ship, Star, CheckCircle, ExternalLink, ArrowLeft, Users, Ruler } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
@@ -436,6 +437,8 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                     </div>
                   </div>
                 </div>
+
+                <OglasniBanner pozicija="Charterji sidebar" className="w-full h-[250px]" />
               </div>
 
             </div>

@@ -8,6 +8,7 @@ import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import CharterKartica from '@/components/charterji/CharterKartica'
 import HeroSearch from '@/components/home/HeroSearch'
+import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -147,6 +148,11 @@ export default function HomePage() {
             </svg>
           </div>
         </section>
+
+        {/* Prazen div ne pusca ne obstaja, ce banner ni nastavljen — OglasniBanner
+            vrne null, zato tu namerno NI dodatnega ovijalnega diva z
+            barvo/paddingom, ki bi sicer pustil prazno vrzel na strani. */}
+        <OglasniBanner pozicija="Homepage top" className="block w-full max-w-4xl h-[90px] sm:h-[120px] mx-auto my-6 px-4" />
 
         {/* STATS */}
         <section className="py-10 bg-[#f8fafc]">
@@ -346,6 +352,8 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        <OglasniBanner pozicija="Homepage mid" className="block w-full max-w-4xl h-[90px] sm:h-[120px] mx-auto my-6 px-4" />
 
         {/* PROMOCIJE */}
         <section className="py-20 bg-[#0c2340] relative overflow-hidden">

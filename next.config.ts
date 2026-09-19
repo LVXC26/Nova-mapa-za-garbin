@@ -44,7 +44,12 @@ const csp = [
   // izbrane slike sploh ne prikažejo/naložijo. Ni varnostno tveganje: blob:
   // URL je vedno generiran s strani lastnega JS iz datoteke, ki jo je
   // uporabnik sam izbral, ne zunanji vir.
-  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com https://*.tawk.to https://cdn.jsdelivr.net",
+  // https: (katerakoli HTTPS domena) je tu namerno dodan zaradi oglasnih
+  // bannerjev (/admin/bannerji) — oglaševalec (npr. zunanje podjetje) poda
+  // URL do slike na SVOJEM strežniku, ki ga vnaprej ne moremo poznati/omejiti
+  // na seznam. Brez tega bi ozek whitelist tiho blokiral vsak banner, ki ne
+  // kaže na eno od spodnjih znanih domen.
+  "img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://*.tile.openstreetmap.org https://www.facebook.com https://*.tawk.to https://cdn.jsdelivr.net",
   // wss://*.supabase.co je nujen za Realtime (chat uporablja
   // supabase.channel(...).on('postgres_changes', ...) — WebSocket, ločena
   // shema od https:, CSP ju obravnava kot različna vira) — brez tega je bila
