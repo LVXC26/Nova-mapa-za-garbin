@@ -221,6 +221,7 @@ export default function AdminNovicePage() {
       )}
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
@@ -264,6 +265,7 @@ export default function AdminNovicePage() {
             ))}
           </tbody>
         </table>
+        </div>
         {!nalaga && novice.length === 0 && (
           <div className="py-12 text-center text-gray-400 text-sm">Ni novic</div>
         )}
