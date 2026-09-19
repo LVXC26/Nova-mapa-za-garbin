@@ -571,7 +571,7 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
                   </div>
                 )}
 
-                <OglasniBanner pozicija="Plovila sidebar" className="w-full h-[250px]" />
+                <OglasniBanner pozicija="Plovila sidebar" className="w-full h-[600px]" />
               </div>
 
             </div>

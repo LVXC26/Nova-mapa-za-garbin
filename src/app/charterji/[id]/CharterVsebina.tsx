@@ -438,7 +438,7 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
 
-                <OglasniBanner pozicija="Charterji sidebar" className="w-full h-[250px]" />
+                <OglasniBanner pozicija="Charterji sidebar" className="w-full h-[600px]" />
               </div>
 
             </div>

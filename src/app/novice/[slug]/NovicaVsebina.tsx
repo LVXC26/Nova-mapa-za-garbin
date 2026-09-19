@@ -244,7 +244,7 @@ export default function NovicaVsebina({ params }: { params: Promise<{ slug: stri
                   </div>
                 )}
 
-                <OglasniBanner pozicija="Detail stran" className="w-full h-[250px]" />
+                <OglasniBanner pozicija="Detail stran" className="w-full h-[600px]" />
               </div>
             </div>
 
