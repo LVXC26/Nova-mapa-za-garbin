@@ -25,6 +25,7 @@ const specFields = [
   { kljuc: 'letnik', label: 'Letnik', format: (p: any) => p.letnik ?? '—' },
   { kljuc: 'dolzina_m', label: 'Dolžina', format: (p: any) => p.dolzina_m ? `${p.dolzina_m} m` : '—' },
   { kljuc: 'postelje', label: 'Postelje', format: (p: any) => p.postelje ?? '—' },
+  { kljuc: 'max_oseb', label: 'Maks. oseb', format: (p: any) => p.max_oseb ?? '—' },
   { kljuc: 'stanje', label: 'Stanje', format: (p: any) => p.stanje ?? '—' },
   { kljuc: 'lokacija', label: 'Lokacija', format: (p: any) => p.lokacija ?? '—' },
 ]

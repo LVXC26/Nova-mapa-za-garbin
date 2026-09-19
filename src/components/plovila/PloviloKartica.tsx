@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Calendar, Ruler, BedDouble, Heart, GitCompare } from 'lucide-react'
+import { MapPin, Calendar, Ruler, BedDouble, Users, Heart, GitCompare } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { Plovilo } from '@/types/database'
 import { formatCena } from '@/lib/utils'
@@ -236,6 +236,12 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
               <div className="flex items-center gap-1.5 text-xs text-gray-500">
                 <BedDouble className="w-3.5 h-3.5 text-[#c9a84c] shrink-0" />
                 <span>{plovilo.postelje} postelj{plovilo.postelje === 1 ? 'a' : ''}</span>
+              </div>
+            )}
+            {plovilo.max_oseb && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                <Users className="w-3.5 h-3.5 text-[#c9a84c] shrink-0" />
+                <span>Maks. {plovilo.max_oseb} oseb</span>
               </div>
             )}
             <div className="flex items-center gap-1.5 text-xs">

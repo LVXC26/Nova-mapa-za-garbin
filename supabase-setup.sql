@@ -1895,3 +1895,29 @@ create policy "Admin brise slike novic" on storage.objects
     bucket_id = 'novice-slike'
     and exists (select 1 from profiles where id = auth.uid() and is_admin = true)
   );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- MAKS. OSEB — locena od "postelje" (koliko lahko prespi na plovilu).
+-- Ta stevilka je dnevna/celotna kapaciteta plovila (npr. na izletu cez dan
+-- je lahko visja od stevila lezisc) - uporabnik: "na barkah razclenjeno za
+-- koliko ljudi imas za prespat maximalno in koliko ljudi je lahko na njej
+-- maximalno".
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table plovila add column if not exists max_oseb integer;
+
+drop view if exists plovila_javno;
+
+create view plovila_javno
+with (security_invoker = false)
+as select
+  id, naziv, opis, cena, letnik, dolzina_m, postelje, max_oseb, tip, tip_oglasa, stanje, lokacija,
+  case when tip_oglasa = 'najem' then null else kontakt_email end as kontakt_email,
+  case when tip_oglasa = 'najem' then null else kontakt_tel end as kontakt_tel,
+  slike, model_3d_url, oprema, potrjeno, promoted, promoted_do, prodano,
+  cena_na_zahtevo, urgentno, urgentno_do, user_id, created_at, updated_at
+from plovila
+where potrjeno = true;
+
+revoke insert, update, delete, truncate, references, trigger on plovila_javno from public, anon, authenticated;
+grant select on plovila_javno to anon, authenticated;

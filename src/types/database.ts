@@ -11,6 +11,7 @@ export interface Plovilo {
   letnik: number | null
   dolzina_m: number | null
   postelje: number | null
+  max_oseb: number | null
   tip: TipPlovila
   tip_oglasa: TipOglasa
   stanje: StanjePlovila | null

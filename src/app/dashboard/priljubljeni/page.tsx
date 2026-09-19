@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Heart, Ship, MapPin, Calendar, Ruler, BedDouble, Trash2 } from 'lucide-react'
+import { Heart, Ship, MapPin, Calendar, Ruler, BedDouble, Users, Trash2 } from 'lucide-react'
 import { formatCena } from '@/lib/utils'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -95,6 +95,7 @@ export default function PriljubljeniPage() {
                   {plovilo.letnik && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{plovilo.letnik}</span>}
                   {plovilo.dolzina_m && <span className="flex items-center gap-1"><Ruler className="w-3 h-3" />{plovilo.dolzina_m}m</span>}
                   {plovilo.postelje && <span className="flex items-center gap-1"><BedDouble className="w-3 h-3" />{plovilo.postelje}</span>}
+                  {plovilo.max_oseb && <span className="flex items-center gap-1"><Users className="w-3 h-3" />{plovilo.max_oseb}</span>}
                 </div>
               </div>
               <div className="text-right shrink-0">

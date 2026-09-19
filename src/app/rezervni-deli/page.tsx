@@ -78,8 +78,8 @@ export default function RezervniDeliPage() {
               Motorji, elektronika, jadra, sidra in vse kar potrebujete za vaše plovilo. Kupite ali prodajte rabljene in nove dele.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-2xl">
-              <div className="flex-1 relative">
+            <div className="mt-8 max-w-2xl">
+              <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                 <input
                   type="text"
@@ -89,15 +89,29 @@ export default function RezervniDeliPage() {
                   className="w-full pl-12 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-[#c9a84c] focus:bg-white/15 transition-all"
                 />
               </div>
-              <select
-                value={stanje}
-                onChange={(e) => setStanje(e.target.value as Stanje)}
-                className="px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-[#c9a84c] cursor-pointer"
-              >
-                <option value="vse" className="text-[#0c2340]">Vse stanje</option>
-                <option value="novo" className="text-[#0c2340]">Novo</option>
-                <option value="rabljeno" className="text-[#0c2340]">Rabljeno</option>
-              </select>
+            </div>
+
+            {/* STANJE — prej skrito v dropdown meniju ("Vse stanje"), zdaj
+                velika, takoj vidna zavihka, da je delitev rabljeno/novo
+                jasna na prvi pogled brez klikanja. */}
+            <div className="mt-6 flex gap-2">
+              {([
+                { vrednost: 'vse', label: 'Vsi deli' },
+                { vrednost: 'rabljeno', label: 'Rabljeni deli' },
+                { vrednost: 'novo', label: 'Novi deli' },
+              ] as { vrednost: Stanje; label: string }[]).map(({ vrednost, label }) => (
+                <button
+                  key={vrednost}
+                  onClick={() => setStanje(vrednost)}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    stanje === vrednost
+                      ? 'bg-[#c9a84c] text-[#0c2340]'
+                      : 'bg-white/10 text-white/70 hover:bg-white/15 hover:text-white border border-white/20'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
         </section>
