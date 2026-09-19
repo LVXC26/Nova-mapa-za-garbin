@@ -64,15 +64,29 @@ export default function ZasebnostPage() {
             </Razdelek>
 
             <Razdelek naslov="4. Piškotki (cookies)" id="piskotki">
-              <p>Ob prvem obisku vas vprašamo za soglasje. Uporabljamo tri kategorije piškotkov:</p>
+              <p>Ob prvem obisku vas vprašamo za soglasje. Uporabljamo naslednje kategorije piškotkov:</p>
               <ul className="list-disc pl-5 space-y-1.5">
-                <li><strong>Nujni piškotki</strong> — potrebni za osnovno delovanje strani (npr. prijava, shranjena izbira glede piškotkov). Teh ni mogoče izklopiti.</li>
-                <li><strong>Analitični piškotki (Google Analytics)</strong> — pomagajo nam razumeti, kako obiskovalci uporabljajo stran, da jo lahko izboljšujemo. Naložijo se šele, ko to dovolite.</li>
-                <li><strong>Marketinški piškotki (Meta Pixel)</strong> — uporabljajo se za merjenje učinkovitosti oglasov. Naložijo se šele, ko to dovolite.</li>
+                <li>
+                  <strong>Nujni/funkcijski piškotki</strong> — potrebni za osnovno delovanje strani in za klepet za
+                  podporo strankam (ponudnik Tawk.to: <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">twk_uuid_*</code>,{' '}
+                  <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">twk_idm_key</code>,{' '}
+                  <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">TawkConnectionTime</code>), ter za shranjeno
+                  izbiro glede piškotkov in prijavo. Klepet je namenjen neposredni komunikaciji z obiskovalci (ne
+                  oglaševanju), zato se naloži takoj in ga ni mogoče izklopiti.
+                </li>
+                <li>
+                  <strong>Analitični piškotki (Google Analytics: <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">_ga</code>,{' '}
+                  <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">_ga_*</code>)</strong> — pomagajo nam
+                  razumeti, kako obiskovalci uporabljajo stran, da jo lahko izboljšujemo. Naložijo se šele, ko to dovolite.
+                </li>
+                <li>
+                  <strong>Marketinški piškotki (Meta Pixel)</strong> — uporabljajo se za merjenje učinkovitosti oglasov.
+                  Naložijo se šele, ko to dovolite (trenutno ta funkcija na strani še ni aktivirana).
+                </li>
               </ul>
               <p>
-                Svojo izbiro lahko kadarkoli spremenite tako, da v brskalniku počistite piškotke te strani, s čimer se
-                pasica za piškotke ponovno prikaže.
+                Svojo izbiro glede analitičnih in marketinških piškotkov lahko kadarkoli spremenite tako, da v
+                brskalniku počistite piškotke te strani, s čimer se pasica za piškotke ponovno prikaže.
               </p>
             </Razdelek>
 
