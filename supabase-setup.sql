@@ -1854,3 +1854,17 @@ create policy "Prijavljeni brisejo svoje slike delov" on storage.objects
 create policy "Admin brise skiperje" on skiperji for delete using (
   exists (select 1 from profiles where id = auth.uid() and is_admin = true)
 );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- ISTI PROBLEM — charterji (uporabnik: "a za plovila je narejeno enako da
+-- lahko izbrišeš objave ko ga izbrišeš"). Admin/charterji ni imel SPLOH
+-- NOBENEGA gumba za brisanje (ne pravega, ne "navideznega" kot pri
+-- skiperjih), in tabela charterji prav tako ni imela nobene delete
+-- politike. Charter podjetje ima lahko svoja plovila (plovila.user_id) IN
+-- objave (objave.lastnik_user_id) — oboje se ob brisanju charter profila v
+-- kodi izbriše izrecno.
+-- ═══════════════════════════════════════════════════════════════════
+
+create policy "Admin brise charterje" on charterji for delete using (
+  exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+);

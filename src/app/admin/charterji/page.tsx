@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CheckCircle, XCircle, Eye, BadgeCheck, Gift, X, Calendar, AlertTriangle } from 'lucide-react'
+import { CheckCircle, XCircle, Eye, BadgeCheck, Gift, X, Calendar, AlertTriangle, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Charter } from '@/types/database'
 
@@ -179,6 +179,20 @@ export default function AdminCharterjiPage() {
     nalozi()
   }
 
+  async function izbrisi(c: Charter) {
+    if (!confirm(`Izbrišete charter "${c.naziv}" ter vsa njegova plovila (${c.st_plovil}) in objave? Tega ni mogoče razveljaviti.`)) return
+    // Plovila in objave se ne izbrišejo same od sebe — vezana so na
+    // user_id/lastnik_user_id (auth.users), ne na charterji.id, zato ju
+    // zbrišemo izrecno pred profilom.
+    if (c.user_id) {
+      await supabase.from('plovila').delete().eq('user_id', c.user_id)
+      await supabase.from('objave').delete().eq('lastnik_user_id', c.user_id)
+    }
+    const { error } = await supabase.from('charterji').delete().eq('id', c.id)
+    if (error) { prikaziObvestilo('napaka', 'Napaka pri brisanju: ' + error.message); return }
+    nalozi()
+  }
+
   return (
     <div className="p-8">
       {/* Toast obvestilo */}
@@ -272,6 +286,13 @@ export default function AdminCharterjiPage() {
                       >
                         <Gift className="w-4 h-4" />
                       </button>
+                      <button
+                        onClick={() => izbrisi(c)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors"
+                        title="Izbriši charter, njegova plovila in objave"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -291,6 +312,7 @@ export default function AdminCharterjiPage() {
       <div className="mt-4 flex items-center gap-5 text-xs text-gray-400">
         <div className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Preklopi verified</div>
         <div className="flex items-center gap-1.5"><Gift className="w-3.5 h-3.5 text-amber-500" /> Dodeli brezplačni dostop</div>
+        <div className="flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5 text-red-500" /> Izbriši (in njegova plovila/objave)</div>
       </div>
 
       {/* Modal */}
