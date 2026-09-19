@@ -10,6 +10,7 @@ export interface Plovilo {
   cena: number
   letnik: number | null
   dolzina_m: number | null
+  postelje: number | null
   tip: TipPlovila
   tip_oglasa: TipOglasa
   stanje: StanjePlovila | null

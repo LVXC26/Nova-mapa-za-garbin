@@ -1760,3 +1760,32 @@ from skiperji;
 -- samo branje.
 revoke insert, update, delete, truncate, references, trigger on skiperji_javno from public, anon, authenticated;
 grant select on skiperji_javno to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POSTELJE (število ležišč) — manjkajoče, a nujno polje pri prodaji IN
+-- najemu plovil (uporabnik: "pri prodaji in najemu plovil je potrebno
+-- dodati koliko postelj ima").
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table plovila add column if not exists postelje integer;
+
+-- drop + create (ne "create or replace") — glej razlago pri skiperji_javno
+-- zgoraj: Postgres ne dovoli vrivanja stolpca na sredino seznama obstoječega
+-- pogleda (ERROR 42P16).
+drop view if exists plovila_javno;
+
+create view plovila_javno
+with (security_invoker = false)
+as select
+  id, naziv, opis, cena, letnik, dolzina_m, postelje, tip, tip_oglasa, stanje, lokacija,
+  case when tip_oglasa = 'najem' then null else kontakt_email end as kontakt_email,
+  case when tip_oglasa = 'najem' then null else kontakt_tel end as kontakt_tel,
+  slike, model_3d_url, oprema, potrjeno, promoted, promoted_do, prodano,
+  cena_na_zahtevo, urgentno, urgentno_do, user_id, created_at, updated_at
+from plovila
+where potrjeno = true;
+
+-- drop+create ponastavi grante na pogledu — brez tega bi bil spet pisljiv
+-- prek gole anon/authenticated vloge (glej "KRITIČEN VARNOSTNI POPRAVEK" zgoraj).
+revoke insert, update, delete, truncate, references, trigger on plovila_javno from public, anon, authenticated;
+grant select on plovila_javno to anon, authenticated;

@@ -24,6 +24,7 @@ const specFields = [
   { kljuc: 'tip_oglasa', label: 'Tip oglasa', format: (p: any) => p.tip_oglasa === 'najem' ? 'Najem' : 'Prodaja' },
   { kljuc: 'letnik', label: 'Letnik', format: (p: any) => p.letnik ?? '—' },
   { kljuc: 'dolzina_m', label: 'Dolžina', format: (p: any) => p.dolzina_m ? `${p.dolzina_m} m` : '—' },
+  { kljuc: 'postelje', label: 'Postelje', format: (p: any) => p.postelje ?? '—' },
   { kljuc: 'stanje', label: 'Stanje', format: (p: any) => p.stanje ?? '—' },
   { kljuc: 'lokacija', label: 'Lokacija', format: (p: any) => p.lokacija ?? '—' },
 ]

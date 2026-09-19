@@ -3,7 +3,7 @@
 import { use, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, MapPin, Calendar, Ruler, Phone, Mail, MessageCircle, CheckCircle, Share2, Copy, X, Printer, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, Ruler, BedDouble, Phone, Mail, MessageCircle, CheckCircle, Share2, Copy, X, Printer, ChevronLeft, ChevronRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
@@ -359,6 +359,11 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
                     {plovilo.dolzina_m && (
                       <span className="flex items-center gap-1.5">
                         <Ruler className="w-4 h-4 text-[#c9a84c]" /> {plovilo.dolzina_m} m
+                      </span>
+                    )}
+                    {plovilo.postelje && (
+                      <span className="flex items-center gap-1.5">
+                        <BedDouble className="w-4 h-4 text-[#c9a84c]" /> {plovilo.postelje} postelj{plovilo.postelje === 1 ? 'a' : ''}
                       </span>
                     )}
                   </div>

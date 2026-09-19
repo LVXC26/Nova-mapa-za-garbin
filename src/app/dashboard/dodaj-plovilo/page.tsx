@@ -52,6 +52,7 @@ function DodajPloviloContent() {
     cena: '',
     letnik: '',
     dolzina_m: '',
+    postelje: '',
     lokacija: '',
     stanje: 'odlično',
     kontakt_email: user?.email ?? '',
@@ -93,6 +94,7 @@ function DodajPloviloContent() {
           cena: data.cena_na_zahtevo ? '' : String(data.cena ?? ''),
           letnik: data.letnik ? String(data.letnik) : '',
           dolzina_m: data.dolzina_m ? String(data.dolzina_m) : '',
+          postelje: data.postelje ? String(data.postelje) : '',
           lokacija: data.lokacija ?? '',
           stanje: data.stanje ?? 'odlično',
           kontakt_email: data.kontakt_email ?? user.email ?? '',
@@ -225,6 +227,7 @@ function DodajPloviloContent() {
       cena_na_zahtevo: cenaZahtevo,
       letnik: forma.letnik ? Number(forma.letnik) : null,
       dolzina_m: parsiDolzino(forma.dolzina_m),
+      postelje: forma.postelje ? Number(forma.postelje) : null,
       lokacija: forma.lokacija || null,
       stanje: forma.stanje as StanjePlovila,
       kontakt_email: forma.kontakt_email || null,
@@ -297,7 +300,7 @@ function DodajPloviloContent() {
           <div className="flex gap-3 justify-center">
             {!editId && (
               <button
-                onClick={() => { setUspesno(false); setForma(f => ({ ...f, naziv: '', opis: '', cena: '', letnik: '', dolzina_m: '' })); setCenaZahtevo(false); setSlike([]); setObstojeceSlike([]) }}
+                onClick={() => { setUspesno(false); setForma(f => ({ ...f, naziv: '', opis: '', cena: '', letnik: '', dolzina_m: '', postelje: '' })); setCenaZahtevo(false); setSlike([]); setObstojeceSlike([]) }}
                 className="px-5 py-2.5 border border-gray-200 text-gray-600 font-medium text-sm rounded-full hover:bg-gray-50"
               >
                 Dodaj še eno
@@ -437,7 +440,7 @@ function DodajPloviloContent() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Letnik</label>
                 <input
@@ -461,6 +464,18 @@ function DodajPloviloContent() {
                   value={forma.dolzina_m}
                   onChange={(e) => posodobiFormo('dolzina_m', e.target.value)}
                   placeholder="12.5 ali 12,5"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Postelje</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={forma.postelje}
+                  onChange={(e) => posodobiFormo('postelje', e.target.value)}
+                  placeholder="6"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white"
                 />
               </div>
