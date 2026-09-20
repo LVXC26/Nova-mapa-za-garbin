@@ -122,7 +122,14 @@ export default function NastavitveProfilaPage() {
     if (datoteka.size > MAX_SLIKA_MB * 1024 * 1024) { setNapaka(`Slika presega ${MAX_SLIKA_MB} MB.`); return }
 
     setNalagaSliko(true)
-    const stisnjena = await stisniSliko(datoteka)
+    let stisnjena: File
+    try {
+      stisnjena = await stisniSliko(datoteka)
+    } catch (e) {
+      setNalagaSliko(false)
+      setNapaka(e instanceof Error ? e.message : 'Napaka pri obdelavi slike.')
+      return
+    }
     const supabase = createClient()
     const pot = `${user.id}/${crypto.randomUUID()}-${varnoImeDatoteke(stisnjena.name)}`
     const { error: uploadError } = await supabase.storage.from('profilne-slike').upload(pot, stisnjena)

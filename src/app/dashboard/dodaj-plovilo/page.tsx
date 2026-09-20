@@ -6,7 +6,7 @@ import { CheckCircle, Upload, AlertCircle, X, Star, Loader2, ImageOff, Crown } f
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { opremaKategorije } from '@/lib/oprema'
-import { stisniSlike } from '@/lib/stisniSliko'
+import { stisniSliko } from '@/lib/stisniSliko'
 import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import TipPlovilaFormaIzbirnik from '@/components/plovila/TipPlovilaFormaIzbirnik'
 import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
@@ -146,18 +146,28 @@ function DodajPloviloContent() {
     setSlike((s) => [...s, ...dodane])
 
     setStiskamSlike(true)
-    const stisnjene = await stisniSlike(dodane)
+    // allSettled, ne Promise.all — ce ena slika (npr. neveljaven HEIC) spodleti,
+    // naj to ne zavrze uspesno stisnjenih ostalih slik iz iste izbire.
+    const rezultati = await Promise.allSettled(dodane.map((f) => stisniSliko(f)))
     setStiskamSlike(false)
+    const napake = rezultati
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map((r) => (r.reason instanceof Error ? r.reason.message : 'Napaka pri obdelavi slike.'))
+    if (napake.length) setNapaka(napake.join(' '))
     // Ujemanje po referenci, ne po indeksu — med stiskanjem bi uporabnik
     // lahko sliko odstranil ali jo nastavil za naslovno (spremeni vrstni
-    // red), zato bi bil fiksen indeks lahko že napačen.
+    // red), zato bi bil fiksen indeks lahko že napačen. Slike, ki jih ni
+    // bilo mogoče obdelati (npr. nepretvorljiv HEIC), odstranimo iz
+    // predogleda namesto da ostanejo v njem kot trajno pokvarjene.
     setSlike((s) => {
-      const kopija = [...s]
+      const zaOdstraniti = new Set<File>()
+      const zamenjave = new Map<File, File>()
       dodane.forEach((izvirna, i) => {
-        const idx = kopija.indexOf(izvirna)
-        if (idx !== -1) kopija[idx] = stisnjene[i]
+        const r = rezultati[i]
+        if (r.status === 'fulfilled') zamenjave.set(izvirna, r.value)
+        else zaOdstraniti.add(izvirna)
       })
-      return kopija
+      return s.filter((f) => !zaOdstraniti.has(f)).map((f) => zamenjave.get(f) ?? f)
     })
   }
 

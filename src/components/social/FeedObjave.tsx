@@ -263,7 +263,13 @@ export default function FeedObjave({
     for (const datoteka of datoteke) {
       if (!datoteka.type.startsWith('image/')) { setSlikeNapaka(`"${datoteka.name}" ni slikovna datoteka.`); continue }
       if (datoteka.size > MAX_SLIKA_MB * 1024 * 1024) { setSlikeNapaka(`Slika "${datoteka.name}" presega ${MAX_SLIKA_MB} MB.`); continue }
-      const stisnjena = await stisniSliko(datoteka)
+      let stisnjena: File
+      try {
+        stisnjena = await stisniSliko(datoteka)
+      } catch (e) {
+        setSlikeNapaka(e instanceof Error ? e.message : `Napaka pri obdelavi slike "${datoteka.name}".`)
+        continue
+      }
       const pot = `${user.id}/${crypto.randomUUID()}-${varnoImeDatoteke(stisnjena.name)}`
       const { error: uploadError } = await supabase.storage.from('objave-slike').upload(pot, stisnjena)
       if (uploadError) { setSlikeNapaka('Napaka pri nalaganju slike: ' + uploadError.message); continue }

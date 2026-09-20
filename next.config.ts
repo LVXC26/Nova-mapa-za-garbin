@@ -55,6 +55,13 @@ const csp = [
   // shema od https:, CSP ju obravnava kot različna vira) — brez tega je bila
   // chat stran tiho pokvarjena. Enako wss://*.tawk.to za widget podpore.
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://*.tawk.to wss://*.tawk.to",
+  // worker-src: heic2any (pretvorba iPhonovih .heic/.heif slik v JPEG pred
+  // nalaganjem, glej stisniSliko.ts) svoj WASM dekoder (libheif) požene v
+  // Web Workerju iz blob: URL-ja — brez te vrstice CSP privzeto pade nazaj
+  // na script-src, ki blob: ne dovoljuje, in ustvarjanje workerja tiho
+  // spodleti (pretvorba se tiho preskoči, izvirna .heic datoteka pa se
+  // naloži nespremenjena — v brskalniku neprikazljiva, potrjen primer).
+  "worker-src 'self' blob:",
 ].join('; ')
 
 const nextConfig: NextConfig = {

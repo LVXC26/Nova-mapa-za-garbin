@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X, Upload, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { stisniSlike } from '@/lib/stisniSliko'
+import { stisniSliko } from '@/lib/stisniSliko'
 import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import type { Banner } from '@/types/database'
 
@@ -73,9 +73,12 @@ export default function AdminBannerjiPage() {
     if (datoteka.size > MAX_VELIKOST_MB * 1024 * 1024) { setNapaka(`Slika presega ${MAX_VELIKOST_MB} MB.`); return }
     setNapaka('')
     setStiskamSliko(true)
-    const [stisnjena] = await stisniSlike([datoteka])
+    try {
+      setNovaSlika(await stisniSliko(datoteka))
+    } catch (e) {
+      setNapaka(e instanceof Error ? e.message : 'Napaka pri obdelavi slike.')
+    }
     setStiskamSliko(false)
-    setNovaSlika(stisnjena)
   }
 
   function odstraniSliko() {

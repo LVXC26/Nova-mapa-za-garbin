@@ -138,7 +138,11 @@ export default function ZemljevidMap() {
     if (datoteka.size > 30 * 1024 * 1024) { setPosebnostNapaka('Slika presega 30 MB.'); return }
     setPosebnostNapaka('')
     setStiskaSliko(true)
-    setPosebnostSlika(await stisniSliko(datoteka))
+    try {
+      setPosebnostSlika(await stisniSliko(datoteka))
+    } catch (e) {
+      setPosebnostNapaka(e instanceof Error ? e.message : 'Napaka pri obdelavi slike.')
+    }
     setStiskaSliko(false)
   }
 
