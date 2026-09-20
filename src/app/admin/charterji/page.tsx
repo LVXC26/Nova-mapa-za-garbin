@@ -211,16 +211,36 @@ export default function AdminCharterjiPage() {
     nalozi()
   }
 
-  // POMEMBNO (po incidentu): brisanje charter PROFILA ne sme vec avtomatsko
-  // odnesti tudi plovil/objav s sabo — admin naj to naredi zavestno, po
-  // eno plovilo naenkrat (glej razsirjena vrstica zgoraj), ali pa uporabi
-  // "Izbriši uporabnika" na /admin/uporabniki, ce res zeli izbrisati vse.
+  // Brisanje charter PROFILA odnese s sabo tudi vsa njegova plovila za
+  // najem (na zeljo uporabnika, po incidentu z izgubljenimi plovili). Da se
+  // isti incident ne ponovi (takrat je bilo zaupano zastarelemu st_plovil
+  // polju, ki ni kazalo resnicnega stanja), tik pred potrditvijo VEDNO
+  // preberemo ZIVO stanje iz baze in ga pokazemo v potrditvenem oknu.
   async function izbrisi(c: Charter) {
-    const stOglasov = plovilaPoCharterju[c.id]?.length
-    const opozoriloOglasi = stOglasov ? ` Ima ${stOglasov} plovil, ki NE bodo izbrisana skupaj s profilom.` : ''
-    if (!confirm(`Izbrišete SAMO profil "${c.naziv}"?${opozoriloOglasi} Za brisanje celotnega računa (vključno s plovili) uporabi "Izbriši uporabnika" na strani Uporabniki.`)) return
+    if (!c.user_id) {
+      if (!confirm(`Izbrišete profil "${c.naziv}"? Tega ni mogoče razveljaviti.`)) return
+      const { error } = await supabase.from('charterji').delete().eq('id', c.id)
+      if (error) { prikaziObvestilo('napaka', 'Napaka pri brisanju: ' + error.message); return }
+      nalozi()
+      return
+    }
+    const { data: njegovaPlovila } = await supabase.from('plovila').select('id, naziv').eq('user_id', c.user_id).eq('tip_oglasa', 'najem')
+    const stPlovil = njegovaPlovila?.length ?? 0
+    const opozoriloOglasi = stPlovil
+      ? ` To bo DOKONČNO izbrisalo tudi njegovih ${stPlovil} plovil za najem: ${njegovaPlovila!.map(p => p.naziv).join(', ')}.`
+      : ' Nima nobenega plovila za najem.'
+    if (!confirm(`Izbrišete profil "${c.naziv}"?${opozoriloOglasi} Tega ni mogoče razveljaviti.`)) return
+    if (stPlovil) {
+      const { error: plovilaError } = await supabase.from('plovila').delete().eq('user_id', c.user_id).eq('tip_oglasa', 'najem')
+      if (plovilaError) { prikaziObvestilo('napaka', 'Napaka pri brisanju plovil: ' + plovilaError.message); return }
+    }
     const { error } = await supabase.from('charterji').delete().eq('id', c.id)
-    if (error) { prikaziObvestilo('napaka', 'Napaka pri brisanju: ' + error.message); return }
+    if (error) { prikaziObvestilo('napaka', 'Napaka pri brisanju profila: ' + error.message); return }
+    setPlovilaPoCharterju(prev => {
+      const { [c.id]: _odstranjen, ...ostalo } = prev
+      return ostalo
+    })
+    prikaziObvestilo('ok', `✓ Profil "${c.naziv}"${stPlovil ? ` in ${stPlovil} plovil` : ''} izbrisano`)
     nalozi()
   }
 
@@ -333,7 +353,7 @@ export default function AdminCharterjiPage() {
                       <button
                         onClick={() => izbrisi(c)}
                         className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors"
-                        title="Izbriši SAMO profil (plovila ostanejo)"
+                        title="Izbriši profil in vsa njegova plovila za najem"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -387,7 +407,7 @@ export default function AdminCharterjiPage() {
         <div className="flex items-center gap-1.5"><ChevronRight className="w-3.5 h-3.5" /> Prikaži plovila</div>
         <div className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Preklopi verified</div>
         <div className="flex items-center gap-1.5"><Gift className="w-3.5 h-3.5 text-amber-500" /> Dodeli brezplačni dostop</div>
-        <div className="flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5 text-red-500" /> Izbriši SAMO profil (plovila ostanejo — briši jih posamično zgoraj)</div>
+        <div className="flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5 text-red-500" /> Izbriši profil in vsa njegova plovila za najem (dokončno)</div>
       </div>
 
       {/* Modal */}

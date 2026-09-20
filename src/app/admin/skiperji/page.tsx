@@ -62,17 +62,32 @@ export default function AdminSkiperjiPage() {
     nalozi()
   }
 
-  // POMEMBNO (po incidentu z izgubljenimi plovili pri charterjih): brisanje
-  // skipper PROFILA ne sme vec avtomatsko odnesti tudi objav s sabo — admin
-  // naj to naredi zavestno, po eno objavo naenkrat (glej razsirjena vrstica
-  // spodaj), ali uporabi "Izbriši uporabnika" na /admin/uporabniki za
-  // celoten racun.
+  // Brisanje skipper PROFILA odnese s sabo tudi vse njegove objave (na
+  // zeljo uporabnika). Tik pred potrditvijo VEDNO preberemo ZIVO stanje iz
+  // baze (ne zastarelega/predpomnjenega seznama) in ga pokazemo v
+  // potrditvenem oknu — isti previdnostni ukrep kot pri admin/charterji.
   async function izbrisi(s: Skipper) {
-    const stObjav = objavePoSkiperju[s.id]?.length
-    const opozorilo = stObjav ? ` Ima ${stObjav} objav, ki NE bodo izbrisane skupaj s profilom.` : ''
-    if (!confirm(`Izbrišete SAMO profil "${s.ime}"?${opozorilo} Za brisanje celotnega računa (vključno z objavami) uporabi "Izbriši uporabnika" na strani Uporabniki.`)) return
+    if (!s.user_id) {
+      if (!confirm(`Izbrišete profil "${s.ime}"? Tega ni mogoče razveljaviti.`)) return
+      const { error } = await supabase.from('skiperji').delete().eq('id', s.id)
+      if (error) { alert('Napaka pri brisanju: ' + error.message); return }
+      nalozi()
+      return
+    }
+    const { data: njegoveObjave } = await supabase.from('objave').select('id').eq('lastnik_user_id', s.user_id)
+    const stObjav = njegoveObjave?.length ?? 0
+    const opozorilo = stObjav ? ` To bo DOKONČNO izbrisalo tudi njegovih ${stObjav} objav.` : ' Nima nobene objave.'
+    if (!confirm(`Izbrišete profil "${s.ime}"?${opozorilo} Tega ni mogoče razveljaviti.`)) return
+    if (stObjav) {
+      const { error: objaveError } = await supabase.from('objave').delete().eq('lastnik_user_id', s.user_id)
+      if (objaveError) { alert('Napaka pri brisanju objav: ' + objaveError.message); return }
+    }
     const { error } = await supabase.from('skiperji').delete().eq('id', s.id)
     if (error) { alert('Napaka pri brisanju: ' + error.message); return }
+    setObjavePoSkiperju(prev => {
+      const { [s.id]: _odstranjeno, ...ostalo } = prev
+      return ostalo
+    })
     nalozi()
   }
 
@@ -214,7 +229,7 @@ export default function AdminSkiperjiPage() {
                         <button onClick={() => potrdi(s.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="Potrdi (verified)"><CheckCircle className="w-4 h-4" /></button>
                       )}
                       <button onClick={() => zavrni(s.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Odstrani verified"><XCircle className="w-4 h-4" /></button>
-                      <button onClick={() => izbrisi(s)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors" title="Izbriši SAMO profil (objave ostanejo)"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => izbrisi(s)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors" title="Izbriši profil in vse njegove objave"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
