@@ -74,27 +74,9 @@ export default function Footer() {
               <a href="mailto:matej@lumavx.com" className="flex items-center gap-2 hover:text-[#c9a84c] transition-colors">
                 <Mail className="w-4 h-4 text-[#c9a84c]" /> matej@lumavx.com
               </a>
-              <a href="tel:+38651234567" className="flex items-center gap-2 hover:text-[#c9a84c] transition-colors">
-                <Phone className="w-4 h-4 text-[#c9a84c]" /> +386 5 123 45 67
+              <a href="tel:+38631216053" className="flex items-center gap-2 hover:text-[#c9a84c] transition-colors">
+                <Phone className="w-4 h-4 text-[#c9a84c]" /> +386 31 216 053
               </a>
-            </div>
-            {/* Social icons — placeholder links */}
-            <div className="flex items-center gap-2">
-              {[
-                { label: 'Instagram', icon: '📸' },
-                { label: 'Facebook', icon: '👥' },
-                { label: 'LinkedIn', icon: '💼' },
-                { label: 'TikTok', icon: '🎵' },
-              ].map(({ label, icon }) => (
-                <a
-                  key={label}
-                  href="#"
-                  title={label}
-                  className="w-9 h-9 rounded-xl bg-white/8 hover:bg-[#c9a84c]/20 border border-white/10 hover:border-[#c9a84c]/40 flex items-center justify-center text-sm transition-all"
-                >
-                  {icon}
-                </a>
-              ))}
             </div>
 
             {/* Jezik switcher — prej brez onClick (ni delal nič), zdaj vezan

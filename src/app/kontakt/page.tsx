@@ -72,7 +72,7 @@ export default function KontaktPage() {
                   <div className="space-y-4">
                     {[
                       { ikona: Mail, label: 'E-mail', vrednost: 'matej@lumavx.com', href: 'mailto:matej@lumavx.com' },
-                      { ikona: Phone, label: 'Telefon', vrednost: '+386 5 123 45 67', href: 'tel:+38651234567' },
+                      { ikona: Phone, label: 'Telefon', vrednost: '+386 31 216 053', href: 'tel:+38631216053' },
                       { ikona: MapPin, label: 'Naslov', vrednost: 'Obala 14, 6320 Portorož', href: undefined },
                     ].map(({ ikona: Ikona, label, vrednost, href }) => (
                       <div key={label} className="flex items-start gap-3">
