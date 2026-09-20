@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
+import Avatar from '@/components/shared/Avatar'
 
 type NavItem = { href: string; label: string; ikona: React.ElementType; exact?: boolean }
 
@@ -65,7 +66,7 @@ const vlogaLabele: Record<string, { label: string; barva: string }> = {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, vloga, demoMode, odjavaDemo } = useAuth()
+  const { user, vloga, demoMode, odjavaDemo, slikaUrl } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const [menuOdprt, setMenuOdprt] = useState(false)
@@ -105,9 +106,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* User info */}
         <div className="px-4 py-4 border-b border-white/10">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
-            <div className="w-9 h-9 rounded-full bg-[#c9a84c] flex items-center justify-center text-[#0c2340] text-sm font-bold shrink-0">
-              {inicialke || <UserCircle className="w-5 h-5" />}
-            </div>
+            {slikaUrl ? (
+              <Avatar slikaUrl={slikaUrl} ime={ime} velikost={36} />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-[#c9a84c] flex items-center justify-center text-[#0c2340] text-sm font-bold shrink-0">
+                {inicialke || <UserCircle className="w-5 h-5" />}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{ime}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -177,9 +182,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${menuOdprt ? 'rotate-180' : ''}`} />
           </button>
 
-          <div className="w-8 h-8 rounded-full bg-[#c9a84c] flex items-center justify-center text-[#0c2340] text-xs font-bold shrink-0">
-            {inicialke || <UserCircle className="w-4 h-4" />}
-          </div>
+          {slikaUrl ? (
+            <Avatar slikaUrl={slikaUrl} ime={ime} velikost={32} />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[#c9a84c] flex items-center justify-center text-[#0c2340] text-xs font-bold shrink-0">
+              {inicialke || <UserCircle className="w-4 h-4" />}
+            </div>
+          )}
         </div>
 
         {menuOdprt && (

@@ -11,11 +11,13 @@ import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import ZasedenostPrikaz from '@/components/shared/ZasedenostPrikaz'
 import OglasniBanner from '@/components/oglasi/OglasniBanner'
+import Avatar from '@/components/shared/Avatar'
 import { createClient } from '@/lib/supabase/client'
 import type { Skipper, Rating, SkipperZasedenost } from '@/types/database'
 
 interface OcenaZImenom extends Rating {
   ime: string
+  slika_url: string | null
 }
 
 const tipIkone: Record<string, string> = {
@@ -85,11 +87,12 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
     const seznam = data ?? []
     const raterIds = Array.from(new Set(seznam.map(r => r.rater_id)))
     const imena = new Map<string, string>()
+    const slike = new Map<string, string | null>()
     if (raterIds.length > 0) {
-      const { data: profili } = await supabase.from('public_profiles').select('id, ime').in('id', raterIds)
-      profili?.forEach(p => imena.set(p.id, p.ime ?? 'Uporabnik'))
+      const { data: profili } = await supabase.from('public_profiles').select('id, ime, slika_url').in('id', raterIds)
+      profili?.forEach(p => { imena.set(p.id, p.ime ?? 'Uporabnik'); slike.set(p.id, p.slika_url ?? null) })
     }
-    setOcene(seznam.map(r => ({ ...r, ime: imena.get(r.rater_id) ?? 'Uporabnik' })))
+    setOcene(seznam.map(r => ({ ...r, ime: imena.get(r.rater_id) ?? 'Uporabnik', slika_url: slike.get(r.rater_id) ?? null })))
     setNalagaOcen(false)
   }
 
@@ -384,7 +387,7 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
                             <div key={o.id} className="border-b border-gray-50 last:border-0 pb-4 last:pb-0">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-sm font-bold text-[#0c2340]">{o.ime[0]}</div>
+                                  <Avatar slikaUrl={o.slika_url} ime={o.ime} velikost={32} textClassName="text-[#0c2340] text-sm" />
                                   <span className="font-medium text-[#0c2340] text-sm">{o.ime}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
