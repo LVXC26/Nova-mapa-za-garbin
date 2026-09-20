@@ -9,10 +9,9 @@ import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { useAuth } from '@/components/providers/AuthProvider'
 import FeedObjave from '@/components/social/FeedObjave'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
-import ZasedenostPrikaz from '@/components/shared/ZasedenostPrikaz'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { createClient } from '@/lib/supabase/client'
-import type { Charter, Plovilo, PloviloZasedenost, Rating } from '@/types/database'
+import type { Charter, Plovilo, Rating } from '@/types/database'
 
 interface OcenaZImenom extends Rating {
   ime: string
@@ -33,8 +32,6 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
   const { user } = useAuth()
   const [realCharter, setRealCharter] = useState<Charter | null>(null)
   const [plovila, setPlovila] = useState<Plovilo[]>([])
-  const [zasedenostFlote, setZasedenostFlote] = useState<PloviloZasedenost[]>([])
-  const [izbranTermin, setIzbranTermin] = useState('')
   const [nalaga, setNalaga] = useState(true)
   const [ocene, setOcene] = useState<OcenaZImenom[]>([])
   const [nalagaOcen, setNalagaOcen] = useState(true)
@@ -57,17 +54,7 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
       if (data?.user_id) {
         supabase.from('plovila_javno').select('*').eq('user_id', data.user_id).eq('tip_oglasa', 'najem')
           .then(({ data: flota }) => {
-            if (flota) {
-              setPlovila(flota)
-              // Splošno povpraševanje (ne za konkretno plovilo) prikaže
-              // koledar, sestavljen iz zasedenosti CELE flote — če ima
-              // charter samo eno plovilo (najpogostejši primer), je to
-              // enako natančno kot na strani posameznega plovila.
-              if (flota.length > 0) {
-                supabase.from('plovilo_zasedenost').select('*').in('plovilo_id', flota.map(p => p.id))
-                  .then(({ data: termini }) => { if (termini) setZasedenostFlote(termini) })
-              }
-            }
+            if (flota) setPlovila(flota)
           })
       }
     })
@@ -246,18 +233,6 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                   <p className="text-gray-600 leading-relaxed">{charter.opis}</p>
                 </div>
 
-                {/* Razpoložljivost — vedno odprt koledar (zasedenost cele
-                    flote), direktna zahteva direktorja — povezan s
-                    povpraševanjem na desni (glej izbranTermin). */}
-                {plovila.length > 0 && (
-                  <ZasedenostPrikaz
-                    naslov="Razpoložljivost flote"
-                    zasedenost={zasedenostFlote}
-                    vrednost={izbranTermin}
-                    onChange={setIzbranTermin}
-                  />
-                )}
-
                 {/* Plovila za najem */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -394,7 +369,6 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                   <PovprasevanjeForma
                     tip="charter"
                     targetId={String(charter.id)}
-                    terminZunaj={plovila.length > 0 ? izbranTermin : undefined}
                   />
                 </div>
 
