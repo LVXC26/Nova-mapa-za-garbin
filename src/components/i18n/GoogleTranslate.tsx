@@ -22,7 +22,10 @@ export default function GoogleTranslate() {
           (imeti izmerljive dimenzije v layoutu), sicer notranje ne napolni
           seznama jezikov (goog-te-combo ostane prazen, prevod se nikoli ne
           sproži). Zato je samo pomaknjen daleč izven zaslona. */}
-      <div id="google_translate_element" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} />
+      <div
+        id="google_translate_element"
+        style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '100px', height: '50px' }}
+      />
       <Script id="google-translate-init" strategy="afterInteractive">
         {`
           function googleTranslateElementInit() {
