@@ -1948,3 +1948,18 @@ where potrjeno = true;
 
 revoke insert, update, delete, truncate, references, trigger on plovila_javno from public, anon, authenticated;
 grant select on plovila_javno to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- ADMIN/MODERATOR LAHKO IZBRIŠE OCENO (ratings) — doslej ni bilo NOBENE
+-- delete politike na "ratings", torej ni mogel nihce, niti admin, izbrisati
+-- neprimerne/testne ocene. Enak vzorec kot "Moderator brise katerokoli
+-- objavo/komentar" (glej zgoraj) - admin ali moderator lahko izbrise
+-- katerokoli oceno; povprecje/stevilo ocen na charterju/skiperju se
+-- samodejno preracuna (obstojeci trg_posodobi_oceno_po_oceni trigger je
+-- ze definiran za AFTER ... DELETE, torej ne potrebuje spremembe).
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Admin/moderator brise oceno" on ratings;
+create policy "Admin/moderator brise oceno" on ratings for delete using (
+  exists (select 1 from profiles where id = auth.uid() and (is_admin = true or is_moderator = true))
+);

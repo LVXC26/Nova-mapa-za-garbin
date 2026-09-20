@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MapPin, Ship, Star, CheckCircle, ExternalLink, ArrowLeft, Users, Ruler } from 'lucide-react'
+import { MapPin, Ship, Star, CheckCircle, ExternalLink, ArrowLeft, Users, Ruler, Trash2 } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import OglasniBanner from '@/components/oglasi/OglasniBanner'
@@ -43,6 +43,13 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
   const [novKomentar, setNovKomentar] = useState('')
   const [posiljaOceno, setPosiljaOceno] = useState(false)
   const [ocenaNapaka, setOcenaNapaka] = useState('')
+  const [lahkoBrisOceno, setLahkoBrisOceno] = useState(false)
+
+  useEffect(() => {
+    if (!user) { setLahkoBrisOceno(false); return }
+    createClient().from('profiles').select('is_admin, is_moderator').eq('id', user.id).maybeSingle()
+      .then(({ data }) => setLahkoBrisOceno(!!data?.is_admin || !!data?.is_moderator))
+  }, [user])
 
   useEffect(() => {
     const supabase = createClient()
@@ -104,12 +111,23 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
     })
     setPosiljaOceno(false)
     if (error) {
-      setOcenaNapaka(error.message.includes('duplicate') ? 'Tega charterja ste že ocenili.' : 'Napaka pri shranjevanju ocene.')
+      setOcenaNapaka(
+        error.message.includes('duplicate') ? 'Tega charterja ste že ocenili.'
+        : error.message.includes('oceniti samega sebe') ? 'Ne morete oceniti lastnega charterja.'
+        : `Napaka pri shranjevanju ocene: ${error.message}`
+      )
       return
     }
     setDodajOceno(false)
     setNovKomentar('')
     setNovaOcena(5)
+    nalozOcene()
+  }
+
+  async function izbrisiOceno(ocenaId: string) {
+    if (!confirm('Izbrišete to oceno? Tega ni mogoče razveljaviti.')) return
+    const supabase = createClient()
+    await supabase.from('ratings').delete().eq('id', ocenaId)
     nalozOcene()
   }
 
@@ -296,6 +314,11 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                                 ))}
                               </div>
                               <span className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })}</span>
+                              {lahkoBrisOceno && (
+                                <button onClick={() => izbrisiOceno(o.id)} title="Izbriši oceno (admin)" className="p-1 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </div>
                           {o.komentar && <p className="text-sm text-gray-600 leading-relaxed ml-10">{o.komentar}</p>}

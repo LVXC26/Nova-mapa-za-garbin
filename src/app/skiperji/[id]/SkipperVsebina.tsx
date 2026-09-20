@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, MapPin, Star, CheckCircle, Mail, Calendar, Award, Globe, Ship, Users, Building2 } from 'lucide-react'
+import { ArrowLeft, MapPin, Star, CheckCircle, Mail, Calendar, Award, Globe, Ship, Users, Building2, Trash2 } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { unsplashSkipperji } from '@/data/mock'
@@ -48,6 +48,7 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
   // Cena je javno "po dogovoru"; pravi znesek dobi samo admin (posebna
   // poizvedba na osnovno tabelo skiperji, ki jo RLS dovoli le adminu).
   const [cenaZaAdmina, setCenaZaAdmina] = useState<number | null>(null)
+  const [lahkoBrisOceno, setLahkoBrisOceno] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -71,8 +72,9 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
     ;(async () => {
       if (!user) return
       const supabase = createClient()
-      const { data: profil } = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+      const { data: profil } = await supabase.from('profiles').select('is_admin, is_moderator').eq('id', user.id).maybeSingle()
       if (preklic) return
+      setLahkoBrisOceno(!!profil?.is_admin || !!profil?.is_moderator)
       if (!profil?.is_admin) { setCenaZaAdmina(null); return }
       const { data: s } = await supabase.from('skiperji').select('cena_dan').eq('id', id).maybeSingle()
       if (!preklic) setCenaZaAdmina(typeof s?.cena_dan === 'number' ? s.cena_dan : null)
@@ -119,12 +121,23 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
     })
     setPosiljaOceno(false)
     if (error) {
-      setOcenaNapaka(error.message.includes('duplicate') ? 'Tega skiperja ste že ocenili.' : 'Napaka pri shranjevanju ocene.')
+      setOcenaNapaka(
+        error.message.includes('duplicate') ? 'Tega skiperja ste že ocenili.'
+        : error.message.includes('oceniti samega sebe') ? 'Ne morete oceniti samega sebe.'
+        : `Napaka pri shranjevanju ocene: ${error.message}`
+      )
       return
     }
     setDodajOceno(false)
     setNovKomentar('')
     setNovaOcena(5)
+    nalozOcene()
+  }
+
+  async function izbrisiOceno(ocenaId: string) {
+    if (!confirm('Izbrišete to oceno? Tega ni mogoče razveljaviti.')) return
+    const supabase = createClient()
+    await supabase.from('ratings').delete().eq('id', ocenaId)
     nalozOcene()
   }
 
@@ -397,6 +410,11 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
                                     ))}
                                   </div>
                                   <span className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })}</span>
+                                  {lahkoBrisOceno && (
+                                    <button onClick={() => izbrisiOceno(o.id)} title="Izbriši oceno (admin)" className="p-1 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                               {o.komentar && <p className="text-sm text-gray-600 leading-relaxed ml-10">{o.komentar}</p>}
