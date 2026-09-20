@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { CheckCircle, XCircle, Eye, Search } from 'lucide-react'
+import { CheckCircle, XCircle, Eye, Search, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Plovilo } from '@/types/database'
 
@@ -11,13 +11,27 @@ export default function AdminPlovilaPage() {
   const [filter, setFilter] = useState<'vsi' | 'nepotrjeni' | 'potrjeni'>('vsi')
   const [plovila, setPlovila] = useState<Plovilo[]>([])
   const [nalaga, setNalaga] = useState(true)
+  // user_id -> e-mail lastnika. Plovila sama nimajo e-maila shranjenega —
+  // pridobimo ga prek /api/admin/uporabniki (ze obstoječ endpoint, uporablja
+  // service role za dostop do auth.users, ki ga iz klienta ni mogoče
+  // neposredno poizvedovati).
+  const [lastniki, setLastniki] = useState<Record<string, string>>({})
+  const [izbrani, setIzbrani] = useState<Set<string>>(new Set())
+  const [brisanjeVteku, setBrisanjeVteku] = useState(false)
 
   const supabase = createClient()
 
   async function nalozi() {
     setNalaga(true)
-    const { data } = await supabase.from('plovila').select('*').order('created_at', { ascending: false })
-    setPlovila(data ?? [])
+    const [{ data: plovilaData }, uporabnikiRes] = await Promise.all([
+      supabase.from('plovila').select('*').order('created_at', { ascending: false }),
+      fetch('/api/admin/uporabniki').then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
+    ])
+    setPlovila(plovilaData ?? [])
+    const mapa: Record<string, string> = {}
+    for (const u of uporabnikiRes.data ?? []) mapa[u.id] = u.email
+    setLastniki(mapa)
+    setIzbrani(new Set())
     setNalaga(false)
   }
 
@@ -36,11 +50,43 @@ export default function AdminPlovilaPage() {
     nalozi()
   }
 
-  const filtrirani = plovila.filter(p => {
+  function preklopiIzbor(id: string) {
+    setIzbrani(prev => {
+      const nov = new Set(prev)
+      if (nov.has(id)) nov.delete(id); else nov.add(id)
+      return nov
+    })
+  }
+
+  async function izbrisiIzbrane() {
+    if (izbrani.size === 0) return
+    if (!confirm(`Izbrišete ${izbrani.size} izbranih plovil? Tega ni mogoče razveljaviti.`)) return
+    setBrisanjeVteku(true)
+    const { error } = await supabase.from('plovila').delete().in('id', Array.from(izbrani))
+    setBrisanjeVteku(false)
+    if (error) { alert('Napaka pri brisanju: ' + error.message); return }
+    nalozi()
+  }
+
+  const filtrirani = useMemo(() => plovila.filter(p => {
     if (filter === 'nepotrjeni' && p.potrjeno) return false
     if (filter === 'potrjeni' && !p.potrjeno) return false
-    return p.naziv.toLowerCase().includes(iskanje.toLowerCase())
-  })
+    if (!iskanje.trim()) return true
+    const q = iskanje.toLowerCase()
+    const lastnikEmail = (p.user_id && lastniki[p.user_id]) || ''
+    return p.naziv.toLowerCase().includes(q) || lastnikEmail.toLowerCase().includes(q)
+  }), [plovila, filter, iskanje, lastniki])
+
+  const vsiIzbrani = filtrirani.length > 0 && filtrirani.every(p => izbrani.has(p.id))
+
+  function preklopiVse() {
+    setIzbrani(prev => {
+      if (vsiIzbrani) return new Set()
+      const nov = new Set(prev)
+      filtrirani.forEach(p => nov.add(p.id))
+      return nov
+    })
+  }
 
   return (
     <div className="p-8">
@@ -53,7 +99,7 @@ export default function AdminPlovilaPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={iskanje} onChange={e => setIskanje(e.target.value)}
-            placeholder="Išči plovila..."
+            placeholder="Išči po nazivu plovila ali e-mailu lastnika..."
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]" />
         </div>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
@@ -66,12 +112,29 @@ export default function AdminPlovilaPage() {
         </div>
       </div>
 
+      {izbrani.size > 0 && (
+        <div className="flex items-center justify-between gap-3 mb-4 p-3 bg-red-50 border border-red-100 rounded-xl">
+          <p className="text-sm text-red-700 font-medium">{izbrani.size} {izbrani.size === 1 ? 'plovilo izbrano' : 'plovil izbranih'}</p>
+          <button
+            onClick={izbrisiIzbrane}
+            disabled={brisanjeVteku}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> {brisanjeVteku ? 'Brišem...' : 'Izbriši izbrana'}
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
+              <th className="w-10 pl-5">
+                <input type="checkbox" checked={vsiIzbrani} onChange={preklopiVse} className="rounded" />
+              </th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Plovilo</th>
+              <th className="text-left px-5 py-3 font-semibold text-gray-600">Lastnik</th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Tip</th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Cena</th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Oglas</th>
@@ -81,8 +144,12 @@ export default function AdminPlovilaPage() {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {filtrirani.map(p => (
-              <tr key={p.id} className="hover:bg-gray-50/50">
+              <tr key={p.id} className={`hover:bg-gray-50/50 ${izbrani.has(p.id) ? 'bg-[#c9a84c]/5' : ''}`}>
+                <td className="pl-5">
+                  <input type="checkbox" checked={izbrani.has(p.id)} onChange={() => preklopiIzbor(p.id)} className="rounded" />
+                </td>
                 <td className="px-5 py-3.5 font-medium text-gray-900">{p.naziv}</td>
+                <td className="px-5 py-3.5 text-gray-500">{(p.user_id && lastniki[p.user_id]) || '—'}</td>
                 <td className="px-5 py-3.5 text-gray-500 capitalize">{p.tip}</td>
                 <td className="px-5 py-3.5 text-gray-700">{p.cena.toLocaleString('sl-SI')} €</td>
                 <td className="px-5 py-3.5">
