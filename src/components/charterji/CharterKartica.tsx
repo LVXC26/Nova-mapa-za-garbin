@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Star, MapPin, Ship, CheckCircle, ArrowRight, Users } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Avatar from '@/components/shared/Avatar'
 import type { Charter } from '@/types/database'
 
 function useFavorite(id: string) {
@@ -37,6 +38,7 @@ export default function CharterKartica({ charter }: { charter: Charter }) {
   const zvezdice = Array.from({ length: 5 }, (_, i) => i < Math.round(charter.ocena))
   const { isFav, toggle } = useFavorite(charter.id)
   const [slikaUrl, setSlikaUrl] = useState<string | null>(null)
+  const [profilnaSlika, setProfilnaSlika] = useState<string | null>(null)
 
   // Charterji nimajo lastne "naslovne slike" — prej je bila tu trdo kodirana
   // tuja Unsplash fotografija, ki je ob padlem/blokiranem URL-ju pustila
@@ -52,6 +54,8 @@ export default function CharterKartica({ charter }: { charter: Charter }) {
         const prva = data?.find(p => p.slike && p.slike.length > 0)?.slike?.[0]
         if (prva) setSlikaUrl(prva)
       })
+    supabase.from('public_profiles').select('slika_url').eq('id', charter.user_id).maybeSingle()
+      .then(({ data }) => setProfilnaSlika(data?.slika_url ?? null))
   }, [charter.user_id])
 
   return (
@@ -87,22 +91,25 @@ export default function CharterKartica({ charter }: { charter: Charter }) {
       <div className="p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                charter.tip === 'podjetje'
-                  ? 'bg-[#0c2340]/10 text-[#0c2340]'
-                  : 'bg-[#c9a84c]/15 text-[#9a7a2e]'
-              }`}>
-                {charter.tip === 'podjetje' ? '🏢 Podjetje' : '👤 Zasebnik'}
-              </span>
-              {charter.verified && (
-                <span title="Preverjeno">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+          <div className="flex items-start gap-2.5 flex-1 min-w-0">
+            <Avatar slikaUrl={profilnaSlika} ime={charter.naziv} velikost={36} className="mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                  charter.tip === 'podjetje'
+                    ? 'bg-[#0c2340]/10 text-[#0c2340]'
+                    : 'bg-[#c9a84c]/15 text-[#9a7a2e]'
+                }`}>
+                  {charter.tip === 'podjetje' ? '🏢 Podjetje' : '👤 Zasebnik'}
                 </span>
-              )}
+                {charter.verified && (
+                  <span title="Preverjeno">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  </span>
+                )}
+              </div>
+              <h3 className="font-display text-base font-semibold text-[#0c2340] leading-tight group-hover:text-[#1e3a5f] truncate">{charter.naziv}</h3>
             </div>
-            <h3 className="font-display text-base font-semibold text-[#0c2340] leading-tight group-hover:text-[#1e3a5f] truncate">{charter.naziv}</h3>
           </div>
 
           <div className="flex items-center gap-1 shrink-0">

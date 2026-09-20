@@ -16,7 +16,7 @@ const NOTIFIKACIJE_OPCIJE = [
 ] as const
 
 export default function NastavitveProfilaPage() {
-  const { user, vloga, demoMode } = useAuth()
+  const { user, vloga, demoMode, refreshSlika } = useAuth()
   const [tab, setTab] = useState<'profil' | 'geslo' | 'notifikacije'>('profil')
   const [uspesno, setUspesno] = useState('')
   const [napaka, setNapaka] = useState('')
@@ -129,6 +129,9 @@ export default function NastavitveProfilaPage() {
     setNalagaSliko(false)
     if (profilError) { setNapaka('Slika je bila naložena, a shranjevanje ni uspelo.'); return }
     setSlikaUrl(data.publicUrl)
+    // Osvezi tudi skupno (AuthProvider) sliko, da se navbar in vsa druga
+    // mesta po strani takoj posodobijo brez ponovnega nalaganja strani.
+    refreshSlika()
     setUspesno('Profilna slika je bila posodobljena.')
     setTimeout(() => setUspesno(''), 4000)
   }
@@ -143,6 +146,7 @@ export default function NastavitveProfilaPage() {
     const supabase = createClient()
     const { error } = await supabase.from('profiles').update({ slika_url: null }).eq('id', user.id)
     if (error) { setSlikaUrl(prejsnja); setNapaka('Napaka pri odstranjevanju slike.'); return }
+    refreshSlika()
     setUspesno('Profilna slika je bila odstranjena.')
     setTimeout(() => setUspesno(''), 4000)
   }

@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Menu, X, Anchor, UserCircle, MessageCircle, Map, Globe, ChevronDown, Search } from 'lucide-react'
+import { Menu, X, Anchor, MessageCircle, Map, Globe, ChevronDown, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePathname } from 'next/navigation'
 import { useLocale, type Locale } from '@/lib/i18n/LocaleContext'
+import Avatar from '@/components/shared/Avatar'
 
 const links = [
   { href: '/plovila', label: 'Plovila' },
@@ -44,12 +45,10 @@ export default function Navbar() {
       setIskalnoQ('')
     }
   }
-  const { user } = useAuth()
+  const { user, slikaUrl } = useAuth()
   const pathname = usePathname()
 
-  const inicialke = user?.user_metadata?.ime
-    ? user.user_metadata.ime.split(' ').map((d: string) => d[0]).slice(0, 2).join('').toUpperCase()
-    : null
+  const imeAliEmail = user?.user_metadata?.ime || user?.email || 'Uporabnik'
 
   const unread = 0
 
@@ -157,13 +156,7 @@ export default function Navbar() {
                       : 'text-white border-white/20 hover:border-white/40 hover:bg-white/5'
                   }`}
                 >
-                  {inicialke ? (
-                    <span className="w-6 h-6 rounded-full bg-[#c9a84c] flex items-center justify-center text-[#0c2340] text-xs font-bold">
-                      {inicialke}
-                    </span>
-                  ) : (
-                    <UserCircle className="w-4 h-4" />
-                  )}
+                  <Avatar slikaUrl={slikaUrl} ime={imeAliEmail} velikost={24} bgClassName="bg-[#c9a84c]" textClassName="text-[#0c2340]" />
                   {t('Moj panel')}
                 </Link>
               </>

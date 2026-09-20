@@ -10,6 +10,8 @@ type AuthContextType = {
   loading: boolean
   vloga: Vloga | null
   demoMode: boolean
+  slikaUrl: string | null
+  refreshSlika: () => void
   prijavaDemo: (vloga: Vloga) => void
   odjavaDemo: () => void
 }
@@ -19,6 +21,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   vloga: null,
   demoMode: false,
+  slikaUrl: null,
+  refreshSlika: () => {},
   prijavaDemo: () => {},
   odjavaDemo: () => {},
 })
@@ -59,6 +63,24 @@ export function AuthProvider({
   const [user, setUser] = useState<User | null>(initialUser)
   const [loading, setLoading] = useState(false)
   const [demoMode, setDemoMode] = useState(false)
+  const [slikaUrl, setSlikaUrl] = useState<string | null>(null)
+
+  const nalozSliko = useCallback((userId: string) => {
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      createClient().from('public_profiles').select('slika_url').eq('id', userId).maybeSingle()
+        .then(({ data }) => setSlikaUrl(data?.slika_url ?? null))
+    })
+  }, [])
+
+  const refreshSlika = useCallback(() => {
+    if (user && !demoMode) nalozSliko(user.id)
+  }, [user, demoMode, nalozSliko])
+
+  useEffect(() => {
+    if (user && !demoMode) nalozSliko(user.id)
+    else setSlikaUrl(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, demoMode])
 
   useEffect(() => {
     // Check for demo user in localStorage first
@@ -95,7 +117,7 @@ export function AuthProvider({
   const vloga = (user?.user_metadata?.vloga ?? null) as Vloga | null
 
   return (
-    <AuthContext.Provider value={{ user, loading, vloga, demoMode, prijavaDemo, odjavaDemo }}>
+    <AuthContext.Provider value={{ user, loading, vloga, demoMode, slikaUrl, refreshSlika, prijavaDemo, odjavaDemo }}>
       {children}
     </AuthContext.Provider>
   )

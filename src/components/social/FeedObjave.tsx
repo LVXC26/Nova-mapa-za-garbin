@@ -6,6 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { stisniSliko } from '@/lib/stisniSliko'
 import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
+import Avatar from '@/components/shared/Avatar'
 import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
 
 const MAX_SLIK_OBJAVA = 6
@@ -31,6 +32,7 @@ function KomentarjiPanel({ objavaId, isModerator }: { objavaId: string; isModera
   const [nalaga, setNalaga] = useState(true)
   const [nov, setNov] = useState('')
   const [posilja, setPosilja] = useState(false)
+  const [profilneSlike, setProfilneSlike] = useState<Record<string, string>>({})
 
   const nalozi = useCallback(async () => {
     setNalaga(true)
@@ -38,6 +40,14 @@ function KomentarjiPanel({ objavaId, isModerator }: { objavaId: string; isModera
     const { data } = await supabase.from('objava_komentarji').select('*').eq('objava_id', objavaId).order('created_at', { ascending: true })
     setKomentarji(data ?? [])
     setNalaga(false)
+    const avtorIds = Array.from(new Set((data ?? []).map(k => k.user_id)))
+    if (avtorIds.length > 0) {
+      supabase.from('public_profiles').select('id, slika_url').in('id', avtorIds).then(({ data: profili }) => {
+        const mapa: Record<string, string> = {}
+        profili?.forEach(p => { if (p.slika_url) mapa[p.id] = p.slika_url })
+        setProfilneSlike(mapa)
+      })
+    }
   }, [objavaId])
 
   useEffect(() => {
@@ -74,7 +84,7 @@ function KomentarjiPanel({ objavaId, isModerator }: { objavaId: string; isModera
       ) : (
         komentarji.map(k => (
           <div key={k.id} className="flex items-start gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-xs font-bold text-[#0c2340] shrink-0">{k.ime[0]}</div>
+            <Avatar slikaUrl={profilneSlike[k.user_id]} ime={k.ime} velikost={24} textClassName="text-[#0c2340] text-xs" />
             <div className="flex-1 bg-gray-50 rounded-xl px-3 py-2 flex items-start justify-between gap-2">
               <div>
                 <p className="text-xs font-semibold text-[#0c2340]">{k.ime}</p>
@@ -147,6 +157,7 @@ export default function FeedObjave({
   const [posilja, setPosilja] = useState(false)
   const [filter, setFilter] = useState<'vse' | 'moje' | 'caka'>('vse')
   const [isModerator, setIsModerator] = useState(false)
+  const [profilneSlike, setProfilneSlike] = useState<Record<string, string>>({})
 
   const jeLastnik = !!user && !!lastnikUserId && user.id === lastnikUserId
 
@@ -178,6 +189,15 @@ export default function FeedObjave({
     const { data: objavaData } = await poizvedba
     const seznam = objavaData ?? []
     setObjave(seznam)
+
+    const avtorIds = Array.from(new Set(seznam.map(o => o.avtor_user_id)))
+    if (avtorIds.length > 0) {
+      supabase.from('public_profiles').select('id, slika_url').in('id', avtorIds).then(({ data: profili }) => {
+        const mapa: Record<string, string> = {}
+        profili?.forEach(p => { if (p.slika_url) mapa[p.id] = p.slika_url })
+        setProfilneSlike(mapa)
+      })
+    }
 
     if (!jeLastnik && lastnikUserId) {
       const { data: profil } = await supabase.from('public_profiles').select('dovoli_tuje_objave').eq('id', lastnikUserId).maybeSingle()
@@ -512,7 +532,7 @@ export default function FeedObjave({
               <div key={o.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#0c2340]/8 flex items-center justify-center text-lg shrink-0">{o.avtor_ime[0]}</div>
+                    <Avatar slikaUrl={profilneSlike[o.avtor_user_id]} ime={o.avtor_ime} velikost={40} className="text-lg" />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-[#0c2340] text-sm">{o.avtor_ime}</p>

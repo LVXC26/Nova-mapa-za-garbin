@@ -41,6 +41,7 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
   const [posiljaOceno, setPosiljaOceno] = useState(false)
   const [ocenaNapaka, setOcenaNapaka] = useState('')
   const [zasedenost, setZasedenost] = useState<SkipperZasedenost[]>([])
+  const [slikaUrl, setSlikaUrl] = useState<string | null>(null)
   const [izbranTermin, setIzbranTermin] = useState('')
   // Cena je javno "po dogovoru"; pravi znesek dobi samo admin (posebna
   // poizvedba na osnovno tabelo skiperji, ki jo RLS dovoli le adminu).
@@ -53,6 +54,10 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
     supabase.from('skiperji_javno').select('*').eq('id', id).maybeSingle().then(({ data }) => {
       setRealSkipper(data)
       setNalaga(false)
+      if (data?.user_id) {
+        supabase.from('public_profiles').select('slika_url').eq('id', data.user_id).maybeSingle()
+          .then(({ data: profil }) => setSlikaUrl(profil?.slika_url ?? null))
+      }
     })
     supabase.from('skipper_zasedenost').select('*').eq('skipper_id', id).then(({ data }) => {
       if (data) setZasedenost(data)
@@ -179,7 +184,10 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
             <div className="flex flex-col sm:flex-row items-start gap-6">
               {/* Avatar */}
               <div className="w-24 h-24 rounded-2xl bg-[#c9a84c]/20 border-2 border-[#c9a84c]/40 flex items-center justify-center overflow-hidden shrink-0">
-                {unsplashSkipperji[skipper.id] && skipper.tip_skiper !== 'agencija' ? (
+                {slikaUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={slikaUrl} alt={skipper.ime} className="w-full h-full object-cover" />
+                ) : unsplashSkipperji[skipper.id] && skipper.tip_skiper !== 'agencija' ? (
                   <img src={unsplashSkipperji[skipper.id]} alt={skipper.ime} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-4xl">{skipper.tip_skiper === 'agencija' ? '🏢' : '👨‍✈️'}</span>

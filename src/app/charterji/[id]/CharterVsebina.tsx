@@ -31,6 +31,7 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
   const { id } = use(params)
   const { user } = useAuth()
   const [realCharter, setRealCharter] = useState<Charter | null>(null)
+  const [slikaUrl, setSlikaUrl] = useState<string | null>(null)
   const [plovila, setPlovila] = useState<Plovilo[]>([])
   const [nalaga, setNalaga] = useState(true)
   const [ocene, setOcene] = useState<OcenaZImenom[]>([])
@@ -56,6 +57,8 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
           .then(({ data: flota }) => {
             if (flota) setPlovila(flota)
           })
+        supabase.from('public_profiles').select('slika_url').eq('id', data.user_id).maybeSingle()
+          .then(({ data: profil }) => setSlikaUrl(profil?.slika_url ?? null))
       }
     })
   }, [id])
@@ -169,18 +172,16 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
             </Link>
 
             <div className="flex items-start gap-6">
-              {/* Avatar */}
+              {/* Avatar — prava profilna slika lastnika (Nastavitve), placeholder samo ce je ni */}
               <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 relative">
-                <img
-                  src="https://images.unsplash.com/photo-1519789110440-4b90d6f7e65b?auto=format&fit=crop&w=200&q=80"
-                  alt={charter.naziv}
-                  className="w-full h-full object-cover"
-                  onError={e => {
-                    const el = e.target as HTMLImageElement
-                    el.style.display = 'none'
-                    el.parentElement!.innerHTML = `<div class="w-full h-full ${charter.tip === 'podjetje' ? 'bg-[#c9a84c]' : 'bg-white/10'} flex items-center justify-center text-3xl">${charter.tip === 'podjetje' ? '🏢' : '👤'}</div>`
-                  }}
-                />
+                {slikaUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={slikaUrl} alt={charter.naziv} className="w-full h-full object-cover" />
+                ) : (
+                  <div className={`w-full h-full ${charter.tip === 'podjetje' ? 'bg-[#c9a84c]' : 'bg-white/10'} flex items-center justify-center text-3xl`}>
+                    {charter.tip === 'podjetje' ? '🏢' : '👤'}
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 min-w-0">

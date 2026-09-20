@@ -33,6 +33,7 @@ export default function SkiperjiPage() {
   })
 
   const [realSkiperji, setRealSkiperji] = useState<Skipper[]>([])
+  const [profilneSlike, setProfilneSlike] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const supabase = createClient()
@@ -40,7 +41,17 @@ export default function SkiperjiPage() {
     // je omejena na lastnika + admina, glej supabase-setup.sql). aktiven=true
     // — neaktivni skiperji (daljša odsotnost) se ne prikažejo.
     supabase.from('skiperji_javno').select('*').eq('aktiven', true).order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setRealSkiperji(data) })
+      .then(({ data }) => {
+        if (!data) return
+        setRealSkiperji(data)
+        const userIds = data.map(s => s.user_id).filter((id): id is string => !!id)
+        if (userIds.length === 0) return
+        supabase.from('public_profiles').select('id, slika_url').in('id', userIds).then(({ data: profili }) => {
+          const mapa: Record<string, string> = {}
+          profili?.forEach(p => { if (p.slika_url) mapa[p.id] = p.slika_url })
+          setProfilneSlike(mapa)
+        })
+      })
   }, [])
 
   const vsiSkiperji = realSkiperji
@@ -228,7 +239,9 @@ export default function SkiperjiPage() {
                     <div className="p-6">
                       <div className="flex items-start gap-4 mb-4">
                         <div className="w-14 h-14 rounded-full bg-[#0c2340]/10 flex items-center justify-center overflow-hidden shrink-0">
-                          {unsplashSkipperji[skipper.id] && skipper.tip_skiper !== 'agencija' ? (
+                          {(skipper.user_id && profilneSlike[skipper.user_id]) ? (
+                            <img src={profilneSlike[skipper.user_id]} alt={skipper.ime} className="w-full h-full object-cover" />
+                          ) : unsplashSkipperji[skipper.id] && skipper.tip_skiper !== 'agencija' ? (
                             <img src={unsplashSkipperji[skipper.id]} alt={skipper.ime} className="w-full h-full object-cover" />
                           ) : (
                             <span className="text-2xl">{skipper.tip_skiper === 'agencija' ? '🏢' : '👨‍✈️'}</span>
