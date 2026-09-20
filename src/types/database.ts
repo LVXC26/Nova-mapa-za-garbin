@@ -343,7 +343,10 @@ export interface Database {
   public: {
     Tables: {
       plovila: { Row: Pick<Plovilo, keyof Plovilo>; Insert: Omit<Plovilo, 'id' | 'created_at'>; Update: Partial<Plovilo>; Relationships: [] }
-      profiles: { Row: Pick<Profil, keyof Profil>; Insert: Omit<Profil, 'created_at'>; Update: Partial<Profil>; Relationships: [] }
+      // Insert: samo "id" je zares obvezen - vsa ostala polja imajo v bazi
+      // privzeto vrednost ali dovoljujejo null (glej supabase-setup.sql),
+      // zato jih upsert() sme izpustiti.
+      profiles: { Row: Pick<Profil, keyof Profil>; Insert: Partial<Profil> & Pick<Profil, 'id'>; Update: Partial<Profil>; Relationships: [] }
       charter_narocnine: { Row: Pick<CharterNarocnina, keyof CharterNarocnina>; Insert: Omit<CharterNarocnina, 'id' | 'created_at' | 'updated_at'>; Update: Partial<CharterNarocnina>; Relationships: [] }
       novice: { Row: Pick<Novica, keyof Novica>; Insert: Omit<Novica, 'id' | 'created_at'>; Update: Partial<Novica>; Relationships: [] }
       novice_kategorije: { Row: Pick<NovicaKategorija, keyof NovicaKategorija>; Insert: Omit<NovicaKategorija, 'id'>; Update: Partial<NovicaKategorija>; Relationships: [] }

@@ -36,10 +36,13 @@ export default function DashboardFeedPage() {
     if (!user || demoMode) return
     setShranjujem(true)
     const supabase = createClient()
-    await supabase.from('profiles').update({
+    // upsert, ne update — glej opombo v dashboard/nastavitve (ce vrstica v
+    // profiles manjka, bi update tiho spremenil 0 vrstic brez napake).
+    await supabase.from('profiles').upsert({
+      id: user.id,
       dovoli_tuje_objave: nastavitve.dovoliTujeObjave,
       avto_odobritev_objav: nastavitve.avtoOdobritev,
-    }).eq('id', user.id)
+    }, { onConflict: 'id' })
     setShranjujem(false)
     setShranjeno(true)
     setTimeout(() => setShranjeno(false), 2500)

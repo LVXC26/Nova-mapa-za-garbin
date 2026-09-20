@@ -72,12 +72,19 @@ export default function NastavitveProfilaPage() {
     setNalaga(true)
     const supabase = createClient()
 
-    const { error: profilError } = await supabase.from('profiles').update({
+    // upsert namesto update: ce vrstica v profiles (iz nekega razloga - npr.
+    // handle_new_user trigger ob registraciji ni ustvaril vrstice) ne
+    // obstaja, bi .update() tiho "uspel" brez napake, a spremenil 0 vrstic -
+    // uporabnik bi videl "Shranjeno", sprememba pa se dejansko ne bi
+    // zapisala (potrjen primer: nova profilna slika je po osvezitvi strani
+    // izginila). upsert zagotovi, da vrstica po potrebi nastane.
+    const { error: profilError } = await supabase.from('profiles').upsert({
+      id: user.id,
       ime: forma.ime || null,
       telefon: forma.telefon || null,
       opis: forma.opis || null,
       spletna_stran: forma.spletna_stran || null,
-    }).eq('id', user.id)
+    }, { onConflict: 'id' })
 
     // Ime se povsod drugod po strani (navigacija, forum, feed ...) bere iz
     // user_metadata, ne iz profiles tabele — brez tega bi ostalo prikazano
@@ -125,7 +132,7 @@ export default function NastavitveProfilaPage() {
       return
     }
     const { data } = supabase.storage.from('profilne-slike').getPublicUrl(pot)
-    const { error: profilError } = await supabase.from('profiles').update({ slika_url: data.publicUrl }).eq('id', user.id)
+    const { error: profilError } = await supabase.from('profiles').upsert({ id: user.id, slika_url: data.publicUrl }, { onConflict: 'id' })
     setNalagaSliko(false)
     if (profilError) { setNapaka('Slika je bila naložena, a shranjevanje ni uspelo.'); return }
     setSlikaUrl(data.publicUrl)
@@ -144,7 +151,7 @@ export default function NastavitveProfilaPage() {
     const prejsnja = slikaUrl
     setSlikaUrl(null)
     const supabase = createClient()
-    const { error } = await supabase.from('profiles').update({ slika_url: null }).eq('id', user.id)
+    const { error } = await supabase.from('profiles').upsert({ id: user.id, slika_url: null }, { onConflict: 'id' })
     if (error) { setSlikaUrl(prejsnja); setNapaka('Napaka pri odstranjevanju slike.'); return }
     refreshSlika()
     setUspesno('Profilna slika je bila odstranjena.')
@@ -200,7 +207,7 @@ export default function NastavitveProfilaPage() {
 
     setNalaga(true)
     const supabase = createClient()
-    const { error } = await supabase.from('profiles').update({ notifikacije }).eq('id', user.id)
+    const { error } = await supabase.from('profiles').upsert({ id: user.id, notifikacije }, { onConflict: 'id' })
     setNalaga(false)
     if (error) { setNapaka('Napaka pri shranjevanju nastavitev.'); return }
     setUspesno('Nastavitve obvestil so bile shranjene.')
