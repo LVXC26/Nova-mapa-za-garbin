@@ -327,8 +327,13 @@ export default function NovicaVsebina({ params }: { params: Promise<{ slug: stri
                   {druge.map((n, i) => (
                     <Link key={n.id} href={`/novice/${n.slug}`} className="group block">
                       <article className="h-full bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-                        <div className="h-40 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] flex items-center justify-center relative">
-                          <span className="text-4xl opacity-20">{ikone[i % ikone.length]}</span>
+                        <div className="h-40 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] flex items-center justify-center relative overflow-hidden">
+                          {n.slika_url || unsplashNovice[n.slug] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={n.slika_url ?? unsplashNovice[n.slug]} alt={n.naslov} className="w-full h-full object-cover absolute inset-0" />
+                          ) : (
+                            <span className="text-4xl opacity-20">{ikone[i % ikone.length]}</span>
+                          )}
                           {n.kategorija && (
                             <div className="absolute top-3 left-3">
                               <span className="px-2.5 py-1 text-xs font-medium rounded-full text-white" style={{ backgroundColor: n.kategorija.barva ?? '#0c2340' }}>
