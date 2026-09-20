@@ -11,7 +11,6 @@ export default function DashboardFeedPage() {
 
   const [nastavitve, setNastavitve] = useState({
     dovoliTujeObjave: true,
-    avtoOdobritev: false,
   })
   const [nalaga, setNalaga] = useState(true)
   const [shranjujem, setShranjujem] = useState(false)
@@ -21,11 +20,10 @@ export default function DashboardFeedPage() {
     ;(async () => {
       if (!user || demoMode) { setNalaga(false); return }
       const supabase = createClient()
-      const { data } = await supabase.from('profiles').select('dovoli_tuje_objave, avto_odobritev_objav').eq('id', user.id).maybeSingle()
+      const { data } = await supabase.from('profiles').select('dovoli_tuje_objave').eq('id', user.id).maybeSingle()
       if (data) {
         setNastavitve({
           dovoliTujeObjave: data.dovoli_tuje_objave ?? true,
-          avtoOdobritev: data.avto_odobritev_objav ?? false,
         })
       }
       setNalaga(false)
@@ -41,7 +39,6 @@ export default function DashboardFeedPage() {
     await supabase.from('profiles').upsert({
       id: user.id,
       dovoli_tuje_objave: nastavitve.dovoliTujeObjave,
-      avto_odobritev_objav: nastavitve.avtoOdobritev,
     }, { onConflict: 'id' })
     setShranjujem(false)
     setShranjeno(true)
@@ -95,24 +92,6 @@ export default function DashboardFeedPage() {
                   </button>
                 </div>
 
-                {/* Avtomatska odobritev */}
-                {nastavitve.dovoliTujeObjave && (
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-[#0c2340]">Avtomatska odobritev</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Objave se objavijo takoj brez pregleda</p>
-                    </div>
-                    <button
-                      onClick={() => setNastavitve(n => ({ ...n, avtoOdobritev: !n.avtoOdobritev }))}
-                      className="shrink-0"
-                    >
-                      {nastavitve.avtoOdobritev
-                        ? <ToggleRight className="w-8 h-8 text-[#c9a84c]" />
-                        : <ToggleLeft className="w-8 h-8 text-gray-300" />
-                      }
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 
@@ -123,10 +102,8 @@ export default function DashboardFeedPage() {
                 : 'bg-gray-50 text-gray-500'
             }`}>
               {nastavitve.dovoliTujeObjave
-                ? nastavitve.avtoOdobritev
-                  ? '✅ Tuje objave: samodejno odobrene'
-                  : '👁 Tuje objave: čakajo vašo odobritev'
-                : '🔒 Profil zalit — tuje objave onemogočene'
+                ? '✅ Tuje objave: takoj vidne, brez čakanja na odobritev'
+                : '🔒 Profil zaklenjen — tuje objave onemogočene'
               }
             </div>
 
@@ -151,7 +128,7 @@ export default function DashboardFeedPage() {
             <p className="font-semibold text-[#0c2340] mb-1 flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5" /> Tuje objave
             </p>
-            Ko je tuja objava, se prikaže v čakajočih objavah. Odobrite jo ali jo zavrnite preden postane javno vidna. Zavrnjene objave so izbrisane brez obvestila avtorju.
+            Tuje objave so zdaj takoj javno vidne, brez čakanja na vašo odobritev — lahko jih kadarkoli izbrišete. Če izklopite "Dovoli tuje objave", stranke na vaš profil ne bodo mogle več pisati.
           </div>
         </div>
       </div>

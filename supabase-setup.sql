@@ -2011,3 +2011,34 @@ for each row execute function prevent_rating_identity_tampering();
 
 drop policy if exists "Avtor ureja svojo objavo" on objave;
 create policy "Avtor ureja svojo objavo" on objave for update using (auth.uid() = avtor_user_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- OBJAVE SO ZDAJ VEDNO TAKOJ VIDNE - brez cakanja na odobritev, enako
+-- kot je bilo ze od nekdaj za objave pod plovilom ("plovilo_id is not
+-- null" - glej opombo zgoraj: "Prodajalci nimajo strani za odobravanje
+-- cakajocih objav ... zato so objave na plovilu VEDNO takoj vidne").
+-- Na zeljo uporabnika enako zdaj velja tudi za charter/skipper zid -
+-- "avto_odobritev_objav" stolpec/preklop ostane v bazi (neskodljivo),
+-- v UI pa ni vec prikazan, ker nima vec ucinka. "dovoli_tuje_objave"
+-- ostane edini preklop - lahko se vedno popolnoma izklopi objave drugih.
+-- ═══════════════════════════════════════════════════════════════════
+
+create or replace function nastavi_odobritev_objave()
+returns trigger as $$
+declare
+  dovoljeno boolean;
+begin
+  if new.plovilo_id is not null or new.avtor_user_id = new.lastnik_user_id then
+    new.odobrena := true;
+    return new;
+  end if;
+
+  select coalesce(dovoli_tuje_objave, true) into dovoljeno from profiles where id = new.lastnik_user_id;
+  if dovoljeno is false then
+    raise exception 'Lastnik profila ne dovoljuje objav drugih uporabnikov.';
+  end if;
+
+  new.odobrena := true;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;

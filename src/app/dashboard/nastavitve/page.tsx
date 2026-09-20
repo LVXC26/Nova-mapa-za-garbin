@@ -291,7 +291,7 @@ export default function NastavitveProfilaPage() {
             <div>
               <p className="font-semibold text-[#0c2340]">{forma.ime || 'Vaše ime'}</p>
               <p className="text-sm text-gray-500 capitalize">
-                {vloga === 'prodajalec' ? 'Prodajalec' : vloga === 'charter' ? 'Charter' : vloga === 'oba' ? 'Prodajalec & Charter' : 'Kupec'}
+                {vloga === 'prodajalec' ? 'Prodajalec' : vloga === 'charter' ? 'Charter' : vloga === 'skipper' ? 'Skipper' : vloga === 'oba' ? 'Prodajalec & Charter' : 'Kupec'}
               </p>
             </div>
           </div>
