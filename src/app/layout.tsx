@@ -6,6 +6,7 @@ import CookieBanner from '@/components/gdpr/CookieBanner'
 import AnalyticsScripts from '@/components/gdpr/AnalyticsScripts'
 import TawkChat from '@/components/support/TawkChat'
 import OglasniBanner from '@/components/oglasi/OglasniBanner'
+import GoogleTranslate from '@/components/i18n/GoogleTranslate'
 
 export const metadata: Metadata = {
   title: 'Garbin — Vaš zaupanja vredni pomorski portal',
@@ -40,6 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-full flex flex-col">
         <AuthProvider initialUser={user}>
           <PrimerjaProvider>
+            <GoogleTranslate />
             {children}
             {/* Stranska "skyscraper" bannerja — fiksno pripeta na rob
                 zaslona, vidna samo na zelo širokih zaslonih (2xl = 1536px+),

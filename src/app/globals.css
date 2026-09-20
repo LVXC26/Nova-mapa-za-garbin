@@ -40,6 +40,24 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Google Translate widget — skrijemo NJEGOV privzeti UI (spustni meni,
+   zgornji trak, obarvanje prevedenih besed), ker za izbiro jezika
+   uporabljamo lasten izbirnik v Navbar.tsx (glej lib/googleTranslate.ts).
+   Sam prevajalni mehanizem ostane povsem funkcionalen, samo vizualno ga
+   ne kaže. */
+#google_translate_element,
+.goog-te-banner-frame,
+.skiptranslate {
+  display: none !important;
+}
+body {
+  top: 0 !important;
+}
+.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
+}
+
 /* Custom scrollbar */
 /* Track je "transparent" v resnici pokaze osnovno (svetlo) ozadje body-ja, ne
    vsebine pod njim - na temni strani je bilo to vidno kot tanka bela crta ob

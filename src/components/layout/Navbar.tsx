@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Menu, X, Anchor, UserCircle, MessageCircle, Map, Globe, ChevronDown, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePathname } from 'next/navigation'
+import { nastaviJezik, trenutniJezik } from '@/lib/googleTranslate'
 
 const links = [
   { href: '/plovila', label: 'Plovila' },
@@ -18,10 +19,13 @@ const links = [
   { href: '/zemljevid', label: 'Zemljevid', ikona: Map },
 ]
 
+// "koda" ujema Google Translate jezikovno kodo (prazen niz = original,
+// brez prevoda) — glej lib/googleTranslate.ts.
 const jeziki = [
-  { koda: 'SLO', label: 'Slovenščina', zastava: '🇸🇮' },
-  { koda: 'HR', label: 'Hrvaščina', zastava: '🇭🇷' },
-  { koda: 'IT', label: 'Italijanščina', zastava: '🇮🇹' },
+  { koda: '', label: 'Slovenščina', zastava: '🇸🇮' },
+  { koda: 'en', label: 'English', zastava: '🇬🇧' },
+  { koda: 'hr', label: 'Hrvaščina', zastava: '🇭🇷' },
+  { koda: 'it', label: 'Italijanščina', zastava: '🇮🇹' },
 ]
 
 export default function Navbar() {
@@ -30,6 +34,22 @@ export default function Navbar() {
   const [izbranJezik, setIzbranJezik] = useState(jeziki[0])
   const [iskalnoQ, setIskalnoQ] = useState('')
   const router = useRouter()
+
+  // Ob nalaganju preberemo dejansko aktivno stanje iz "googtrans" piškotka
+  // (google Translate ga nastavi/prebere sam) — brez tega bi izbirnik po
+  // osvežitvi strani vedno kazal "Slovenščina", tudi če je stran dejansko
+  // prevedena.
+  useEffect(() => {
+    const trenutna = trenutniJezik()
+    const najdena = jeziki.find(j => j.koda === trenutna)
+    if (najdena) setIzbranJezik(najdena)
+  }, [])
+
+  function izberiJezik(j: typeof jeziki[number]) {
+    setJezikOpen(false)
+    if (j.koda === izbranJezik.koda) return
+    nastaviJezik(j.koda || null)
+  }
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -103,15 +123,15 @@ export default function Navbar() {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 transition-all"
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span>{izbranJezik.zastava} {izbranJezik.koda}</span>
+                <span>{izbranJezik.zastava} {izbranJezik.koda ? izbranJezik.koda.toUpperCase() : 'SLO'}</span>
                 <ChevronDown className={`w-3 h-3 transition-transform ${jezikOpen ? 'rotate-180' : ''}`} />
               </button>
               {jezikOpen && (
                 <div className="absolute right-0 top-full mt-1 bg-[#0c2340] border border-white/15 rounded-xl shadow-xl overflow-hidden min-w-[160px] z-50">
                   {jeziki.map(j => (
                     <button
-                      key={j.koda}
-                      onClick={() => { setIzbranJezik(j); setJezikOpen(false) }}
+                      key={j.koda || 'sl'}
+                      onClick={() => izberiJezik(j)}
                       className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
                         j.koda === izbranJezik.koda
                           ? 'text-[#c9a84c] bg-white/8'
@@ -213,15 +233,15 @@ export default function Navbar() {
             <div className="flex gap-2">
               {jeziki.map(j => (
                 <button
-                  key={j.koda}
-                  onClick={() => setIzbranJezik(j)}
+                  key={j.koda || 'sl'}
+                  onClick={() => izberiJezik(j)}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     j.koda === izbranJezik.koda
                       ? 'bg-[#c9a84c] text-[#0c2340]'
                       : 'bg-white/10 text-white/70 hover:bg-white/20'
                   }`}
                 >
-                  {j.zastava} {j.koda}
+                  {j.zastava} {j.koda ? j.koda.toUpperCase() : 'SLO'}
                 </button>
               ))}
             </div>
