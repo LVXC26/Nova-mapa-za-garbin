@@ -7,6 +7,7 @@ export default function Avatar({
   bgClassName = 'bg-[#0c2340]/8',
   textClassName = 'text-[#0c2340]',
   className = '',
+  objectFit = 'cover',
 }: {
   slikaUrl?: string | null
   ime: string
@@ -14,6 +15,10 @@ export default function Avatar({
   bgClassName?: string
   textClassName?: string
   className?: string
+  // 'contain' za logotipe (npr. charter/skipper podjetja) — 'cover' bi
+  // pogosto obrezal široke/pravokotne logotipe (npr. besedilne znamke) tako,
+  // da postanejo neberljivi. Za osebne fotografije ostane privzeti 'cover'.
+  objectFit?: 'cover' | 'contain'
 }) {
   if (slikaUrl) {
     return (
@@ -21,7 +26,7 @@ export default function Avatar({
       <img
         src={slikaUrl}
         alt={ime}
-        className={`rounded-full object-cover shrink-0 ${className}`}
+        className={`rounded-full shrink-0 ${objectFit === 'contain' ? 'object-contain' : 'object-cover'} ${className}`}
         style={{ width: velikost, height: velikost }}
       />
     )

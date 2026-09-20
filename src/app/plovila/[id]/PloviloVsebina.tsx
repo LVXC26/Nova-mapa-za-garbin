@@ -483,7 +483,7 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
                   >
                     <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Plovilo oddaja</h3>
                     <div className="flex items-center gap-3">
-                      <Avatar slikaUrl={charter.slika_url} ime={charter.naziv} velikost={40} className="text-lg" />
+                      <Avatar slikaUrl={charter.slika_url} ime={charter.naziv} velikost={40} className="text-lg" objectFit="contain" />
                       <div className="min-w-0">
                         <p className="font-medium text-[#0c2340] text-sm truncate flex items-center gap-1.5">
                           {charter.naziv}

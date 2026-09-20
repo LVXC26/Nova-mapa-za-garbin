@@ -220,8 +220,11 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
               {/* Avatar */}
               <div className="w-24 h-24 rounded-2xl bg-[#c9a84c]/20 border-2 border-[#c9a84c]/40 flex items-center justify-center overflow-hidden shrink-0">
                 {slikaUrl ? (
+                  // object-contain za agencijo (logotip bi se z object-cover
+                  // obrezal), object-cover za samostojnega skiperja (osebna
+                  // fotografija — obrezovanje je tam pricakovano/v redu).
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={slikaUrl} alt={skipper.ime} className="w-full h-full object-cover" />
+                  <img src={slikaUrl} alt={skipper.ime} className={`w-full h-full ${skipper.tip_skiper === 'agencija' ? 'object-contain' : 'object-cover'}`} />
                 ) : unsplashSkipperji[skipper.id] && skipper.tip_skiper !== 'agencija' ? (
                   <img src={unsplashSkipperji[skipper.id]} alt={skipper.ime} className="w-full h-full object-cover" />
                 ) : (

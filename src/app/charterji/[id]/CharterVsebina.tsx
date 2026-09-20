@@ -213,10 +213,12 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
 
             <div className="flex items-start gap-6">
               {/* Avatar — prava profilna slika lastnika (Nastavitve), placeholder samo ce je ni */}
-              <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 relative">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 relative bg-white/5">
                 {slikaUrl ? (
+                  // object-contain, ne object-cover — logotip (pogosto širok
+                  // besedilni znak) bi se sicer obrezal in postal neberljiv.
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={slikaUrl} alt={charter.naziv} className="w-full h-full object-cover" />
+                  <img src={slikaUrl} alt={charter.naziv} className="w-full h-full object-contain" />
                 ) : (
                   <div className={`w-full h-full ${charter.tip === 'podjetje' ? 'bg-[#c9a84c]' : 'bg-white/10'} flex items-center justify-center text-3xl`}>
                     {charter.tip === 'podjetje' ? '🏢' : '👤'}

@@ -92,7 +92,7 @@ export default function CharterKartica({ charter }: { charter: Charter }) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-start gap-2.5 flex-1 min-w-0">
-            <Avatar slikaUrl={profilnaSlika} ime={charter.naziv} velikost={36} className="mt-0.5" />
+            <Avatar slikaUrl={profilnaSlika} ime={charter.naziv} velikost={36} className="mt-0.5" objectFit="contain" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5">
                 <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
