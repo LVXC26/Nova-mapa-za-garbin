@@ -2,9 +2,9 @@
 
 import { useState, useEffect, Fragment } from 'react'
 import Link from 'next/link'
-import { CheckCircle, XCircle, Eye, BadgeCheck, Star, Pencil, X, Award, Trash2 } from 'lucide-react'
+import { CheckCircle, XCircle, Eye, BadgeCheck, Star, Pencil, X, Award, Trash2, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import type { Skipper } from '@/types/database'
+import type { Skipper, Objava } from '@/types/database'
 
 const TIPI_PLOVIL = ['jadrnica', 'motorni', 'katamaran', 'jahta', 'gumenjak']
 const JEZIKI = ['slovenščina', 'angleščina', 'hrvaščina', 'nemščina', 'italijanščina']
@@ -30,6 +30,13 @@ export default function AdminSkiperjiPage() {
   const [noviCertifikat, setNoviCertifikat] = useState('')
   const [shranjuje, setShranjuje] = useState(false)
   const [napaka, setNapaka] = useState('')
+  // Razsirjena vrstica (id skiperja) - prikaze NJEGOVE PRAVE, ZIVE objave
+  // (isti razlog kot pri admin/charterji - po incidentu brisanje profila
+  // ne sme vec avtomatsko pobrisati vsebine, admin jo mora videti in
+  // izbrisati po eni, zavestno).
+  const [razsirjenId, setRazsirjenId] = useState<string | null>(null)
+  const [objavePoSkiperju, setObjavePoSkiperju] = useState<Record<string, Objava[]>>({})
+  const [nalagaObjave, setNalagaObjave] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -55,16 +62,35 @@ export default function AdminSkiperjiPage() {
     nalozi()
   }
 
+  // POMEMBNO (po incidentu z izgubljenimi plovili pri charterjih): brisanje
+  // skipper PROFILA ne sme vec avtomatsko odnesti tudi objav s sabo — admin
+  // naj to naredi zavestno, po eno objavo naenkrat (glej razsirjena vrstica
+  // spodaj), ali uporabi "Izbriši uporabnika" na /admin/uporabniki za
+  // celoten racun.
   async function izbrisi(s: Skipper) {
-    if (!confirm(`Izbrišete profil "${s.ime}" in vse njegove objave (feed)? Tega ni mogoče razveljaviti.`)) return
-    // Objave (feed) se ne izbrišejo same od sebe — vezane so na
-    // lastnik_user_id (auth.users), ne na skiperji.id, zato jih zbrišemo
-    // izrecno pred profilom, sicer bi na strani obiskovalca ostale
-    // "osirotele" objave brez profila, na katerega so vezane.
-    if (s.user_id) await supabase.from('objave').delete().eq('lastnik_user_id', s.user_id)
+    const stObjav = objavePoSkiperju[s.id]?.length
+    const opozorilo = stObjav ? ` Ima ${stObjav} objav, ki NE bodo izbrisane skupaj s profilom.` : ''
+    if (!confirm(`Izbrišete SAMO profil "${s.ime}"?${opozorilo} Za brisanje celotnega računa (vključno z objavami) uporabi "Izbriši uporabnika" na strani Uporabniki.`)) return
     const { error } = await supabase.from('skiperji').delete().eq('id', s.id)
     if (error) { alert('Napaka pri brisanju: ' + error.message); return }
     nalozi()
+  }
+
+  async function preklopiRazsiritev(s: Skipper) {
+    if (razsirjenId === s.id) { setRazsirjenId(null); return }
+    setRazsirjenId(s.id)
+    if (!s.user_id || objavePoSkiperju[s.id]) return
+    setNalagaObjave(s.id)
+    const { data } = await supabase.from('objave').select('*').eq('lastnik_user_id', s.user_id).order('created_at', { ascending: false })
+    setObjavePoSkiperju(prev => ({ ...prev, [s.id]: data ?? [] }))
+    setNalagaObjave(null)
+  }
+
+  async function izbrisiObjavo(skiperId: string, objava: Objava) {
+    if (!confirm('Izbrišete to objavo? Tega ni mogoče razveljaviti.')) return
+    const { error } = await supabase.from('objave').delete().eq('id', objava.id)
+    if (error) { alert('Napaka pri brisanju: ' + error.message); return }
+    setObjavePoSkiperju(prev => ({ ...prev, [skiperId]: (prev[skiperId] ?? []).filter(o => o.id !== objava.id) }))
   }
 
   function zacniUrejanje(s: Skipper) {
@@ -140,6 +166,7 @@ export default function AdminSkiperjiPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
+              <th className="w-8"></th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Ime</th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Lokacija</th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Izkušnje</th>
@@ -153,6 +180,11 @@ export default function AdminSkiperjiPage() {
             {skiperji.map(s => (
               <Fragment key={s.id}>
                 <tr className="hover:bg-gray-50/50">
+                  <td className="pl-5">
+                    <button onClick={() => preklopiRazsiritev(s)} className="p-1 rounded text-gray-400 hover:text-[#0c2340]" title="Prikaži njegove objave">
+                      {razsirjenId === s.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
+                  </td>
                   <td className="px-5 py-3.5 font-medium text-gray-900">{s.ime}</td>
                   <td className="px-5 py-3.5 text-gray-600">{s.lokacija}</td>
                   <td className="px-5 py-3.5 text-gray-600">{s.izkusnje_let} let</td>
@@ -182,13 +214,38 @@ export default function AdminSkiperjiPage() {
                         <button onClick={() => potrdi(s.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title="Potrdi (verified)"><CheckCircle className="w-4 h-4" /></button>
                       )}
                       <button onClick={() => zavrni(s.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Odstrani verified"><XCircle className="w-4 h-4" /></button>
-                      <button onClick={() => izbrisi(s)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors" title="Izbriši profil in njegove objave"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => izbrisi(s)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors" title="Izbriši SAMO profil (objave ostanejo)"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
+                {razsirjenId === s.id && (
+                  <tr>
+                    <td colSpan={8} className="bg-gray-50/70 px-5 py-4">
+                      {nalagaObjave === s.id ? (
+                        <p className="text-xs text-gray-400">Nalagam objave...</p>
+                      ) : !objavePoSkiperju[s.id] || objavePoSkiperju[s.id].length === 0 ? (
+                        <p className="text-xs text-gray-400 flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> Ta skipper nima nobene objave.</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold text-gray-500 mb-2">{objavePoSkiperju[s.id].length} objav — vsako lahko izbrišete posamično:</p>
+                          {objavePoSkiperju[s.id].map(o => (
+                            <div key={o.id} className="flex items-center justify-between gap-3 bg-white rounded-lg border border-gray-100 px-3 py-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <MessageSquare className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                <span className="text-sm text-gray-800 truncate">{o.vsebina}</span>
+                                <span className="text-xs text-gray-400 shrink-0">{new Date(o.created_at).toLocaleDateString('sl-SI')}</span>
+                              </div>
+                              <button onClick={() => izbrisiObjavo(s.id, o)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 shrink-0" title="Izbriši to objavo"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
                 {urejaId === s.id && forma && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-5 bg-gray-50/70">
+                    <td colSpan={8} className="px-5 py-5 bg-gray-50/70">
                       <div className="max-w-2xl space-y-4">
                         <div className="flex items-center justify-between">
                           <h3 className="font-semibold text-gray-900">Uredi profil skiperja</h3>

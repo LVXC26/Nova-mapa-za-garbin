@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Shield, Ban, CheckCircle, Mail, MessageSquareWarning, Star } from 'lucide-react'
+import { Shield, Ban, CheckCircle, Mail, MessageSquareWarning, Star, Trash2 } from 'lucide-react'
 
 interface Uporabnik {
   id: string
@@ -92,6 +92,21 @@ export default function AdminUporabnikiPage() {
     if (!res.ok) await nalozi()
   }
 
+  // NAMENOMA edino mesto v celi admin strani, ki res izbrise CISTO VSE
+  // (racun, profil, charter/skipper profil, plovila, rezervni deli,
+  // objave, sporocila ...) - drugje (admin/charterji, admin/skiperji)
+  // brisanje profila NAMENOMA vec ne odnese s sabo oglasov, glej tam.
+  async function izbrisiUporabnika(u: Uporabnik) {
+    if (!confirm(`Izbrišete račun "${u.ime}" (${u.email})? To DOKONČNO izbriše čisto vse: profil, vsa njegova plovila, rezervne dele, objave in sporočila. Tega ni mogoče razveljaviti.`)) return
+    setUporabniki(prev => prev.filter(x => x.id !== u.id))
+    const res = await fetch('/api/admin/uporabniki', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: u.id }),
+    })
+    if (!res.ok) await nalozi()
+  }
+
   return (
     <div className="p-8">
       <div className="mb-6">
@@ -175,6 +190,9 @@ export default function AdminUporabnikiPage() {
                     </button>
                     <button onClick={() => preklopiBlokado(u.id, u.aktiven)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title={u.aktiven ? 'Blokiraj' : 'Odblokiraj'}>
                       {u.aktiven ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                    </button>
+                    <button onClick={() => izbrisiUporabnika(u)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors" title="Izbriši račun in VSO njegovo vsebino (dokončno)">
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </td>

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import Link from 'next/link'
-import { CheckCircle, XCircle, Eye, BadgeCheck, Gift, X, Calendar, AlertTriangle, Trash2 } from 'lucide-react'
+import { CheckCircle, XCircle, Eye, BadgeCheck, Gift, X, Calendar, AlertTriangle, Trash2, ChevronDown, ChevronRight, Ship } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import type { Charter } from '@/types/database'
+import type { Charter, Plovilo } from '@/types/database'
+import { formatCena } from '@/lib/utils'
 
 type TrialStatus = Record<string, { meseci: number; konec: Date } | null>
 
@@ -123,6 +124,14 @@ export default function AdminCharterjiPage() {
   const [izbraniCharter, setIzbraniCharter] = useState<Charter | null>(null)
   const [triali, setTriali] = useState<TrialStatus>({})
   const [obvestilo, setObvestilo] = useState<{ tip: 'ok' | 'napaka'; sporocilo: string } | null>(null)
+  // Razsirjena vrstica (id charterja) - prikaze NJEGOVA PRAVA, ZIVA plovila
+  // (uporabnik: incident, ko je stolpec "Plovil" (st_plovil - rocno/zastarelo
+  // polje) kazal "0", dejansko brisanje pa je odneslo vec pravih oglasov,
+  // ker se ni nikoli ujemalo z resnicnim stanjem). Zdaj admin PRED brisanjem
+  // vidi resnicen seznam in lahko vsako plovilo izbrise posebej.
+  const [razsirjenId, setRazsirjenId] = useState<string | null>(null)
+  const [plovilaPoCharterju, setPlovilaPoCharterju] = useState<Record<string, Plovilo[]>>({})
+  const [nalagaPlovila, setNalagaPlovila] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -140,6 +149,24 @@ export default function AdminCharterjiPage() {
   function prikaziObvestilo(tip: 'ok' | 'napaka', sporocilo: string) {
     setObvestilo({ tip, sporocilo })
     setTimeout(() => setObvestilo(null), 4000)
+  }
+
+  async function preklopiRazsiritev(c: Charter) {
+    if (razsirjenId === c.id) { setRazsirjenId(null); return }
+    setRazsirjenId(c.id)
+    if (!c.user_id || plovilaPoCharterju[c.id]) return
+    setNalagaPlovila(c.id)
+    const { data } = await supabase.from('plovila').select('*').eq('user_id', c.user_id).order('created_at', { ascending: false })
+    setPlovilaPoCharterju(prev => ({ ...prev, [c.id]: data ?? [] }))
+    setNalagaPlovila(null)
+  }
+
+  async function izbrisiPlovilo(charterId: string, plovilo: Plovilo) {
+    if (!confirm(`Izbrišete plovilo "${plovilo.naziv}"? Tega ni mogoče razveljaviti.`)) return
+    const { error } = await supabase.from('plovila').delete().eq('id', plovilo.id)
+    if (error) { prikaziObvestilo('napaka', 'Napaka pri brisanju: ' + error.message); return }
+    setPlovilaPoCharterju(prev => ({ ...prev, [charterId]: (prev[charterId] ?? []).filter(p => p.id !== plovilo.id) }))
+    prikaziObvestilo('ok', `✓ Plovilo "${plovilo.naziv}" izbrisano`)
   }
 
   async function potrdiTrial(meseci: number, opomba: string) {
@@ -179,15 +206,14 @@ export default function AdminCharterjiPage() {
     nalozi()
   }
 
+  // POMEMBNO (po incidentu): brisanje charter PROFILA ne sme vec avtomatsko
+  // odnesti tudi plovil/objav s sabo — admin naj to naredi zavestno, po
+  // eno plovilo naenkrat (glej razsirjena vrstica zgoraj), ali pa uporabi
+  // "Izbriši uporabnika" na /admin/uporabniki, ce res zeli izbrisati vse.
   async function izbrisi(c: Charter) {
-    if (!confirm(`Izbrišete charter "${c.naziv}" ter vsa njegova plovila (${c.st_plovil}) in objave? Tega ni mogoče razveljaviti.`)) return
-    // Plovila in objave se ne izbrišejo same od sebe — vezana so na
-    // user_id/lastnik_user_id (auth.users), ne na charterji.id, zato ju
-    // zbrišemo izrecno pred profilom.
-    if (c.user_id) {
-      await supabase.from('plovila').delete().eq('user_id', c.user_id)
-      await supabase.from('objave').delete().eq('lastnik_user_id', c.user_id)
-    }
+    const stOglasov = plovilaPoCharterju[c.id]?.length
+    const opozoriloOglasi = stOglasov ? ` Ima ${stOglasov} plovil, ki NE bodo izbrisana skupaj s profilom.` : ''
+    if (!confirm(`Izbrišete SAMO profil "${c.naziv}"?${opozoriloOglasi} Za brisanje celotnega računa (vključno s plovili) uporabi "Izbriši uporabnika" na strani Uporabniki.`)) return
     const { error } = await supabase.from('charterji').delete().eq('id', c.id)
     if (error) { prikaziObvestilo('napaka', 'Napaka pri brisanju: ' + error.message); return }
     nalozi()
@@ -214,6 +240,7 @@ export default function AdminCharterjiPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
+              <th className="w-8"></th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Naziv</th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Tip</th>
               <th className="text-left px-5 py-3 font-semibold text-gray-600">Lokacija</th>
@@ -228,16 +255,27 @@ export default function AdminCharterjiPage() {
               const trial = triali[c.id]
               const jeVerificiran = c.verified
               const trialAktiven = trial && trial.konec > new Date()
+              const jeRazsirjen = razsirjenId === c.id
+              const njegovaPlovila = plovilaPoCharterju[c.id]
 
               return (
-                <tr key={c.id} className="hover:bg-gray-50/50">
+                <Fragment key={c.id}>
+                <tr className="hover:bg-gray-50/50">
+                  <td className="pl-5">
+                    <button onClick={() => preklopiRazsiritev(c)} className="p-1 rounded text-gray-400 hover:text-[#0c2340]" title="Prikaži njegova plovila">
+                      {jeRazsirjen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
+                  </td>
                   <td className="px-5 py-3.5">
                     <p className="font-medium text-gray-900">{c.naziv}</p>
                     <p className="text-xs text-gray-400">{c.kontakt_email}</p>
                   </td>
                   <td className="px-5 py-3.5 text-gray-500 capitalize">{c.tip}</td>
                   <td className="px-5 py-3.5 text-gray-600">{c.lokacija}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{c.st_plovil}</td>
+                  <td className="px-5 py-3.5 text-gray-600">
+                    {c.st_plovil}
+                    <span className="text-xs text-gray-300" title="Ročno polje, ni nujno živo stanje — klikni puščico za dejanski seznam"> (info)</span>
+                  </td>
                   <td className="px-5 py-3.5">
                     <span className={`flex items-center gap-1 text-xs font-medium w-fit px-2.5 py-1 rounded-full ${jeVerificiran ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                       {jeVerificiran && <BadgeCheck className="w-3.5 h-3.5" />}
@@ -290,13 +328,42 @@ export default function AdminCharterjiPage() {
                       <button
                         onClick={() => izbrisi(c)}
                         className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors"
-                        title="Izbriši charter, njegova plovila in objave"
+                        title="Izbriši SAMO profil (plovila ostanejo)"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
                 </tr>
+                {jeRazsirjen && (
+                  <tr>
+                    <td colSpan={8} className="bg-gray-50/70 px-5 py-4">
+                      {nalagaPlovila === c.id ? (
+                        <p className="text-xs text-gray-400">Nalagam plovila...</p>
+                      ) : !njegovaPlovila || njegovaPlovila.length === 0 ? (
+                        <p className="text-xs text-gray-400 flex items-center gap-1.5"><Ship className="w-3.5 h-3.5" /> Ta charter nima nobenega plovila.</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold text-gray-500 mb-2">{njegovaPlovila.length} plovil — vsako lahko izbrišete posamično:</p>
+                          {njegovaPlovila.map(p => (
+                            <div key={p.id} className="flex items-center justify-between gap-3 bg-white rounded-lg border border-gray-100 px-3 py-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Ship className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                <span className="text-sm text-gray-800 truncate">{p.naziv}</span>
+                                <span className="text-xs text-gray-400 shrink-0">{p.cena_na_zahtevo ? 'Cena na zahtevo' : formatCena(p.cena)}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <Link href={`/plovila/${p.id}`} target="_blank" className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Oglej"><Eye className="w-3.5 h-3.5" /></Link>
+                                <button onClick={() => izbrisiPlovilo(c.id, p)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50" title="Izbriši to plovilo"><Trash2 className="w-3.5 h-3.5" /></button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               )
             })}
           </tbody>
@@ -311,10 +378,11 @@ export default function AdminCharterjiPage() {
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center gap-5 text-xs text-gray-400">
+      <div className="mt-4 flex items-center gap-5 text-xs text-gray-400 flex-wrap">
+        <div className="flex items-center gap-1.5"><ChevronRight className="w-3.5 h-3.5" /> Prikaži plovila</div>
         <div className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Preklopi verified</div>
         <div className="flex items-center gap-1.5"><Gift className="w-3.5 h-3.5 text-amber-500" /> Dodeli brezplačni dostop</div>
-        <div className="flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5 text-red-500" /> Izbriši (in njegova plovila/objave)</div>
+        <div className="flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5 text-red-500" /> Izbriši SAMO profil (plovila ostanejo — briši jih posamično zgoraj)</div>
       </div>
 
       {/* Modal */}

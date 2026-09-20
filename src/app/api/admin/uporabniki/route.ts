@@ -84,3 +84,35 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true })
 }
+
+// Popolna izbrisa racuna - namensko LOCENO od brisanja charter/skipper
+// profila (glej admin/charterji, admin/skiperji): tam brisanje NE sme vec
+// tiho pobrisati tudi plovil/objav (glej incident - "0 plovil" prikazano
+// polje st_plovil je bilo zastarelo, dejansko izbrisanih je bilo vec pravih
+// oglasov). Tukaj, na strani "Uporabniki", pa je "izbrisi vse" ravno
+// namen akcije, zato admin to eksplicitno zahteva z locenim gumbom in
+// potrditvijo, ki jasno pove kaj vse bo izbrisano.
+export async function DELETE(req: NextRequest) {
+  const { ok } = await jeAdmin()
+  if (!ok) return NextResponse.json({ error: 'Nisi admin' }, { status: 403 })
+
+  const { userId } = await req.json() as { userId: string }
+  if (!userId) return NextResponse.json({ error: 'Manjka userId' }, { status: 400 })
+
+  const adminClient = createAdminClient()
+
+  // plovila.user_id in rezervni_deli.user_id imata "on delete set null", ne
+  // "cascade" - ce bi samo izbrisali auth uporabnika, bi ti oglasi ostali
+  // (osiroteli, brez lastnika), namesto da izginejo. Zato ju izrecno
+  // izbrisemo tukaj, pred brisanjem racuna.
+  await adminClient.from('plovila').delete().eq('user_id', userId)
+  await adminClient.from('rezervni_deli').delete().eq('user_id', userId)
+
+  // Vse ostalo (profiles, charterji, skiperji, objave, messages, ratings,
+  // komentarji ...) ima "on delete cascade" na auth.users, zato se izbrise
+  // samodejno ob brisanju uporabnika spodaj.
+  const { error } = await adminClient.auth.admin.deleteUser(userId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true })
+}
