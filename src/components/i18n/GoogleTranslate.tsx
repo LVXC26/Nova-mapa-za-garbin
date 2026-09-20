@@ -18,9 +18,7 @@ declare global {
 export default function GoogleTranslate() {
   return (
     <>
-      {/* ZACASNO VIDNO za diagnostiko — glej pogovor, goog-te-combo ostaja
-          prazen tudi brez vsakega skrivanja, torej vzrok ni vidnost. */}
-      <div id="google_translate_element" style={{ position: 'fixed', top: 70, right: 10, zIndex: 9999, background: 'white', padding: 4 }} />
+      <div id="google_translate_element" className="hidden" />
       <Script id="google-translate-init" strategy="afterInteractive">
         {`
           function googleTranslateElementInit() {
