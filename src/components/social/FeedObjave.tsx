@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor, CheckCircle, X, Clock, Trash2, Loader2, Camera } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor, CheckCircle, X, Clock, Trash2, Loader2, Camera, Pencil } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { stisniSliko } from '@/lib/stisniSliko'
@@ -158,6 +158,10 @@ export default function FeedObjave({
   const [filter, setFilter] = useState<'vse' | 'moje' | 'caka'>('vse')
   const [isModerator, setIsModerator] = useState(false)
   const [profilneSlike, setProfilneSlike] = useState<Record<string, string>>({})
+  const [urejamObjavoId, setUrejamObjavoId] = useState<string | null>(null)
+  const [urejenaVsebina, setUrejenaVsebina] = useState('')
+  const [shranjujeUrejanje, setShranjujeUrejanje] = useState(false)
+  const [urejanjeNapaka, setUrejanjeNapaka] = useState('')
 
   const jeLastnik = !!user && !!lastnikUserId && user.id === lastnikUserId
 
@@ -315,6 +319,30 @@ export default function FeedObjave({
     if (!confirm('Izbrišete to objavo? Tega ni mogoče razveljaviti.')) return
     const supabase = createClient()
     await supabase.from('objave').delete().eq('id', id)
+    nalozi()
+  }
+
+  function zacniUrejanjeObjave(o: Objava) {
+    setUrejamObjavoId(o.id)
+    setUrejenaVsebina(o.vsebina)
+    setUrejanjeNapaka('')
+  }
+
+  async function shraniUrejenoObjavo() {
+    if (!urejamObjavoId || !urejenaVsebina.trim()) return
+    setShranjujeUrejanje(true)
+    setUrejanjeNapaka('')
+    const supabase = createClient()
+    const { data: shranjeno, error } = await supabase.from('objave').update({ vsebina: urejenaVsebina.trim() }).eq('id', urejamObjavoId).select()
+    setShranjujeUrejanje(false)
+    // update() na vrstico, ki je RLS ne dovoli, "uspe" brez napake, a
+    // spremeni 0 vrstic - .select() to razkrije kot prazen seznam namesto
+    // tihe "uspesne" napake (glej isti vzorec pri urejanju ocen).
+    if (error || !shranjeno || shranjeno.length === 0) {
+      setUrejanjeNapaka(error ? `Napaka pri shranjevanju: ${error.message}` : 'Shranjevanje ni uspelo (ni pravic).')
+      return
+    }
+    setUrejamObjavoId(null)
     nalozi()
   }
 
@@ -546,19 +574,35 @@ export default function FeedObjave({
                       <p className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                     </div>
                   </div>
-                  {/* RLS "Lastnik brise objave na svojem profilu" to že dovoljuje
-                      lastniku zidu (ne samo globalnemu moderatorju) — brez tega bi
-                      npr. prodajalec plovila (ki nima moderatorskih pravic) nikoli
-                      ne mogel odstraniti neprimerne objave na svojem oglasu. */}
-                  {(isModerator || jeLastnik) && (
-                    <button
-                      onClick={() => izbrisiObjavo(o.id)}
-                      title={isModerator ? 'Izbriši objavo (moderator)' : 'Izbriši objavo'}
-                      className="p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Avtor ureja/brise SVOJO objavo (glej "Avtor ureja svojo
+                        objavo"/"Avtor brise svojo objavo" v supabase-setup.sql) -
+                        namenoma samo za pravega avtorja, ne za lastnika zidu, da
+                        se ne bi dalo prirejati besedila, ki ga je napisal nekdo
+                        drug (glej prevent_objava_content_tampering trigger). */}
+                    {user?.id === o.avtor_user_id && (
+                      <button
+                        onClick={() => zacniUrejanjeObjave(o)}
+                        title="Uredi svojo objavo"
+                        className="p-1.5 rounded-lg text-gray-300 hover:text-[#0c2340] hover:bg-gray-100 transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                    {/* RLS "Lastnik brise objave na svojem profilu" to že dovoljuje
+                        lastniku zidu (ne samo globalnemu moderatorju) — brez tega bi
+                        npr. prodajalec plovila (ki nima moderatorskih pravic) nikoli
+                        ne mogel odstraniti neprimerne objave na svojem oglasu. */}
+                    {(isModerator || jeLastnik || user?.id === o.avtor_user_id) && (
+                      <button
+                        onClick={() => izbrisiObjavo(o.id)}
+                        title={isModerator ? 'Izbriši objavo (moderator)' : 'Izbriši objavo'}
+                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Lokacija + plovilo */}
@@ -577,7 +621,27 @@ export default function FeedObjave({
                   </div>
                 )}
 
-                <p className="text-sm text-gray-700 leading-relaxed mb-4">{o.vsebina}</p>
+                {urejamObjavoId === o.id ? (
+                  <div className="mb-4">
+                    {urejanjeNapaka && <p className="text-xs text-red-600 mb-2">{urejanjeNapaka}</p>}
+                    <textarea
+                      value={urejenaVsebina}
+                      onChange={e => setUrejenaVsebina(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none mb-2"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={shraniUrejenoObjavo} disabled={shranjujeUrejanje || !urejenaVsebina.trim()} className="px-4 py-1.5 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] text-xs font-semibold rounded-full transition-all">
+                        {shranjujeUrejanje ? 'Shranjujem...' : 'Shrani'}
+                      </button>
+                      <button onClick={() => setUrejamObjavoId(null)} className="px-4 py-1.5 border border-gray-200 text-gray-600 text-xs font-medium rounded-full hover:bg-gray-50">
+                        Prekliči
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-700 leading-relaxed mb-4">{o.vsebina}</p>
+                )}
 
                 {o.slike && o.slike.length > 0 && (
                   <div className={`grid gap-1.5 mb-4 rounded-xl overflow-hidden ${o.slike.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>

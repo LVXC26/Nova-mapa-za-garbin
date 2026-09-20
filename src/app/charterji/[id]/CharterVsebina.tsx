@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MapPin, Ship, Star, CheckCircle, ExternalLink, ArrowLeft, Users, Ruler, Trash2 } from 'lucide-react'
+import { MapPin, Ship, Star, CheckCircle, ExternalLink, ArrowLeft, Users, Ruler, Trash2, Pencil } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import OglasniBanner from '@/components/oglasi/OglasniBanner'
@@ -44,6 +44,7 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
   const [posiljaOceno, setPosiljaOceno] = useState(false)
   const [ocenaNapaka, setOcenaNapaka] = useState('')
   const [lahkoBrisOceno, setLahkoBrisOceno] = useState(false)
+  const [urejamOcenoId, setUrejamOcenoId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) { setLahkoBrisOceno(false); return }
@@ -102,13 +103,15 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
     setOcenaNapaka('')
     setPosiljaOceno(true)
     const supabase = createClient()
-    const { error } = await supabase.from('ratings').insert({
-      rater_id: user.id,
-      rated_id: id,
-      rated_type: 'charter',
-      score: novaOcena,
-      komentar: novKomentar.trim(),
-    })
+    const { data: shranjeno, error } = urejamOcenoId
+      ? await supabase.from('ratings').update({ score: novaOcena, komentar: novKomentar.trim() }).eq('id', urejamOcenoId).select()
+      : await supabase.from('ratings').insert({
+          rater_id: user.id,
+          rated_id: id,
+          rated_type: 'charter',
+          score: novaOcena,
+          komentar: novKomentar.trim(),
+        }).select()
     setPosiljaOceno(false)
     if (error) {
       setOcenaNapaka(
@@ -118,10 +121,26 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
       )
       return
     }
+    // update() na vrstico, ki je RLS ne dovoli, "uspe" brez napake, a
+    // spremeni 0 vrstic (glej isti vzorec v dashboard/nastavitve) - .select()
+    // to razkrije kot prazen seznam namesto tihe "uspesne" napake.
+    if (!shranjeno || shranjeno.length === 0) {
+      setOcenaNapaka('Shranjevanje ni uspelo (ni pravic).')
+      return
+    }
     setDodajOceno(false)
+    setUrejamOcenoId(null)
     setNovKomentar('')
     setNovaOcena(5)
     nalozOcene()
+  }
+
+  function zacniUrejanjeOcene(o: OcenaZImenom) {
+    setUrejamOcenoId(o.id)
+    setNovaOcena(o.score)
+    setNovKomentar(o.komentar ?? '')
+    setOcenaNapaka('')
+    setDodajOceno(true)
   }
 
   async function izbrisiOceno(ocenaId: string) {
@@ -300,7 +319,9 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                     <p className="text-sm text-gray-400 text-center py-8">Ta charter še nima ocen.</p>
                   ) : (
                     <div className="space-y-4">
-                      {ocene.map((o) => (
+                      {ocene.filter(o => o.id !== urejamOcenoId).map((o) => {
+                        const jeMoja = user?.id === o.rater_id
+                        return (
                         <div key={o.id} className="border-b border-gray-50 last:border-0 pb-4 last:pb-0">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -314,8 +335,13 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                                 ))}
                               </div>
                               <span className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })}</span>
-                              {lahkoBrisOceno && (
-                                <button onClick={() => izbrisiOceno(o.id)} title="Izbriši oceno (admin)" className="p-1 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors">
+                              {jeMoja && (
+                                <button onClick={() => zacniUrejanjeOcene(o)} title="Uredi svojo oceno" className="p-1 rounded-lg text-gray-300 hover:text-[#0c2340] hover:bg-gray-100 transition-colors">
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {(jeMoja || lahkoBrisOceno) && (
+                                <button onClick={() => izbrisiOceno(o.id)} title={jeMoja ? 'Izbriši svojo oceno' : 'Izbriši oceno (admin)'} className="p-1 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors">
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               )}
@@ -323,7 +349,8 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                           </div>
                           {o.komentar && <p className="text-sm text-gray-600 leading-relaxed ml-10">{o.komentar}</p>}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
 
@@ -353,9 +380,9 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
                       />
                       <div className="flex gap-2">
                         <button onClick={posljiOceno} disabled={posiljaOceno || !novKomentar.trim()} className="px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold text-sm rounded-full transition-all">
-                          {posiljaOceno ? 'Pošiljam...' : 'Objavi oceno'}
+                          {posiljaOceno ? 'Pošiljam...' : urejamOcenoId ? 'Shrani spremembe' : 'Objavi oceno'}
                         </button>
-                        <button onClick={() => { setDodajOceno(false); setOcenaNapaka('') }} className="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-50">
+                        <button onClick={() => { setDodajOceno(false); setUrejamOcenoId(null); setOcenaNapaka(''); setNovKomentar(''); setNovaOcena(5) }} className="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-full hover:bg-gray-50">
                           Prekliči
                         </button>
                       </div>

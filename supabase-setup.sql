@@ -1963,3 +1963,51 @@ drop policy if exists "Admin/moderator brise oceno" on ratings;
 create policy "Admin/moderator brise oceno" on ratings for delete using (
   exists (select 1 from profiles where id = auth.uid() and (is_admin = true or is_moderator = true))
 );
+
+-- ═══════════════════════════════════════════════════════════════════
+-- UPORABNIK LAHKO UREDI/IZBRIŠE SVOJO LASTNO OCENO — doslej je lahko
+-- vsak samo DODAL oceno (insert), nikoli pa je ni mogel popraviti ali
+-- umakniti, ce si je premislil ali se je zmotil. trg_posodobi_oceno_po_
+-- oceni (AFTER INSERT OR UPDATE OR DELETE, glej zgoraj) ze pravilno
+-- preracuna povprecje/stevilo ocen tudi za UPDATE, torej ni potreben
+-- noben dodaten trigger za to.
+--
+-- Dodaten trigger spodaj SAMO prepreci, da bi lastnik ocene prek update
+-- "prestavil" svojo oceno na DRUG charter/skipper (rated_id/rated_type) -
+-- enak razlog/vzorec kot prevent_objava_content_tampering zgoraj.
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Rater ureja svojo oceno" on ratings;
+create policy "Rater ureja svojo oceno" on ratings for update using (auth.uid() = rater_id);
+
+drop policy if exists "Rater brise svojo oceno" on ratings;
+create policy "Rater brise svojo oceno" on ratings for delete using (auth.uid() = rater_id);
+
+create or replace function prevent_rating_identity_tampering()
+returns trigger as $$
+begin
+  if auth.uid() is not null and not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    new.rater_id := old.rater_id;
+    new.rated_id := old.rated_id;
+    new.rated_type := old.rated_type;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_prevent_rating_identity_tampering on ratings;
+create trigger trg_prevent_rating_identity_tampering
+before update on ratings
+for each row execute function prevent_rating_identity_tampering();
+
+-- ═══════════════════════════════════════════════════════════════════
+-- AVTOR LAHKO UREDI SVOJO LASTNO OBJAVO (objave) — "Avtor brise svojo
+-- objavo" (delete) je ze obstajala, "Avtor ureja svojo objavo" (update)
+-- pa manjkala, čeprav je bil prevent_objava_content_tampering trigger
+-- (glej zgoraj) ze od nekdaj napisan tako, da pravega avtorja izrecno
+-- izvzame ("auth.uid() <> old.avtor_user_id") - torej je bila politika
+-- spodaj od vsega začetka nameravana, samo nikoli dodana.
+-- ═══════════════════════════════════════════════════════════════════
+
+drop policy if exists "Avtor ureja svojo objavo" on objave;
+create policy "Avtor ureja svojo objavo" on objave for update using (auth.uid() = avtor_user_id);
