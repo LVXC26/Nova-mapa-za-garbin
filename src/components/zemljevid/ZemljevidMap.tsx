@@ -5,6 +5,7 @@ import { MapPin, Plus, X, Loader2, Camera } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { stisniSliko } from '@/lib/stisniSliko'
+import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import type { ZemljevidTocka, ZemljevidPosebnost } from '@/types/database'
 
 type TipTocke = ZemljevidTocka['tip']
@@ -150,7 +151,7 @@ export default function ZemljevidMap() {
 
     let slikaUrl: string | null = null
     if (posebnostSlika) {
-      const pot = `${user.id}/${crypto.randomUUID()}-${posebnostSlika.name}`
+      const pot = `${user.id}/${crypto.randomUUID()}-${varnoImeDatoteke(posebnostSlika.name)}`
       const { error: uploadError } = await supabase.storage.from('zemljevid-slike').upload(pot, posebnostSlika)
       if (uploadError) {
         setPosiljaPosebnost(false)

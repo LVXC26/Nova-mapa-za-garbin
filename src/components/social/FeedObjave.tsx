@@ -5,6 +5,7 @@ import { Heart, MessageCircle, Share2, Image as ImageIcon, Send, MapPin, Anchor,
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { stisniSliko } from '@/lib/stisniSliko'
+import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
 
 const MAX_SLIK_OBJAVA = 6
@@ -238,7 +239,7 @@ export default function FeedObjave({
       if (!datoteka.type.startsWith('image/')) { setSlikeNapaka(`"${datoteka.name}" ni slikovna datoteka.`); continue }
       if (datoteka.size > MAX_SLIKA_MB * 1024 * 1024) { setSlikeNapaka(`Slika "${datoteka.name}" presega ${MAX_SLIKA_MB} MB.`); continue }
       const stisnjena = await stisniSliko(datoteka)
-      const pot = `${user.id}/${crypto.randomUUID()}-${stisnjena.name}`
+      const pot = `${user.id}/${crypto.randomUUID()}-${varnoImeDatoteke(stisnjena.name)}`
       const { error: uploadError } = await supabase.storage.from('objave-slike').upload(pot, stisnjena)
       if (uploadError) { setSlikeNapaka('Napaka pri nalaganju slike: ' + uploadError.message); continue }
       const { data } = supabase.storage.from('objave-slike').getPublicUrl(pot)

@@ -5,6 +5,7 @@ import { CheckCircle, AlertCircle, User, Lock, Bell, Camera, X, Loader2 } from '
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { stisniSliko } from '@/lib/stisniSliko'
+import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 
 const MAX_SLIKA_MB = 30
 
@@ -116,7 +117,7 @@ export default function NastavitveProfilaPage() {
     setNalagaSliko(true)
     const stisnjena = await stisniSliko(datoteka)
     const supabase = createClient()
-    const pot = `${user.id}/${crypto.randomUUID()}-${stisnjena.name}`
+    const pot = `${user.id}/${crypto.randomUUID()}-${varnoImeDatoteke(stisnjena.name)}`
     const { error: uploadError } = await supabase.storage.from('profilne-slike').upload(pot, stisnjena)
     if (uploadError) {
       setNalagaSliko(false)

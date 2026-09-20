@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { opremaKategorije } from '@/lib/oprema'
 import { stisniSlike } from '@/lib/stisniSliko'
+import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import TipPlovilaFormaIzbirnik from '@/components/plovila/TipPlovilaFormaIzbirnik'
 import type { TipPlovila, TipOglasa, StanjePlovila } from '@/types/database'
 
@@ -206,7 +207,7 @@ function DodajPloviloContent() {
     if (slike.length) {
       setNalagaSlike(true)
       for (const datoteka of slike) {
-        const pot = `${user.id}/${crypto.randomUUID()}-${datoteka.name}`
+        const pot = `${user.id}/${crypto.randomUUID()}-${varnoImeDatoteke(datoteka.name)}`
         const { error: uploadError } = await supabase.storage.from('plovila-slike').upload(pot, datoteka)
         if (uploadError) {
           setNalagaSlike(false)

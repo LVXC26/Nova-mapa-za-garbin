@@ -9,6 +9,7 @@ import Footer from '@/components/layout/Footer'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { stisniSlike } from '@/lib/stisniSliko'
+import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import type { StanjeDela, KategorijaDela } from '@/types/database'
 
 const kategorije: { vrednost: KategorijaDela; label: string }[] = [
@@ -101,7 +102,7 @@ function NovRezervniDelContent() {
 
     let slikaUrl = obstojecaSlika
     if (novaSlika) {
-      const pot = `${user.id}/${crypto.randomUUID()}-${novaSlika.name}`
+      const pot = `${user.id}/${crypto.randomUUID()}-${varnoImeDatoteke(novaSlika.name)}`
       const { error: uploadError } = await supabase.storage.from('rezervni-deli-slike').upload(pot, novaSlika)
       if (uploadError) {
         setNalaga(false)

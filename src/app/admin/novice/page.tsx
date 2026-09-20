@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, Eye, X, Upload, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { stisniSlike } from '@/lib/stisniSliko'
+import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import type { Novica, NovicaKategorija } from '@/types/database'
 
 const MAX_VELIKOST_MB = 30
@@ -97,7 +98,7 @@ export default function AdminNovicePage() {
 
     let slikaUrl = obstojecaSlika
     if (novaSlika) {
-      const pot = `${crypto.randomUUID()}-${novaSlika.name}`
+      const pot = `${crypto.randomUUID()}-${varnoImeDatoteke(novaSlika.name)}`
       const { error: uploadError } = await supabase.storage.from('novice-slike').upload(pot, novaSlika)
       if (uploadError) { setNapaka('Napaka pri nalaganju slike: ' + uploadError.message); return }
       const { data } = supabase.storage.from('novice-slike').getPublicUrl(pot)
