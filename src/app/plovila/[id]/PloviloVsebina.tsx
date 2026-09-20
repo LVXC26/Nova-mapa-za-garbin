@@ -10,6 +10,7 @@ import PloviloKartica from '@/components/plovila/PloviloKartica'
 import { useAuth } from '@/components/providers/AuthProvider'
 import PovprasevanjeForma from '@/components/shared/PovprasevanjeForma'
 import ZasedenostPrikaz from '@/components/shared/ZasedenostPrikaz'
+import Avatar from '@/components/shared/Avatar'
 import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { createClient } from '@/lib/supabase/client'
 import { opremaLabele } from '@/lib/oprema'
@@ -136,8 +137,8 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
   const [zasedenost, setZasedenost] = useState<PloviloZasedenost[]>([])
   const [izbranTermin, setIzbranTermin] = useState('')
   const [lightboxIndeks, setLightboxIndeks] = useState<number | null>(null)
-  const [charter, setCharter] = useState<{ id: string; naziv: string; verified: boolean } | null>(null)
-  const [prodajalec, setProdajalec] = useState<{ ime: string | null; created_at: string } | null>(null)
+  const [charter, setCharter] = useState<{ id: string; naziv: string; verified: boolean; slika_url?: string | null } | null>(null)
+  const [prodajalec, setProdajalec] = useState<{ ime: string | null; created_at: string; slika_url?: string | null } | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -178,14 +179,19 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
           // videl, kateri charter sploh oddaja to plovilo.
           if (data.user_id) {
             supabase.from('charterji_javno').select('id, naziv, verified').eq('user_id', data.user_id).maybeSingle()
-              .then(({ data: c }) => { if (c) setCharter(c) })
+              .then(({ data: c }) => {
+                if (!c) return
+                setCharter(c)
+                supabase.from('public_profiles').select('slika_url').eq('id', data.user_id!).maybeSingle()
+                  .then(({ data: p }) => setCharter(prev => prev ? { ...prev, slika_url: p?.slika_url ?? null } : prev))
+              })
           }
         } else if (data.user_id) {
           // Prava identiteta prodajalca namesto hardkodiranega "Zasebni
           // prodajalec". Osnovna tabela "profiles" je zaradi varnostnega
           // popravka omejena na lastnika (glej supabase-setup.sql) — zato
           // varni javni pogled "public_profiles" (samo ime/created_at ...).
-          supabase.from('public_profiles').select('ime, created_at').eq('id', data.user_id).maybeSingle()
+          supabase.from('public_profiles').select('ime, created_at, slika_url').eq('id', data.user_id).maybeSingle()
             .then(({ data: p }) => { if (p) setProdajalec(p) })
         }
       }
@@ -536,7 +542,7 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
                   >
                     <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Plovilo oddaja</h3>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-lg">🏢</div>
+                      <Avatar slikaUrl={charter.slika_url} ime={charter.naziv} velikost={40} className="text-lg" />
                       <div className="min-w-0">
                         <p className="font-medium text-[#0c2340] text-sm truncate flex items-center gap-1.5">
                           {charter.naziv}
@@ -554,7 +560,7 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Prodajalec</h3>
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-lg">👤</div>
+                      <Avatar slikaUrl={prodajalec?.slika_url} ime={prodajalec?.ime || 'Prodajalec'} velikost={40} className="text-lg" />
                       <div>
                         <p className="font-medium text-[#0c2340] text-sm">{prodajalec?.ime || 'Prodajalec'}</p>
                         <p className="text-xs text-gray-400">
