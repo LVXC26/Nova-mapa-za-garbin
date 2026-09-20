@@ -32,16 +32,12 @@ const csp = [
   // cdn.jsdelivr.net: Tawk.to od tam naloži "emojione" knjižnico za izris
   // emojijev v sporočilih (npr. 👋 v pozdravnem sporočilu) — brez tega se
   // sporočilo z emojijem sploh ne izpiše.
-  // translate.google.com/googleapis.com + www.gstatic.com: Google Translate
-  // widget (celostranski prevod, glej components/i18n/GoogleTranslate.tsx) —
-  // brez teh se skripta sploh ne naloži oz. se prevod tiho ne sproži.
-  `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to https://cdn.jsdelivr.net https://translate.google.com https://translate.googleapis.com https://www.gstatic.com${jeRazvoj ? " 'unsafe-eval'" : ''}`,
+  `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to https://cdn.jsdelivr.net${jeRazvoj ? " 'unsafe-eval'" : ''}`,
   // Tawk.to widget nalaga svoje CSS datoteke neposredno v strani (ne samo
   // znotraj svojega iframe-a) — brez https://*.tawk.to tu je bil gumb za
-  // klepet viden, a povsem nestiliziran/pokvarjen. translate.google.com +
-  // www.gstatic.com — enako za Google Translate widget.
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to https://translate.google.com https://www.gstatic.com",
-  "font-src 'self' https://fonts.gstatic.com https://*.tawk.to https://www.gstatic.com",
+  // klepet viden, a povsem nestiliziran/pokvarjen.
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.tawk.to",
+  "font-src 'self' https://fonts.gstatic.com https://*.tawk.to",
   // blob: je nujen za predogled lokalno izbranih slik (URL.createObjectURL v
   // obrazcih za nalaganje slik/stiskanje pred nalaganjem) — brez njega CSP
   // tiho blokira <img>/Image() na blob: URL, kar je izgledalo kot da se
@@ -58,7 +54,7 @@ const csp = [
   // supabase.channel(...).on('postgres_changes', ...) — WebSocket, ločena
   // shema od https:, CSP ju obravnava kot različna vira) — brez tega je bila
   // chat stran tiho pokvarjena. Enako wss://*.tawk.to za widget podpore.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://*.tawk.to wss://*.tawk.to https://translate.google.com https://translate.googleapis.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://*.tawk.to wss://*.tawk.to",
 ].join('; ')
 
 const nextConfig: NextConfig = {

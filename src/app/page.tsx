@@ -12,6 +12,7 @@ import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { useLocale } from '@/lib/i18n/LocaleContext'
 import type { Plovilo, Charter, Promocija, Novica, NovicaKategorija } from '@/types/database'
 
 type NovicaZKategorijo = Novica & { kategorija?: NovicaKategorija }
@@ -19,9 +20,10 @@ type NovicaZKategorijo = Novica & { kategorija?: NovicaKategorija }
 function NewsletterForm() {
   const [email, setEmail] = useState('')
   const [ok, setOk] = useState(false)
+  const { t } = useLocale()
   return ok ? (
     <div className="flex items-center justify-center gap-2 text-emerald-600 font-medium">
-      <CheckCircle className="w-5 h-5" /> Hvala za prijavo!
+      <CheckCircle className="w-5 h-5" /> {t('Hvala za prijavo!')}
     </div>
   ) : (
     <form
@@ -32,20 +34,21 @@ function NewsletterForm() {
         type="email"
         value={email}
         onChange={e => setEmail(e.target.value)}
-        placeholder="Vaš e-mail naslov"
+        placeholder={t('Vaš e-mail naslov')}
         className="flex-1 px-5 py-3.5 rounded-full border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors"
       />
       <button
         type="submit"
         className="flex items-center justify-center gap-2 px-6 py-3.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-105 shrink-0"
       >
-        Prijavi se <ArrowRight className="w-4 h-4" />
+        {t('Prijavi se')} <ArrowRight className="w-4 h-4" />
       </button>
     </form>
   )
 }
 
 export default function HomePage() {
+  const { t } = useLocale()
   const [nacin, setNacin] = useState<'kupi' | 'najemi'>('kupi')
   const [realnaPlovila, setRealnaPlovila] = useState<Plovilo[]>([])
   const [realnaNajemPlovila, setRealnaNajemPlovila] = useState<Plovilo[]>([])
@@ -126,15 +129,15 @@ export default function HomePage() {
           <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#c9a84c]/20 border border-[#c9a84c]/30 text-[#c9a84c] text-sm font-medium mb-8 animate-fade-in-up">
               <Anchor className="w-4 h-4 animate-float" />
-              Vaš zaupanja vredni pomorski portal
+              {t('Vaš zaupanja vredni pomorski portal')}
             </div>
 
             <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold text-white leading-tight mb-4 animate-fade-in-up delay-100">
-              Vaše naslednje<br />
-              <span className="text-[#c9a84c]">plovilo čaka</span>
+              {t('Vaše naslednje')}<br />
+              <span className="text-[#c9a84c]">{t('plovilo čaka')}</span>
             </h1>
             <p className="text-lg text-white/60 mb-10 max-w-xl mx-auto animate-fade-in-up delay-200">
-              Poiščite jadrnico, motorni čoln, jet ski, gumenjak ali katamaran. Kupite ali najemite.
+              {t('Poiščite jadrnico, motorni čoln, jet ski, gumenjak ali katamaran. Kupite ali najemite.')}
             </p>
 
             <div className="animate-fade-in-up delay-300">
@@ -167,7 +170,7 @@ export default function HomePage() {
                 <div key={opis} className="text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="text-2xl mb-2">{ikona}</div>
                   <div className="font-display text-3xl font-bold text-[#0c2340]">{vrednost}</div>
-                  <div className="text-sm text-gray-500 mt-1">{opis}</div>
+                  <div className="text-sm text-gray-500 mt-1">{t(opis)}</div>
                 </div>
               ))}
             </div>
@@ -180,23 +183,23 @@ export default function HomePage() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <div className="flex items-center gap-2 text-[#c9a84c] text-sm font-medium mb-2">
-                  <Star className="w-4 h-4" /> Izpostavljena plovila
+                  <Star className="w-4 h-4" /> {t('Izpostavljena plovila')}
                 </div>
                 <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340]">
-                  {nacin === 'kupi' ? 'Plovila za prodajo' : 'Plovila za najem'}
+                  {nacin === 'kupi' ? t('Plovila za prodajo') : t('Plovila za najem')}
                 </h2>
               </div>
               <Link
                 href={nacin === 'kupi' ? '/plovila' : '/plovila?oglas=najem'}
                 className="hidden sm:flex items-center gap-1 text-sm font-medium text-[#0c2340] hover:text-[#c9a84c] transition-colors"
               >
-                Vsa plovila <ChevronRight className="w-4 h-4" />
+                {t('Vsa plovila')} <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             {prikazanaPlovila.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
                 <p className="text-gray-400 font-medium">
-                  {nacin === 'kupi' ? 'Trenutno ni plovil za prodajo.' : 'Trenutno ni plovil za najem.'}
+                  {nacin === 'kupi' ? t('Trenutno ni plovil za prodajo.') : t('Trenutno ni plovil za najem.')}
                 </p>
               </div>
             ) : (
@@ -211,7 +214,7 @@ export default function HomePage() {
                 href={nacin === 'kupi' ? '/plovila' : '/plovila?oglas=najem'}
                 className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#0c2340] border-2 border-[#0c2340] rounded-full hover:bg-[#0c2340] hover:text-white transition-colors"
               >
-                Vsa plovila <ArrowRight className="w-4 h-4" />
+                {t('Vsa plovila')} <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
@@ -235,13 +238,13 @@ export default function HomePage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#c9a84c]/20 border border-[#c9a84c]/30 text-[#c9a84c] text-sm font-medium mb-6">
-                  <Ship className="w-4 h-4" /> Za charter podjetja
+                  <Ship className="w-4 h-4" /> {t('Za charter podjetja')}
                 </div>
                 <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mb-4">
-                  Ste charter podjetje?
+                  {t('Ste charter podjetje?')}
                 </h2>
                 <p className="text-white/70 text-lg mb-8 leading-relaxed">
-                  Pridružite se platformi z več kot 1.200 strankami mesečno. Vaša plovila so vidna tisočim iskalcem najema.
+                  {t('Pridružite se platformi z več kot 1.200 strankami mesečno. Vaša plovila so vidna tisočim iskalcem najema.')}
                 </p>
                 <div className="flex flex-col gap-4 mb-10">
                   {[
@@ -252,8 +255,8 @@ export default function HomePage() {
                     <div key={naslov} className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-[#c9a84c]/20 flex items-center justify-center text-xl shrink-0">{ikona}</div>
                       <div>
-                        <p className="font-semibold text-white text-sm">{naslov}</p>
-                        <p className="text-white/60 text-sm mt-0.5">{opis}</p>
+                        <p className="font-semibold text-white text-sm">{t(naslov)}</p>
+                        <p className="text-white/60 text-sm mt-0.5">{t(opis)}</p>
                       </div>
                     </div>
                   ))}
@@ -262,7 +265,7 @@ export default function HomePage() {
                   href="/registracija?vloga=charter"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-bold rounded-full transition-all hover:scale-105 shadow-lg shadow-[#c9a84c]/25"
                 >
-                  Registriraj svoje podjetje <ArrowRight className="w-5 h-5" />
+                  {t('Registriraj svoje podjetje')} <ArrowRight className="w-5 h-5" />
                 </Link>
               </div>
               <div className="hidden lg:grid grid-cols-2 gap-4">
@@ -273,7 +276,7 @@ export default function HomePage() {
                       <span className="text-xs text-[#c9a84c] font-medium capitalize">{c.tip}</span>
                     </div>
                     <p className="font-semibold text-white text-sm mb-1 line-clamp-1">{c.naziv}</p>
-                    <p className="text-white/50 text-xs">{c.lokacija} · {c.st_plovil} plovil</p>
+                    <p className="text-white/50 text-xs">{c.lokacija} · {c.st_plovil} {t('plovil')}</p>
                     <div className="flex items-center gap-1 mt-2">
                       <Star className="w-3 h-3 text-[#c9a84c] fill-[#c9a84c]" />
                       <span className="text-xs text-white/70">{c.ocena.toFixed(1)}</span>
@@ -295,12 +298,12 @@ export default function HomePage() {
                     <div className="w-14 h-14 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-2xl">👨‍✈️</div>
                     <div>
                       <p className="font-semibold text-[#0c2340]">Marko Horvat</p>
-                      <p className="text-sm text-gray-500">18 let izkušenj · Portorož</p>
+                      <p className="text-sm text-gray-500">18 {t('let izkušenj')} · Portorož</p>
                       <div className="flex items-center gap-1 mt-1">
                         {Array.from({length: 5}).map((_, i) => (
                           <Star key={i} className="w-3 h-3 text-[#c9a84c] fill-[#c9a84c]" />
                         ))}
-                        <span className="text-xs text-gray-500 ml-1">4.9 (47 ocen)</span>
+                        <span className="text-xs text-gray-500 ml-1">4.9 (47 {t('ocen')})</span>
                       </div>
                     </div>
                   </div>
@@ -309,23 +312,23 @@ export default function HomePage() {
                       <span key={c} className="text-xs px-2 py-1 bg-[#0c2340]/5 text-[#0c2340] rounded-full font-medium">{c}</span>
                     ))}
                   </div>
-                  <p className="text-right font-bold text-[#0c2340] mt-3">180 € / dan</p>
+                  <p className="text-right font-bold text-[#0c2340] mt-3">180 € / {t('dan')}</p>
                 </div>
                 <div className="bg-[#c9a84c]/10 border border-[#c9a84c]/20 rounded-2xl p-5 text-center">
                   <Compass className="w-8 h-8 text-[#c9a84c] mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-[#0c2340]">6 preverjenih skiperjev</p>
-                  <p className="text-xs text-gray-500">na razpolago v slovenskem primorju</p>
+                  <p className="text-sm font-semibold text-[#0c2340]">{t('6 preverjenih skiperjev')}</p>
+                  <p className="text-xs text-gray-500">{t('na razpolago v slovenskem primorju')}</p>
                 </div>
               </div>
               <div>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#0c2340]/10 border border-[#0c2340]/20 text-[#0c2340] text-sm font-medium mb-6">
-                  <Compass className="w-4 h-4" /> Za skiperje
+                  <Compass className="w-4 h-4" /> {t('Za skiperje')}
                 </div>
                 <h2 className="font-display text-4xl sm:text-5xl font-bold text-[#0c2340] mb-4">
-                  Ste skipper?
+                  {t('Ste skipper?')}
                 </h2>
                 <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-                  Ustvarite profesionalni profil in se povežite s tisočimi jedrálci, ki iščejo izkušenega vodnika po Jadranu.
+                  {t('Ustvarite profesionalni profil in se povežite s tisočimi jedrálci, ki iščejo izkušenega vodnika po Jadranu.')}
                 </p>
                 <div className="flex flex-col gap-4 mb-10">
                   {[
@@ -336,8 +339,8 @@ export default function HomePage() {
                     <div key={naslov} className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-[#0c2340]/8 flex items-center justify-center text-xl shrink-0">{ikona}</div>
                       <div>
-                        <p className="font-semibold text-[#0c2340] text-sm">{naslov}</p>
-                        <p className="text-gray-500 text-sm mt-0.5">{opis}</p>
+                        <p className="font-semibold text-[#0c2340] text-sm">{t(naslov)}</p>
+                        <p className="text-gray-500 text-sm mt-0.5">{t(opis)}</p>
                       </div>
                     </div>
                   ))}
@@ -346,7 +349,7 @@ export default function HomePage() {
                   href="/registracija?vloga=skipper"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-[#0c2340] hover:bg-[#1e3a5f] text-white font-bold rounded-full transition-all hover:scale-105 shadow-lg"
                 >
-                  Ustvari skipper profil <ArrowRight className="w-5 h-5" />
+                  {t('Ustvari skipper profil')} <ArrowRight className="w-5 h-5" />
                 </Link>
               </div>
             </div>
@@ -365,12 +368,12 @@ export default function HomePage() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <div className="flex items-center gap-2 text-[#c9a84c] text-sm font-medium mb-2">
-                  <Tag className="w-4 h-4" /> Posebne ponudbe
+                  <Tag className="w-4 h-4" /> {t('Posebne ponudbe')}
                 </div>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">Promocije & akcije</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">{t('Promocije & akcije')}</h2>
               </div>
               <Link href="/promocije" className="hidden sm:flex items-center gap-1 text-sm font-medium text-white/70 hover:text-[#c9a84c] transition-colors">
-                Vse promocije <ChevronRight className="w-4 h-4" />
+                {t('Vse promocije')} <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -392,11 +395,11 @@ export default function HomePage() {
                   {promo.veljavnost_do && (
                     <div className="flex items-center gap-1.5 text-xs text-white/40">
                       <Calendar className="w-3.5 h-3.5" />
-                      Do {new Date(promo.veljavnost_do).toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' })}
+                      {t('Do')} {new Date(promo.veljavnost_do).toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' })}
                     </div>
                   )}
                   <Link href="/promocije" className="mt-4 flex items-center gap-1 text-xs font-medium text-[#c9a84c] hover:gap-2 transition-all">
-                    Več info <ArrowRight className="w-3.5 h-3.5" />
+                    {t('Več info')} <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               ))}
@@ -411,7 +414,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-r from-[#0c2340] via-[#1e3a5f] to-[#0c2340] opacity-50" />
               <div className="relative z-10 text-center">
                 <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">728 × 90</p>
-                <p className="text-white/50 text-sm font-medium">Oglaševalski prostor · matej@lumavx.com</p>
+                <p className="text-white/50 text-sm font-medium">{t('Oglaševalski prostor')} · matej@lumavx.com</p>
               </div>
             </div>
           </div>
@@ -423,13 +426,13 @@ export default function HomePage() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <div className="flex items-center gap-2 text-[#c9a84c] text-sm font-medium mb-2">
-                  <Ship className="w-4 h-4" /> Najem plovil
+                  <Ship className="w-4 h-4" /> {t('Najem plovil')}
                 </div>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340]">Prevereni charterji</h2>
-                <p className="text-gray-500 mt-2 max-w-lg">Podjetja in zasebniki z verificiranimi profili.</p>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340]">{t('Preverjeni charterji')}</h2>
+                <p className="text-gray-500 mt-2 max-w-lg">{t('Podjetja in zasebniki z verificiranimi profili.')}</p>
               </div>
               <Link href="/charterji" className="hidden sm:flex items-center gap-1 text-sm font-medium text-[#0c2340] hover:text-[#c9a84c] transition-colors">
-                Vsi charterji <ChevronRight className="w-4 h-4" />
+                {t('Vsi charterji')} <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -446,12 +449,12 @@ export default function HomePage() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <div className="flex items-center gap-2 text-[#c9a84c] text-sm font-medium mb-2">
-                  <TrendingUp className="w-4 h-4" /> Blog & novice
+                  <TrendingUp className="w-4 h-4" /> {t('Blog & novice')}
                 </div>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340]">Zadnje novice</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340]">{t('Zadnje novice')}</h2>
               </div>
               <Link href="/novice" className="hidden sm:flex items-center gap-1 text-sm font-medium text-[#0c2340] hover:text-[#c9a84c] transition-colors">
-                Vse novice <ChevronRight className="w-4 h-4" />
+                {t('Vse novice')} <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -500,10 +503,10 @@ export default function HomePage() {
               📬 Newsletter
             </div>
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340] mb-3">
-              Ostanite na tekočem
+              {t('Ostanite na tekočem')}
             </h2>
             <p className="text-gray-500 text-lg mb-8 max-w-xl mx-auto">
-              Novi oglasi, promocije in nasveti za nakup plovila — tedensko v vaš nabiralnik.
+              {t('Novi oglasi, promocije in nasveti za nakup plovila — tedensko v vaš nabiralnik.')}
             </p>
             <NewsletterForm />
           </div>
@@ -516,22 +519,22 @@ export default function HomePage() {
           </div>
           <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="text-5xl mb-6">⚓</div>
-            <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mb-4">Prodajte svoje plovilo</h2>
+            <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mb-4">{t('Prodajte svoje plovilo')}</h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto mb-8 leading-relaxed">
-              Dosežite tisoče potencialnih kupcev. Objava oglasa je hitra, enostavna in dostopna.
+              {t('Dosežite tisoče potencialnih kupcev. Objava oglasa je hitra, enostavna in dostopna.')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/dashboard/dodaj-plovilo"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-[#0c2340] bg-[#c9a84c] hover:bg-[#e8c76d] rounded-full transition-all duration-200 hover:scale-105 shadow-lg shadow-[#c9a84c]/30"
               >
-                Oddaj oglas brezplačno <ArrowRight className="w-5 h-5" />
+                {t('Oddaj oglas brezplačno')} <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
                 href="/plovila"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold text-white border-2 border-white/30 hover:border-white/60 rounded-full transition-all duration-200 hover:bg-white/5"
               >
-                Poglej obstoječe oglase
+                {t('Poglej obstoječe oglase')}
               </Link>
             </div>
           </div>

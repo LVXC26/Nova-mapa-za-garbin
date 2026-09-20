@@ -2,11 +2,18 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Anchor, Mail, Phone, ArrowRight, CheckCircle, Globe, Link2 } from 'lucide-react'
+import { Anchor, Mail, Phone, ArrowRight, CheckCircle, Globe } from 'lucide-react'
+import { useLocale, type Locale } from '@/lib/i18n/LocaleContext'
+
+const jeziki: { koda: Locale; label: string }[] = [
+  { koda: 'sl', label: '🇸🇮 SLO' },
+  { koda: 'en', label: '🇬🇧 EN' },
+]
 
 export default function Footer() {
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
+  const { locale, setLocale, t } = useLocale()
 
   function handleSubscribe(e: React.FormEvent) {
     e.preventDefault()
@@ -21,13 +28,13 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="font-display text-xl font-semibold text-white mb-1">
-                Bodite na tekočem z morskimi novostmi
+                {t('Bodite na tekočem z morskimi novostmi')}
               </h3>
-              <p className="text-sm text-white/60">Tedenske novice, novi oglasi in promocije — direktno v vaš nabiralnik.</p>
+              <p className="text-sm text-white/60">{t('Tedenske novice, novi oglasi in promocije — direktno v vaš nabiralnik.')}</p>
             </div>
             {subscribed ? (
               <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
-                <CheckCircle className="w-5 h-5" /> Uspešno naročeni! Hvala.
+                <CheckCircle className="w-5 h-5" /> {t('Uspešno naročeni! Hvala.')}
               </div>
             ) : (
               <form className="flex gap-2 w-full md:w-auto" onSubmit={handleSubscribe}>
@@ -35,14 +42,14 @@ export default function Footer() {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="Vaš e-mail naslov"
+                  placeholder={t('Vaš e-mail naslov')}
                   className="flex-1 md:w-64 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 text-sm focus:outline-none focus:border-[#c9a84c] transition-colors"
                 />
                 <button
                   type="submit"
                   className="flex items-center gap-2 px-5 py-3 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-xl transition-all hover:scale-[1.02] shrink-0"
                 >
-                  Naroči se <ArrowRight className="w-4 h-4" />
+                  {t('Naroči se')} <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
             )}
@@ -61,7 +68,7 @@ export default function Footer() {
               <span className="font-display text-xl font-semibold text-white">Garbin</span>
             </div>
             <p className="text-sm leading-relaxed mb-5">
-              Slovensko tržišče plovil. Kupite ali prodajte jadrnico, motorni čoln ali gumenjak z zaupanjem.
+              {t('Slovensko tržišče plovil. Kupite ali prodajte jadrnico, motorni čoln ali gumenjak z zaupanjem.')}
             </p>
             <div className="flex flex-col gap-2.5 text-sm mb-6">
               <a href="mailto:matej@lumavx.com" className="flex items-center gap-2 hover:text-[#c9a84c] transition-colors">
@@ -90,15 +97,17 @@ export default function Footer() {
               ))}
             </div>
 
-            {/* Jezik switcher */}
+            {/* Jezik switcher — prej brez onClick (ni delal nič), zdaj vezan
+                na isti mehanizem kot v Navbar.tsx (LocaleContext). */}
             <div className="mt-5 flex items-center gap-2">
               <Globe className="w-3.5 h-3.5 text-white/40" />
-              {['🇸🇮 SLO', '🇭🇷 HR', '🇮🇹 IT'].map(j => (
+              {jeziki.map(j => (
                 <button
-                  key={j}
-                  className="text-xs text-white/50 hover:text-white transition-colors"
+                  key={j.koda}
+                  onClick={() => setLocale(j.koda)}
+                  className={`text-xs transition-colors ${locale === j.koda ? 'text-[#c9a84c] font-semibold' : 'text-white/50 hover:text-white'}`}
                 >
-                  {j}
+                  {j.label}
                 </button>
               ))}
             </div>
@@ -106,7 +115,7 @@ export default function Footer() {
 
           {/* Kolona 2 — Navigacija */}
           <div>
-            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wide">Navigacija</h4>
+            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wide">{t('Navigacija')}</h4>
             <ul className="space-y-2.5 text-sm">
               {[
                 { label: 'Plovila', href: '/plovila' },
@@ -118,7 +127,7 @@ export default function Footer() {
                 { label: 'Jadranski zemljevid', href: '/zemljevid' },
               ].map(({ label, href }) => (
                 <li key={label}>
-                  <Link href={href} className="hover:text-[#c9a84c] hover:pl-1 transition-all duration-200">{label}</Link>
+                  <Link href={href} className="hover:text-[#c9a84c] hover:pl-1 transition-all duration-200">{t(label)}</Link>
                 </li>
               ))}
             </ul>
@@ -126,7 +135,7 @@ export default function Footer() {
 
           {/* Kolona 3 — Za podjetja */}
           <div>
-            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wide">Za podjetja</h4>
+            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wide">{t('Za podjetja')}</h4>
             <ul className="space-y-2.5 text-sm">
               {[
                 { label: 'Registracija charterja', href: '/registracija?vloga=charter' },
@@ -137,7 +146,7 @@ export default function Footer() {
                 { label: 'O nas', href: '/o-nas' },
               ].map(({ label, href }) => (
                 <li key={label}>
-                  <Link href={href} className="hover:text-[#c9a84c] hover:pl-1 transition-all duration-200">{label}</Link>
+                  <Link href={href} className="hover:text-[#c9a84c] hover:pl-1 transition-all duration-200">{t(label)}</Link>
                 </li>
               ))}
             </ul>
@@ -145,7 +154,7 @@ export default function Footer() {
 
           {/* Kolona 4 — Pravno */}
           <div>
-            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wide">Informacije</h4>
+            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wide">{t('Informacije')}</h4>
             <ul className="space-y-2.5 text-sm">
               {[
                 { label: 'Pogoji uporabe', href: '/pogoji-uporabe' },
@@ -155,7 +164,7 @@ export default function Footer() {
                 { label: 'GDPR', href: '/zasebnost#vase-pravice' },
               ].map(({ label, href }) => (
                 <li key={label}>
-                  <Link href={href} className="hover:text-[#c9a84c] hover:pl-1 transition-all duration-200">{label}</Link>
+                  <Link href={href} className="hover:text-[#c9a84c] hover:pl-1 transition-all duration-200">{t(label)}</Link>
                 </li>
               ))}
             </ul>
@@ -163,11 +172,11 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
-          <p>© {new Date().getFullYear()} LUMAVX s.p. Vse pravice pridržane.</p>
+          <p>© {new Date().getFullYear()} LUMAVX s.p. {t('Vse pravice pridržane.')}</p>
           <div className="flex items-center gap-4">
-            <Link href="/pogoji-uporabe" className="hover:text-white/70 transition-colors">Pogoji</Link>
-            <Link href="/zasebnost" className="hover:text-white/70 transition-colors">Zasebnost</Link>
-            <Link href="/zasebnost#piskotki" className="hover:text-white/70 transition-colors">Piškotki</Link>
+            <Link href="/pogoji-uporabe" className="hover:text-white/70 transition-colors">{t('Pogoji')}</Link>
+            <Link href="/zasebnost" className="hover:text-white/70 transition-colors">{t('Zasebnost')}</Link>
+            <Link href="/zasebnost#piskotki" className="hover:text-white/70 transition-colors">{t('Piškotki')}</Link>
           </div>
         </div>
       </div>

@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Menu, X, Anchor, UserCircle, MessageCircle, Map, Globe, ChevronDown, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePathname } from 'next/navigation'
-import { nastaviJezik, trenutniJezik } from '@/lib/googleTranslate'
+import { useLocale, type Locale } from '@/lib/i18n/LocaleContext'
 
 const links = [
   { href: '/plovila', label: 'Plovila' },
@@ -19,36 +19,22 @@ const links = [
   { href: '/zemljevid', label: 'Zemljevid', ikona: Map },
 ]
 
-// "koda" ujema Google Translate jezikovno kodo (prazen niz = original,
-// brez prevoda) — glej lib/googleTranslate.ts.
-const jeziki = [
-  { koda: '', label: 'Slovenščina', zastava: '🇸🇮' },
+const jeziki: { koda: Locale; label: string; zastava: string }[] = [
+  { koda: 'sl', label: 'Slovenščina', zastava: '🇸🇮' },
   { koda: 'en', label: 'English', zastava: '🇬🇧' },
-  { koda: 'hr', label: 'Hrvaščina', zastava: '🇭🇷' },
-  { koda: 'it', label: 'Italijanščina', zastava: '🇮🇹' },
 ]
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [jezikOpen, setJezikOpen] = useState(false)
-  const [izbranJezik, setIzbranJezik] = useState(jeziki[0])
   const [iskalnoQ, setIskalnoQ] = useState('')
   const router = useRouter()
-
-  // Ob nalaganju preberemo dejansko aktivno stanje iz "googtrans" piškotka
-  // (google Translate ga nastavi/prebere sam) — brez tega bi izbirnik po
-  // osvežitvi strani vedno kazal "Slovenščina", tudi če je stran dejansko
-  // prevedena.
-  useEffect(() => {
-    const trenutna = trenutniJezik()
-    const najdena = jeziki.find(j => j.koda === trenutna)
-    if (najdena) setIzbranJezik(najdena)
-  }, [])
+  const { locale, setLocale, t } = useLocale()
+  const izbranJezik = jeziki.find(j => j.koda === locale) ?? jeziki[0]
 
   function izberiJezik(j: typeof jeziki[number]) {
     setJezikOpen(false)
-    if (j.koda === izbranJezik.koda) return
-    nastaviJezik(j.koda || null)
+    setLocale(j.koda)
   }
 
   function handleSearch(e: React.FormEvent) {
@@ -96,7 +82,7 @@ export default function Navbar() {
                   }`}
                 >
                   {l.ikona && <l.ikona className="w-3.5 h-3.5" />}
-                  {l.label}
+                  {t(l.label)}
                   {active && <span className="w-1 h-1 rounded-full bg-[#c9a84c] ml-0.5" />}
                 </Link>
               )
@@ -109,7 +95,7 @@ export default function Navbar() {
             <input
               value={iskalnoQ}
               onChange={e => setIskalnoQ(e.target.value)}
-              placeholder="Išči..."
+              placeholder={t('Išči...')}
               className="w-44 pl-9 pr-3 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 text-sm focus:outline-none focus:border-[#c9a84c] focus:w-56 transition-all duration-200"
             />
           </form>
@@ -123,14 +109,14 @@ export default function Navbar() {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 transition-all"
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span>{izbranJezik.zastava} {izbranJezik.koda ? izbranJezik.koda.toUpperCase() : 'SLO'}</span>
+                <span>{izbranJezik.zastava} {izbranJezik.koda.toUpperCase()}</span>
                 <ChevronDown className={`w-3 h-3 transition-transform ${jezikOpen ? 'rotate-180' : ''}`} />
               </button>
               {jezikOpen && (
                 <div className="absolute right-0 top-full mt-1 bg-[#0c2340] border border-white/15 rounded-xl shadow-xl overflow-hidden min-w-[160px] z-50">
                   {jeziki.map(j => (
                     <button
-                      key={j.koda || 'sl'}
+                      key={j.koda}
                       onClick={() => izberiJezik(j)}
                       className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
                         j.koda === izbranJezik.koda
@@ -178,19 +164,19 @@ export default function Navbar() {
                   ) : (
                     <UserCircle className="w-4 h-4" />
                   )}
-                  Moj panel
+                  {t('Moj panel')}
                 </Link>
               </>
             ) : (
               <>
                 <Link href="/prijava" className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors">
-                  Prijava
+                  {t('Prijava')}
                 </Link>
                 <Link
                   href="/registracija"
                   className="px-4 py-2 text-sm font-semibold text-[#0c2340] bg-[#c9a84c] hover:bg-[#e8c76d] rounded-full transition-all duration-200 hover:scale-105"
                 >
-                  Registracija
+                  {t('Registracija')}
                 </Link>
               </>
             )}
@@ -222,18 +208,18 @@ export default function Navbar() {
                 onClick={() => setOpen(false)}
               >
                 {l.ikona && <l.ikona className="w-4 h-4" />}
-                {l.label}
+                {t(l.label)}
               </Link>
             )
           })}
 
           {/* Mobile jezik switcher */}
           <div className="border-t border-white/10 pt-3 mt-2">
-            <p className="text-xs text-white/40 uppercase tracking-wide px-3 mb-2">Jezik</p>
+            <p className="text-xs text-white/40 uppercase tracking-wide px-3 mb-2">{t('Jezik')}</p>
             <div className="flex gap-2">
               {jeziki.map(j => (
                 <button
-                  key={j.koda || 'sl'}
+                  key={j.koda}
                   onClick={() => izberiJezik(j)}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     j.koda === izbranJezik.koda
@@ -241,7 +227,7 @@ export default function Navbar() {
                       : 'bg-white/10 text-white/70 hover:bg-white/20'
                   }`}
                 >
-                  {j.zastava} {j.koda ? j.koda.toUpperCase() : 'SLO'}
+                  {j.zastava} {j.koda.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -256,7 +242,7 @@ export default function Navbar() {
                   onClick={() => setOpen(false)}
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Sporočila
+                  {t('Sporočila')}
                   {unread > 0 && (
                     <span className="ml-1 px-1.5 py-0.5 bg-[#c9a84c] text-[#0c2340] text-xs font-bold rounded-full">
                       {unread}
@@ -268,20 +254,20 @@ export default function Navbar() {
                   className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white border border-white/30 rounded-full hover:bg-white/5"
                   onClick={() => setOpen(false)}
                 >
-                  Moj panel
+                  {t('Moj panel')}
                 </Link>
               </>
             ) : (
               <>
                 <Link href="/prijava" className="px-3 py-2.5 text-sm font-medium text-white/80 hover:text-white" onClick={() => setOpen(false)}>
-                  Prijava
+                  {t('Prijava')}
                 </Link>
                 <Link
                   href="/registracija"
                   className="px-4 py-2.5 text-sm font-semibold text-center text-[#0c2340] bg-[#c9a84c] rounded-full hover:bg-[#e8c76d]"
                   onClick={() => setOpen(false)}
                 >
-                  Registracija
+                  {t('Registracija')}
                 </Link>
               </>
             )}
