@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Shield, Ban, CheckCircle, Mail, MessageSquareWarning, Star, Trash2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Shield, Ban, CheckCircle, Mail, MessageSquareWarning, Star, Trash2, Search } from 'lucide-react'
 
 interface Uporabnik {
   id: string
@@ -27,6 +27,7 @@ export default function AdminUporabnikiPage() {
   const [uporabniki, setUporabniki] = useState<Uporabnik[]>([])
   const [nalaga, setNalaga] = useState(true)
   const [napaka, setNapaka] = useState('')
+  const [iskanje, setIskanje] = useState('')
 
   async function nalozi() {
     setNalaga(true)
@@ -107,11 +108,27 @@ export default function AdminUporabnikiPage() {
     if (!res.ok) await nalozi()
   }
 
+  const filtrirani = useMemo(() => {
+    if (!iskanje.trim()) return uporabniki
+    const q = iskanje.toLowerCase()
+    return uporabniki.filter(u => u.ime.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+  }, [uporabniki, iskanje])
+
   return (
     <div className="p-8">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-gray-900">Uporabniki</h1>
         <p className="text-gray-500 text-sm mt-1">Pregled računov, sprememba vloge, blokiranje</p>
+      </div>
+
+      <div className="relative mb-4 max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          value={iskanje}
+          onChange={e => setIskanje(e.target.value)}
+          placeholder="Išči po imenu ali e-mailu..."
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]"
+        />
       </div>
 
       {napaka && (
@@ -132,7 +149,7 @@ export default function AdminUporabnikiPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {uporabniki.map(u => (
+            {filtrirani.map(u => (
               <tr key={u.id} className="hover:bg-gray-50/50">
                 <td className="px-5 py-3.5 font-medium text-gray-900">{u.ime}</td>
                 <td className="px-5 py-3.5 text-gray-500">{u.email}</td>
@@ -201,8 +218,8 @@ export default function AdminUporabnikiPage() {
           </tbody>
         </table>
         </div>
-        {!nalaga && uporabniki.length === 0 && (
-          <div className="py-12 text-center text-gray-400 text-sm">Ni uporabnikov</div>
+        {!nalaga && filtrirani.length === 0 && (
+          <div className="py-12 text-center text-gray-400 text-sm">{iskanje ? 'Ni zadetkov' : 'Ni uporabnikov'}</div>
         )}
         {nalaga && (
           <div className="py-12 text-center text-gray-400 text-sm">Nalagam...</div>
