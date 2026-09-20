@@ -156,7 +156,12 @@ export default function AdminCharterjiPage() {
     setRazsirjenId(c.id)
     if (!c.user_id || plovilaPoCharterju[c.id]) return
     setNalagaPlovila(c.id)
-    const { data } = await supabase.from('plovila').select('*').eq('user_id', c.user_id).order('created_at', { ascending: false })
+    // Charter posluje izkljucno z najemom (glej dashboard/dodaj-plovilo,
+    // CharterVsebina.tsx - charterjeva javna "flota" je vedno filtrirana na
+    // tip_oglasa=najem) - brez tega filtra bi se tu prikazalo tudi
+    // morebitno plovilo za PRODAJO pod istim racunom, kar ni del njegove
+    // charter flote.
+    const { data } = await supabase.from('plovila').select('*').eq('user_id', c.user_id).eq('tip_oglasa', 'najem').order('created_at', { ascending: false })
     setPlovilaPoCharterju(prev => ({ ...prev, [c.id]: data ?? [] }))
     setNalagaPlovila(null)
   }
