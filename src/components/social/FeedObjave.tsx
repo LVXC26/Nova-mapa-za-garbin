@@ -8,6 +8,7 @@ import { stisniSliko } from '@/lib/stisniSliko'
 import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import Avatar from '@/components/shared/Avatar'
 import GalerijaMreza from '@/components/shared/GalerijaMreza'
+import GalerijaLightbox from '@/components/shared/GalerijaLightbox'
 import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
 
 const MAX_SLIK_OBJAVA = 6
@@ -139,6 +140,7 @@ export default function FeedObjave({
 }: Props) {
   const { user } = useAuth()
   const [objave, setObjave] = useState<Objava[]>([])
+  const [lightbox, setLightbox] = useState<{ slike: string[]; naziv: string; indeks: number } | null>(null)
   const [nalaga, setNalaga] = useState(true)
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [mojiLikes, setMojiLikes] = useState<Set<string>>(new Set())
@@ -652,7 +654,11 @@ export default function FeedObjave({
 
                 {o.slike && o.slike.length > 0 && (
                   <div className="mb-4">
-                    <GalerijaMreza slike={o.slike} alt={o.avtor_ime} />
+                    <GalerijaMreza
+                      slike={o.slike}
+                      alt={o.avtor_ime}
+                      onSlikaClick={(indeks) => setLightbox({ slike: o.slike!, naziv: o.avtor_ime, indeks })}
+                    />
                   </div>
                 )}
 
@@ -676,6 +682,15 @@ export default function FeedObjave({
             ))
           )}
         </div>
+      )}
+
+      {lightbox && (
+        <GalerijaLightbox
+          slike={lightbox.slike}
+          naziv={lightbox.naziv}
+          zacetniIndeks={lightbox.indeks}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   )
