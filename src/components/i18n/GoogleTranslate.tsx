@@ -18,20 +18,16 @@ declare global {
 export default function GoogleTranslate() {
   return (
     <>
-      {/* NE display:none — Google Translate mora element dejansko "videti"
-          (imeti izmerljive dimenzije v layoutu), sicer notranje ne napolni
-          seznama jezikov (goog-te-combo ostane prazen, prevod se nikoli ne
-          sproži). Zato je samo pomaknjen daleč izven zaslona. */}
-      <div
-        id="google_translate_element"
-        style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '100px', height: '50px' }}
-      />
+      {/* ZACASNO VIDNO za diagnostiko — glej pogovor, goog-te-combo ostaja
+          prazen tudi brez vsakega skrivanja, torej vzrok ni vidnost. */}
+      <div id="google_translate_element" style={{ position: 'fixed', top: 70, right: 10, zIndex: 9999, background: 'white', padding: 4 }} />
       <Script id="google-translate-init" strategy="afterInteractive">
         {`
           function googleTranslateElementInit() {
             new google.translate.TranslateElement({
               pageLanguage: 'sl',
               includedLanguages: 'en,hr,it',
+              layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
               autoDisplay: false,
             }, 'google_translate_element');
           }
