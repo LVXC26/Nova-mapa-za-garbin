@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { stisniSliko } from '@/lib/stisniSliko'
 import { varnoImeDatoteke } from '@/lib/varnoImeDatoteke'
 import Avatar from '@/components/shared/Avatar'
+import GalerijaMreza from '@/components/shared/GalerijaMreza'
 import type { Objava, ObjavaKomentar, TipObjave } from '@/types/database'
 
 const MAX_SLIK_OBJAVA = 6
@@ -644,16 +645,8 @@ export default function FeedObjave({
                 )}
 
                 {o.slike && o.slike.length > 0 && (
-                  <div className={`grid gap-1.5 mb-4 rounded-xl overflow-hidden ${o.slike.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                    {o.slike.map((url, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={i}
-                        src={url}
-                        alt=""
-                        className={`w-full object-cover ${o.slike!.length === 1 ? 'h-96' : 'h-48'}`}
-                      />
-                    ))}
+                  <div className="mb-4">
+                    <GalerijaMreza slike={o.slike} alt={o.avtor_ime} />
                   </div>
                 )}
 
