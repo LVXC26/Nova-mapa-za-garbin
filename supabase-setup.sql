@@ -2042,3 +2042,16 @@ begin
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- NOVICE: PRAVA PROFILNA SLIKA AVTORJA — "avtor" je bil doslej samo
+-- prost tekst (ime), brez povezave na pravi racun, zato ni bilo mogoce
+-- prikazati prave profilne slike pisca (samo prva crka imena). Nov
+-- "avtor_user_id" se nastavi ob objavi nove novice (glej admin/novice) -
+-- obstojece novice ostanejo brez njega (padejo nazaj na crko imena, se
+-- vedno pravilno prikazano). "novice" je ze javno berljiva za objavljene
+-- clanke (glej "Javni bralni dostop - novice"), zato dodaten pogled ni
+-- potreben.
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table novice add column if not exists avtor_user_id uuid references auth.users(id) on delete set null;

@@ -126,6 +126,7 @@ export default function AdminNovicePage() {
           ...polja,
           slug: slugify(forma.naslov) + '-' + Date.now().toString(36),
           avtor: user?.user_metadata?.ime ?? user?.email ?? 'Admin',
+          avtor_user_id: user?.id ?? null,
           published_at: new Date().toISOString(),
         })
 

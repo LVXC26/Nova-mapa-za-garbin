@@ -9,6 +9,7 @@ import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { unsplashNovice } from '@/data/mock'
 import { formatDatum } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import Avatar from '@/components/shared/Avatar'
 import type { Novica, NovicaKategorija, Komentar } from '@/types/database'
 
 type NovicaZKategorijo = Novica & { kategorija?: NovicaKategorija }
@@ -23,6 +24,7 @@ export default function NovicaVsebina({ params }: { params: Promise<{ slug: stri
   const [komentarPoslan, setKomentarPoslan] = useState(false)
   const [komentarNapaka, setKomentarNapaka] = useState('')
   const [posiljaKomentar, setPosiljaKomentar] = useState(false)
+  const [avtorSlika, setAvtorSlika] = useState<string | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -35,6 +37,11 @@ export default function NovicaVsebina({ params }: { params: Promise<{ slug: stri
       const trenutnaNovica = data as NovicaZKategorijo | null
       setRealnaNovica(trenutnaNovica)
       setNalaga(false)
+
+      if (trenutnaNovica?.avtor_user_id) {
+        supabase.from('public_profiles').select('slika_url').eq('id', trenutnaNovica.avtor_user_id).maybeSingle()
+          .then(({ data: profil }) => setAvtorSlika(profil?.slika_url ?? null))
+      }
 
       if (trenutnaNovica?.id) {
         const { data: komentarjiData } = await supabase
@@ -221,9 +228,7 @@ export default function NovicaVsebina({ params }: { params: Promise<{ slug: stri
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <h3 className="font-semibold text-[#0c2340] text-sm mb-3">Avtor</h3>
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-[#0c2340]/10 flex items-center justify-center text-xl font-bold text-[#0c2340]">
-                        {novica.avtor[0]}
-                      </div>
+                      <Avatar slikaUrl={avtorSlika} ime={novica.avtor} velikost={48} textClassName="text-[#0c2340] text-xl" />
                       <div>
                         <p className="font-semibold text-[#0c2340] text-sm">{novica.avtor}</p>
                         <p className="text-xs text-gray-500">Pisec na Garbin</p>

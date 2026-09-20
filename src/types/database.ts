@@ -57,6 +57,7 @@ export interface Novica {
   slika_url: string | null
   slug: string
   avtor: string | null
+  avtor_user_id?: string | null
   kategorija_id: string | null
   published_at: string | null
   created_at: string
