@@ -40,14 +40,13 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Google Translate widget — skrijemo NJEGOV privzeti UI (spustni meni,
-   zgornji trak, obarvanje prevedenih besed), ker za izbiro jezika
-   uporabljamo lasten izbirnik v Navbar.tsx (glej lib/googleTranslate.ts).
-   Sam prevajalni mehanizem ostane povsem funkcionalen, samo vizualno ga
-   ne kaže. */
-#google_translate_element,
-.goog-te-banner-frame,
-.skiptranslate {
+/* Google Translate widget — skrijemo NJEGOV privzeti UI (zgornji trak,
+   obarvanje prevedenih besed), ker za izbiro jezika uporabljamo lasten
+   izbirnik v Navbar.tsx (glej lib/googleTranslate.ts). #google_translate_
+   element NAMERNO ni tu (display:none nanj je Googlu preprecil, da bi
+   sploh napolnil seznam jezikov — glej GoogleTranslate.tsx, tam je namesto
+   tega pomaknjen izven zaslona, kar prevajanje ne moti). */
+.goog-te-banner-frame {
   display: none !important;
 }
 body {
