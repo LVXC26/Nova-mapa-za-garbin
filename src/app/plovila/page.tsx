@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { X, Search, ArrowUpDown, GitCompare, ArrowRight, Tag, Ruler, ShoppingBag, Anchor } from 'lucide-react'
+import { X, Search, ArrowUpDown, GitCompare, ArrowRight, Tag, Ruler, ShoppingBag, Anchor, BedDouble } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
@@ -17,6 +17,8 @@ import type { TipPlovila, Plovilo } from '@/types/database'
 const CENA_MAX_IDX = CENA_VALUES.length - 1
 const DOLZINA_MIN = 3
 const DOLZINA_MAX = 150
+const LEZISCA_MIN = 0
+const LEZISCA_MAX = 20
 const PER_PAGE = 6
 
 type SortKey = 'privzeto' | 'cena_asc' | 'cena_desc' | 'letnik_desc' | 'dolzina_asc'
@@ -40,6 +42,7 @@ function PlovilaContent() {
   const [tip, setTip] = useState<TipPlovila | 'vse'>(initTip)
   const [cenaIdx, setCenaIdx] = useState<[number, number]>([initCenaMin, initCenaMax])
   const [dolzina, setDolzina] = useState<[number, number]>([DOLZINA_MIN, DOLZINA_MAX])
+  const [lezisca, setLezisca] = useState<[number, number]>([LEZISCA_MIN, LEZISCA_MAX])
   const [sortiranje, setSortiranje] = useState<SortKey>('privzeto')
   const [stran, setStran] = useState(1)
 
@@ -67,6 +70,7 @@ function PlovilaContent() {
       if (tip !== 'vse' && p.tip !== tip) return false
       if (p.cena < cenaMin || p.cena > cenaMax) return false
       if (p.dolzina_m !== null && (p.dolzina_m < dolzina[0] || p.dolzina_m > dolzina[1])) return false
+      if (p.postelje !== null && (p.postelje < lezisca[0] || p.postelje > lezisca[1])) return false
       return true
     })
 
@@ -84,18 +88,20 @@ function PlovilaContent() {
       ...result.filter(p => !p.promoted && !p.urgentno && !p.prodano),
       ...result.filter(p => p.prodano),
     ]
-  }, [vsaPlovila, tip, cenaIdx, dolzina, sortiranje])
+  }, [vsaPlovila, tip, cenaIdx, dolzina, lezisca, sortiranje])
 
   const skupajStrani = Math.ceil(filtrirano.length / PER_PAGE)
   const prikazana = filtrirano.slice((stran - 1) * PER_PAGE, stran * PER_PAGE)
 
   const aktivniFilter =
-    tip !== 'vse' || cenaIdx[0] > 0 || cenaIdx[1] < CENA_MAX_IDX || dolzina[0] > DOLZINA_MIN || dolzina[1] < DOLZINA_MAX
+    tip !== 'vse' || cenaIdx[0] > 0 || cenaIdx[1] < CENA_MAX_IDX || dolzina[0] > DOLZINA_MIN || dolzina[1] < DOLZINA_MAX ||
+    lezisca[0] > LEZISCA_MIN || lezisca[1] < LEZISCA_MAX
 
   function resetFiltre() {
     setTip('vse')
     setCenaIdx([0, CENA_MAX_IDX])
     setDolzina([DOLZINA_MIN, DOLZINA_MAX])
+    setLezisca([LEZISCA_MIN, LEZISCA_MAX])
     setStran(1)
   }
 
@@ -126,6 +132,22 @@ function PlovilaContent() {
           min={DOLZINA_MIN} max={DOLZINA_MAX} low={dolzina[0]} high={dolzina[1]} step={1}
           onChange={(l, h) => { setDolzina([l, h]); setStran(1) }}
           format={(v) => `${v} m`}
+        />
+      </div>
+    </div>
+  )
+
+  const LezisceSlider = (
+    <div className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-full bg-[#0c2340] text-[#c9a84c] flex items-center justify-center shrink-0 mt-0.5">
+        <BedDouble className="w-3.5 h-3.5" />
+      </div>
+      <div className="flex-1">
+        <RangeSlider
+          label="Št. ležišč"
+          min={LEZISCA_MIN} max={LEZISCA_MAX} low={lezisca[0]} high={lezisca[1]} step={1}
+          onChange={(l, h) => { setLezisca([l, h]); setStran(1) }}
+          format={(v) => `${v}`}
         />
       </div>
     </div>
@@ -186,9 +208,10 @@ function PlovilaContent() {
               </div>
 
               <div className="h-px bg-gray-100 mb-6" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {CenaSlider}
                 {DolzinaSlider}
+                {LezisceSlider}
               </div>
             </div>
 
