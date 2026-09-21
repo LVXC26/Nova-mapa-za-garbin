@@ -12,6 +12,18 @@ type AuthContextType = {
   demoMode: boolean
   slikaUrl: string | null
   refreshSlika: () => void
+  // En racun lahko poleg svoje prvotne vloge (vloga zgoraj, iz
+  // user_metadata) DODATNO pridobi tudi charter in/ali skipper profil (glej
+  // dashboard/postani-charter in postani-skipper) - namesto da bi to
+  // poskusali stlaciti v obstojeci "vloga" enum (ki ze ima eno samo trdo
+  // kodirano kombinacijo, "oba" = prodajalec+charter, in ne pokrije npr.
+  // skipper+prodajalec), to sledimo neodvisno prek dejanskega obstoja
+  // vrstice v charterji/skiperji za ta user_id - to je itak edini pravi vir
+  // resnice (isti razlog, zakaj je "profiles.vloga" DB stolpec ze od nekdaj
+  // neuporabljen - glej admin/uporabniki, ki vlogo ureja prek user_metadata).
+  imaCharterProfil: boolean
+  imaSkipperProfil: boolean
+  refreshProfili: () => void
   prijavaDemo: (vloga: Vloga) => void
   odjavaDemo: () => void
 }
@@ -23,6 +35,9 @@ const AuthContext = createContext<AuthContextType>({
   demoMode: false,
   slikaUrl: null,
   refreshSlika: () => {},
+  imaCharterProfil: false,
+  imaSkipperProfil: false,
+  refreshProfili: () => {},
   prijavaDemo: () => {},
   odjavaDemo: () => {},
 })
@@ -64,6 +79,8 @@ export function AuthProvider({
   const [loading, setLoading] = useState(false)
   const [demoMode, setDemoMode] = useState(false)
   const [slikaUrl, setSlikaUrl] = useState<string | null>(null)
+  const [imaCharterProfil, setImaCharterProfil] = useState(false)
+  const [imaSkipperProfil, setImaSkipperProfil] = useState(false)
 
   const nalozSliko = useCallback((userId: string) => {
     import('@/lib/supabase/client').then(({ createClient }) => {
@@ -76,9 +93,23 @@ export function AuthProvider({
     if (user && !demoMode) nalozSliko(user.id)
   }, [user, demoMode, nalozSliko])
 
+  const nalozProfile = useCallback((userId: string) => {
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      const supabase = createClient()
+      supabase.from('charterji').select('id', { count: 'exact', head: true }).eq('user_id', userId)
+        .then(({ count }) => setImaCharterProfil(!!count && count > 0))
+      supabase.from('skiperji').select('id', { count: 'exact', head: true }).eq('user_id', userId)
+        .then(({ count }) => setImaSkipperProfil(!!count && count > 0))
+    })
+  }, [])
+
+  const refreshProfili = useCallback(() => {
+    if (user && !demoMode) nalozProfile(user.id)
+  }, [user, demoMode, nalozProfile])
+
   useEffect(() => {
-    if (user && !demoMode) nalozSliko(user.id)
-    else setSlikaUrl(null)
+    if (user && !demoMode) { nalozSliko(user.id); nalozProfile(user.id) }
+    else { setSlikaUrl(null); setImaCharterProfil(false); setImaSkipperProfil(false) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, demoMode])
 
@@ -117,7 +148,7 @@ export function AuthProvider({
   const vloga = (user?.user_metadata?.vloga ?? null) as Vloga | null
 
   return (
-    <AuthContext.Provider value={{ user, loading, vloga, demoMode, slikaUrl, refreshSlika, prijavaDemo, odjavaDemo }}>
+    <AuthContext.Provider value={{ user, loading, vloga, demoMode, slikaUrl, refreshSlika, imaCharterProfil, imaSkipperProfil, refreshProfili, prijavaDemo, odjavaDemo }}>
       {children}
     </AuthContext.Provider>
   )

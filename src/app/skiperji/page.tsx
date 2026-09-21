@@ -7,6 +7,7 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { unsplashSkipperji } from '@/data/mock'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/components/providers/AuthProvider'
 import type { Skipper } from '@/types/database'
 
 const lokacije = ['Vse', 'Portorož', 'Izola', 'Koper', 'Piran', 'Split']
@@ -15,6 +16,7 @@ const jezikiOpcije = ['slovenščina', 'angleščina', 'nemščina', 'hrvaščin
 type TipSkiper = 'vse' | 'samostojni' | 'agencija'
 
 export default function SkiperjiPage() {
+  const { user, imaSkipperProfil } = useAuth()
   const [lokacija, setLokacija] = useState('Vse')
   const [tipPlovila, setTipPlovila] = useState('Vse')
   const [jeziki, setJeziki] = useState<string[]>([])
@@ -295,11 +297,15 @@ export default function SkiperjiPage() {
                 </div>
               ))}
             </div>
+            {/* Prijavljen uporabnik z drugo vlogo (npr. prodajalec) tukaj
+                DODA se skipper profil na svoj obstojeci racun, namesto da bi
+                ga /registracija (namenjena samo prvi registraciji) tiho
+                preusmerila nazaj na /dashboard, ne da bi kaj naredila. */}
             <Link
-              href="/registracija"
+              href={!user ? '/registracija' : imaSkipperProfil ? '/dashboard' : '/dashboard/postani-skipper'}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.02]"
             >
-              Ustvari brezplačen profil <ArrowRight className="w-4 h-4" />
+              {!user ? 'Ustvari brezplačen profil' : imaSkipperProfil ? 'Pojdi na svoj profil' : 'Dodaj skipper profil'} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </section>

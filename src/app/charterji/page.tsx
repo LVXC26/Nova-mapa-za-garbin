@@ -9,6 +9,7 @@ import CharterKartica from '@/components/charterji/CharterKartica'
 import TipCharterjaIzbirnik from '@/components/charterji/TipCharterjaIzbirnik'
 import RangeSlider from '@/components/plovila/RangeSlider'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/components/providers/AuthProvider'
 import type { TipCharterja, TipCharterPlovila, Charter } from '@/types/database'
 
 const OSEBE_MIN = 1
@@ -17,6 +18,7 @@ const DOLZINA_MIN = 5
 const DOLZINA_MAX = 80
 
 export default function CharterjiPage() {
+  const { user, imaCharterProfil } = useAuth()
   // Iskalni filtri
   const [tipPlovila, setTipPlovila] = useState<TipCharterPlovila | ''>('')
   const [osebe, setOsebe] = useState<[number, number]>([OSEBE_MIN, OSEBE_MAX])
@@ -217,11 +219,13 @@ export default function CharterjiPage() {
                 </div>
               ))}
             </div>
+            {/* Prijavljen uporabnik z drugo vlogo tukaj DODA charter profil
+                na svoj obstojeci racun - glej enako opombo na /skiperji. */}
             <Link
-              href="/registracija"
+              href={!user ? '/registracija' : imaCharterProfil ? '/dashboard' : '/dashboard/postani-charter'}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.02] shadow-lg shadow-[#c9a84c]/20"
             >
-              Ustvari brezplačen profil <ArrowRight className="w-4 h-4" />
+              {!user ? 'Ustvari brezplačen profil' : imaCharterProfil ? 'Pojdi na svoj profil' : 'Dodaj charter profil'} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </section>

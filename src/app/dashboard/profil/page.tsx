@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { CheckCircle, AlertCircle, Upload, MapPin, Phone, Globe, Award, Ship, CalendarRange } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -29,7 +30,19 @@ export default function ProfilPage() {
 }
 
 function ProfilContent() {
-  const { user, vloga, demoMode } = useAuth()
+  const { user, demoMode, imaCharterProfil, imaSkipperProfil } = useAuth()
+  // Katero od (morda vec) drzanih vlog trenutno urejamo - racun lahko drzi
+  // charter IN skipper profil hkrati (glej dashboard/postani-charter in
+  // postani-skipper), zato ne moremo vec vseskozi kar uporabljati
+  // "vloga" (prvotna, edina vloga iz user_metadata) - ce ima oboje, ponudimo
+  // preklop; sicer privzeto pokazemo tisto, ki jo dejansko ima.
+  const [aktivnaVloga, setAktivnaVloga] = useState<'skipper' | 'charter' | null>(null)
+  useEffect(() => {
+    if (aktivnaVloga) return
+    if (imaSkipperProfil) setAktivnaVloga('skipper')
+    else if (imaCharterProfil) setAktivnaVloga('charter')
+  }, [imaSkipperProfil, imaCharterProfil, aktivnaVloga])
+
   const searchParams = useSearchParams()
   const router = useRouter()
   const [uspesno, setUspesno] = useState(false)
@@ -71,7 +84,15 @@ function ProfilContent() {
       if (!user || demoMode) { setNalagaProfil(false); return }
       const supabase = createClient()
 
-      if (vloga === 'skipper') {
+      if (!aktivnaVloga) { setNalagaProfil(false); return }
+
+      // Nov preklop na drugo drzano vlogo znotraj iste strani - obrazec
+      // mora pokazati podatke TE vloge, ne ostati na prejsnjih.
+      setObstajaProfil(false)
+      setForma({ ime, email, telefon: '', lokacija: '', opis: '', spletna_stran: '', cena_dan: '' })
+      setTipPlovila([])
+
+      if (aktivnaVloga === 'skipper') {
         const { data } = await supabase.from('skiperji').select('*').eq('user_id', user.id).maybeSingle()
         if (data) {
           setForma(f => ({ ...f, lokacija: data.lokacija, opis: data.opis, cena_dan: String(data.cena_dan) }))
@@ -84,7 +105,7 @@ function ProfilContent() {
           setSkipperId(data.id)
         }
         setNalagaProfil(false)
-      } else if (vloga === 'charter' || vloga === 'oba') {
+      } else if (aktivnaVloga === 'charter') {
         const { data } = await supabase.from('charterji').select('*').eq('user_id', user.id).maybeSingle()
         if (data) {
           setForma(f => ({ ...f, telefon: data.kontakt_tel, lokacija: data.lokacija, opis: data.opis ?? '', spletna_stran: data.spletna_stran ?? '' }))
@@ -93,12 +114,10 @@ function ProfilContent() {
           setObstajaProfil(true)
         }
         setNalagaProfil(false)
-      } else {
-        setNalagaProfil(false)
       }
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, vloga])
+  }, [user?.id, aktivnaVloga])
 
   function toggleTipPlovila(t: string) {
     setTipPlovila(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
@@ -132,7 +151,7 @@ function ProfilContent() {
     setNalaga(true)
     const supabase = createClient()
 
-    if (vloga === 'skipper') {
+    if (aktivnaVloga === 'skipper') {
       const polja = {
         ime: forma.ime || ime,
         lokacija: forma.lokacija,
@@ -157,7 +176,7 @@ function ProfilContent() {
       setNalaga(false)
       if (error) { setNapaka('Napaka pri shranjevanju profila.'); return }
       setObstajaProfil(true)
-    } else if (vloga === 'charter' || vloga === 'oba') {
+    } else if (aktivnaVloga === 'charter') {
       const polja = {
         naziv: forma.ime || ime,
         lokacija: forma.lokacija,
@@ -192,7 +211,7 @@ function ProfilContent() {
     setTimeout(() => setUspesno(false), 3000)
   }
 
-  const tabs = vloga === 'skipper'
+  const tabs = aktivnaVloga === 'skipper'
     ? [
         { vrednost: 'osnovno', label: 'Osnovno' },
         { vrednost: 'specializacija', label: 'Specializacija' },
@@ -204,7 +223,7 @@ function ProfilContent() {
         { vrednost: 'specializacija', label: 'Plovila & storitve' },
       ]
 
-  if (nalagaProfil) {
+  if (nalagaProfil || (!aktivnaVloga && (imaCharterProfil || imaSkipperProfil))) {
     return (
       <div className="p-8 max-w-3xl flex items-center justify-center min-h-[40vh]">
         <div className="w-8 h-8 rounded-full border-4 border-[#c9a84c] border-t-transparent animate-spin" />
@@ -212,19 +231,50 @@ function ProfilContent() {
     )
   }
 
+  if (!aktivnaVloga) {
+    return (
+      <div className="p-8 max-w-3xl">
+        <p className="text-sm text-gray-500">
+          Nimate še charter ali skipper profila. Ustvarite ga na{' '}
+          <Link href="/charterji" className="text-[#c9a84c] hover:underline">/charterji</Link> ali{' '}
+          <Link href="/skiperji" className="text-[#c9a84c] hover:underline">/skiperji</Link>.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="p-8 max-w-3xl">
+      {/* Preklop, ce racun drzi oboje (glej dashboard/postani-charter in
+          postani-skipper - en racun zdaj lahko ima oba profila hkrati). */}
+      {imaCharterProfil && imaSkipperProfil && (
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-full w-fit mb-5">
+          {([['charter', '🏢 Charter'], ['skipper', '👨‍✈️ Skipper']] as const).map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setAktivnaVloga(v)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                aktivnaVloga === v ? 'bg-white text-[#0c2340] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <h1 className="font-display text-2xl font-bold text-[#0c2340] mb-1">
-        {vloga === 'charter' ? 'Profil podjetja' : 'Skipper profil'}
+        {aktivnaVloga === 'charter' ? 'Profil podjetja' : 'Skipper profil'}
       </h1>
       <p className="text-gray-500 text-sm mb-8">
-        {vloga === 'charter' ? 'Podatki vašega charter podjetja' : 'Vaš profesionalni skipper profil'}
+        {aktivnaVloga === 'charter' ? 'Podatki vašega charter podjetja' : 'Vaš profesionalni skipper profil'}
       </p>
 
       {/* Avatar */}
       <div className="flex items-center gap-5 mb-8 p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
         <div className="w-20 h-20 rounded-2xl bg-[#0c2340]/10 flex items-center justify-center text-4xl relative">
-          {vloga === 'charter' ? '🏢' : '👨‍✈️'}
+          {aktivnaVloga === 'charter' ? '🏢' : '👨‍✈️'}
           <button type="button" className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#c9a84c] flex items-center justify-center shadow-sm hover:bg-[#e8c76d] transition-colors">
             <Upload className="w-3.5 h-3.5 text-[#0c2340]" />
           </button>
@@ -235,10 +285,10 @@ function ProfilContent() {
         </div>
         <div className="ml-auto text-right">
           <p className="text-2xl font-display font-bold text-[#0c2340]">
-            {vloga === 'skipper' ? `${forma.cena_dan || 0} € / dan` : `${stPlovil} plovil`}
+            {aktivnaVloga === 'skipper' ? `${forma.cena_dan || 0} € / dan` : `${stPlovil} plovil`}
           </p>
           <p className="text-xs text-gray-400 mt-0.5">
-            {vloga === 'skipper' ? 'Vaša cena' : 'V floti'}
+            {aktivnaVloga === 'skipper' ? 'Vaša cena' : 'V floti'}
           </p>
         </div>
       </div>
@@ -279,7 +329,7 @@ function ProfilContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">
-                  {vloga === 'charter' ? 'Naziv podjetja' : 'Ime in priimek'}
+                  {aktivnaVloga === 'charter' ? 'Naziv podjetja' : 'Ime in priimek'}
                 </label>
                 <input value={forma.ime} onChange={e => setForma(f => ({...f, ime: e.target.value}))}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]" />
@@ -304,7 +354,7 @@ function ProfilContent() {
                   placeholder="Marina Portorož"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]" />
               </div>
-              {vloga === 'charter' && (
+              {aktivnaVloga === 'charter' && (
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">
                     <Globe className="inline w-3.5 h-3.5 mr-1" />Spletna stran
@@ -314,7 +364,7 @@ function ProfilContent() {
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c]" />
                 </div>
               )}
-              {vloga === 'skipper' && (
+              {aktivnaVloga === 'skipper' && (
                 <div>
                   <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Cena / dan (€)</label>
                   <input type="number" value={forma.cena_dan} onChange={e => setForma(f => ({...f, cena_dan: e.target.value}))}
@@ -329,13 +379,13 @@ function ProfilContent() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">
-                {vloga === 'charter' ? 'Opis podjetja' : 'Bio / O sebi'}
+                {aktivnaVloga === 'charter' ? 'Opis podjetja' : 'Bio / O sebi'}
               </label>
               <textarea rows={4} value={forma.opis} onChange={e => setForma(f => ({...f, opis: e.target.value}))}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] resize-none" />
             </div>
 
-            {vloga === 'skipper' && (
+            {aktivnaVloga === 'skipper' && (
               <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50">
                 <button
                   type="button"
@@ -367,7 +417,7 @@ function ProfilContent() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-[#0c2340] mb-3">
-                <Ship className="inline w-4 h-4 mr-1" />Plovila ki jih {vloga === 'charter' ? 'oddajate' : 'vodite'}
+                <Ship className="inline w-4 h-4 mr-1" />Plovila ki jih {aktivnaVloga === 'charter' ? 'oddajate' : 'vodite'}
               </label>
               <div className="flex flex-wrap gap-2">
                 {TIPI_PLOVIL.map(t => {
@@ -381,7 +431,7 @@ function ProfilContent() {
                 })}
               </div>
             </div>
-            {vloga === 'skipper' && (
+            {aktivnaVloga === 'skipper' && (
               <>
                 <div>
                   <label className="block text-sm font-semibold text-[#0c2340] mb-3">Jeziki</label>
@@ -404,7 +454,7 @@ function ProfilContent() {
                 </div>
               </>
             )}
-            {vloga === 'charter' && (
+            {aktivnaVloga === 'charter' && (
               <div>
                 <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Število plovil v floti</label>
                 <input type="number" value={stPlovil} min={0} onChange={e => setStPlovil(Number(e.target.value))}
@@ -414,7 +464,7 @@ function ProfilContent() {
           </div>
         )}
 
-        {tab === 'certifikati' && vloga === 'skipper' && (
+        {tab === 'certifikati' && aktivnaVloga === 'skipper' && (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2 mb-2">
               {certifikati.map(c => (
@@ -440,7 +490,7 @@ function ProfilContent() {
           </div>
         )}
 
-        {tab === 'zasedenost' && vloga === 'skipper' && (
+        {tab === 'zasedenost' && aktivnaVloga === 'skipper' && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h2 className="font-display text-base font-semibold text-[#0c2340] mb-1 flex items-center gap-2">
               <CalendarRange className="w-4 h-4 text-[#c9a84c]" /> Vaša razpoložljivost

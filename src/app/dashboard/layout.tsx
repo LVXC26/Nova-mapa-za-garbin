@@ -13,7 +13,35 @@ import Avatar from '@/components/shared/Avatar'
 
 type NavItem = { href: string; label: string; ikona: React.ElementType; exact?: boolean }
 
-function getNavLinks(vloga: string | null): NavItem[] {
+// Poleg osnovne vloge (vloga, iz user_metadata) racun lahko DODATNO drzi
+// tudi charter in/ali skipper profil (glej dashboard/postani-charter in
+// postani-skipper) - spodaj zdruzimo osnovne povezave s tistimi za vsako
+// dodatno drzano vlogo, brez podvajanja ze prisotnih (npr. "Moja plovila").
+function getNavLinks(vloga: string | null, imaCharterProfil: boolean, imaSkipperProfil: boolean): NavItem[] {
+  const osnovno = getOsnovneNavLinks(vloga)
+  const hrefi = new Set(osnovno.map(l => l.href))
+  const dodatno: NavItem[] = []
+  function dodaj(item: NavItem) {
+    if (!hrefi.has(item.href)) { dodatno.push(item); hrefi.add(item.href) }
+  }
+
+  if (imaCharterProfil) {
+    dodaj({ href: '/dashboard/moja-plovila', label: 'Moja plovila', ikona: Ship })
+    dodaj({ href: '/dashboard/dodaj-plovilo?tip=najem', label: 'Dodaj plovilo', ikona: PlusCircle })
+  }
+  if (imaSkipperProfil) {
+    dodaj({ href: '/dashboard/ocene', label: 'Moje ocene', ikona: Star })
+  }
+  if (imaCharterProfil || imaSkipperProfil) {
+    dodaj({ href: '/dashboard/profil', label: 'Moj profil', ikona: UserCircle })
+  }
+
+  const brezNastavitev = osnovno.filter(l => l.href !== '/dashboard/nastavitve')
+  const nastavitve = osnovno.filter(l => l.href === '/dashboard/nastavitve')
+  return [...brezNastavitev, ...dodatno, ...nastavitve]
+}
+
+function getOsnovneNavLinks(vloga: string | null): NavItem[] {
   switch (vloga) {
     case 'charter':
       return [
@@ -66,7 +94,7 @@ const vlogaLabele: Record<string, { label: string; barva: string }> = {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, vloga, demoMode, odjavaDemo, slikaUrl } = useAuth()
+  const { user, vloga, demoMode, odjavaDemo, slikaUrl, imaCharterProfil, imaSkipperProfil } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const [menuOdprt, setMenuOdprt] = useState(false)
@@ -86,7 +114,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/')
   }
 
-  const navLinks = getNavLinks(vloga)
+  const navLinks = getNavLinks(vloga, imaCharterProfil, imaSkipperProfil)
   const ime = user?.user_metadata?.ime ?? user?.email ?? 'Uporabnik'
   const inicialke = ime.split(' ').map((d: string) => d[0]).slice(0, 2).join('').toUpperCase()
   const vlogaInfo = vlogaLabele[vloga ?? 'prodajalec'] ?? vlogaLabele.prodajalec

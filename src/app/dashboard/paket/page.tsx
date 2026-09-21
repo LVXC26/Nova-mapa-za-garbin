@@ -52,10 +52,23 @@ const mockStatus = {
 }
 
 export default function DashboardPaketPage() {
-  const { vloga } = useAuth()
-  const paket = paketiBenefiti[vloga ?? 'prodajalec'] ?? paketiBenefiti.prodajalec
+  const { vloga, imaCharterProfil, imaSkipperProfil } = useAuth()
 
-  if (vloga === 'kupec') {
+  // Racun lahko drzi vec vlog hkrati (glej dashboard/postani-charter in
+  // postani-skipper) - prej se je paket vedno izbral samo po EDINI "vloga"
+  // (za "oba" je zato npr. znal manjkati charter paket), zdaj prikazemo
+  // po eno kartico za vsako dejansko drzano vlogo.
+  const vlogeKljuci = new Set<string>()
+  if (vloga === 'oba') { vlogeKljuci.add('prodajalec'); vlogeKljuci.add('charter') }
+  else if (vloga && vloga !== 'kupec') vlogeKljuci.add(vloga)
+  if (imaCharterProfil) vlogeKljuci.add('charter')
+  if (imaSkipperProfil) vlogeKljuci.add('skipper')
+  const paketi = Array.from(vlogeKljuci)
+    .map(k => paketiBenefiti[k])
+    .filter((p): p is (typeof paketiBenefiti)[string] => !!p)
+  if (paketi.length === 0) paketi.push(paketiBenefiti.prodajalec)
+
+  if (vloga === 'kupec' && !imaCharterProfil && !imaSkipperProfil) {
     return (
       <div className="p-8 max-w-2xl">
         <h1 className="font-display text-2xl font-bold text-[#0c2340] mb-1">Paket</h1>
@@ -85,8 +98,9 @@ export default function DashboardPaketPage() {
       <h1 className="font-display text-2xl font-bold text-[#0c2340] mb-1">Moj paket</h1>
       <p className="text-gray-500 text-sm mb-8">Status in pregled vašega paketa</p>
 
-      {/* Aktivni paket */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+      {/* Aktivni paket(i) — po ena kartica za vsako dejansko drzano vlogo */}
+      {paketi.map(paket => (
+      <div key={paket.naziv} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
         <div className="bg-[#0c2340] p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -126,6 +140,7 @@ export default function DashboardPaketPage() {
           </div>
         </div>
       </div>
+      ))}
 
       {/* Info boks */}
       <div className="bg-[#c9a84c]/10 border border-[#c9a84c]/30 rounded-2xl p-5 mb-6">
