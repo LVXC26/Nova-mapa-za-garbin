@@ -117,7 +117,7 @@ export default function HeroSearch({
 
           {/* Search card */}
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 shadow-2xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
               <RangeSlider
                 label="Cena"
                 min={0}
@@ -140,6 +140,17 @@ export default function HeroSearch({
                 format={(v) => `${v} m`}
                 light
               />
+              <RangeSlider
+                label="Število ležišč"
+                min={LEZISCA_MIN}
+                max={LEZISCA_MAX}
+                low={lezisca[0]}
+                high={lezisca[1]}
+                step={1}
+                onChange={(l, h) => setLezisca([l, h])}
+                format={(v) => `${v}`}
+                light
+              />
             </div>
 
             <div className="border-t border-white/10 pt-4">
@@ -153,36 +164,23 @@ export default function HeroSearch({
               </button>
 
               {razsirenFiltr && (
-                <div className="mb-4 space-y-4">
-                  <div>
-                    <p className="text-xs text-white/50 mb-2 uppercase tracking-wide font-medium">Stanje plovila</p>
-                    <div className="flex flex-wrap gap-2">
-                      {stanja.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => toggleStanje(s)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
-                            izbranaStanja.includes(s)
-                              ? 'bg-[#c9a84c] text-[#0c2340]'
-                              : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
+                <div className="mb-4">
+                  <p className="text-xs text-white/50 mb-2 uppercase tracking-wide font-medium">Stanje plovila</p>
+                  <div className="flex flex-wrap gap-2">
+                    {stanja.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => toggleStanje(s)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
+                          izbranaStanja.includes(s)
+                            ? 'bg-[#c9a84c] text-[#0c2340]'
+                            : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
                   </div>
-                  <RangeSlider
-                    label="Število ležišč"
-                    min={LEZISCA_MIN}
-                    max={LEZISCA_MAX}
-                    low={lezisca[0]}
-                    high={lezisca[1]}
-                    step={1}
-                    onChange={(l, h) => setLezisca([l, h])}
-                    format={(v) => `${v}`}
-                    light
-                  />
                 </div>
               )}
 
