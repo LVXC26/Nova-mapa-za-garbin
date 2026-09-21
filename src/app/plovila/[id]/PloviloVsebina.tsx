@@ -94,11 +94,14 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
       setNalaga(false)
       if (data) {
         // Pravo stevilo ogledov (namesto prejsnjega izmisljenega) — ne
-        // stejemo lastnikovih lastnih ogledov svojega oglasa. Namerno brez
-        // .catch/await: ce funkcija se ni migrirana ali klic spodleti, naj
-        // to tiho ne vpliva na prikaz strani.
+        // stejemo lastnikovih lastnih ogledov svojega oglasa. Klic MORA
+        // dobiti .then() — supabase-js "builder" objekti so leni in ne
+        // sprozijo dejanske HTTP zahteve, dokler jih nekdo ne "then-a"/awaita
+        // (brez tega se .rpc(...) samo zgradi in nikoli dejansko ne poslje).
+        // Namerno brez drugega (error) argumenta: ce funkcija se ni
+        // migrirana ali klic spodleti, naj to tiho ne vpliva na prikaz strani.
         if (!user || user.id !== data.user_id) {
-          supabase.rpc('povecaj_oglede', { p_id: id })
+          supabase.rpc('povecaj_oglede', { p_id: id }).then(() => {})
         }
         // Najprej naberemo širši nabor istega tipa/oglasa, nato jih uredimo
         // sami: promovirani vedno na vrh, znotraj tega pa po ceni najbližji
