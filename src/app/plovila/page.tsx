@@ -9,7 +9,7 @@ import Footer from '@/components/layout/Footer'
 import PloviloKartica from '@/components/plovila/PloviloKartica'
 import RangeSlider from '@/components/plovila/RangeSlider'
 import TipPlovilaIzbirnik from '@/components/plovila/TipPlovilaIzbirnik'
-import { CENA_VALUES, cenaValueToIdx, formatCena } from '@/lib/cenaSlider'
+import { CENA_VALUES, cenaValueToIdx, formatCena, parseCenaInput } from '@/lib/cenaSlider'
 import { usePrimerjava } from '@/context/PrimerjaContext'
 import { createClient } from '@/lib/supabase/client'
 import type { TipPlovila, Plovilo } from '@/types/database'
@@ -118,6 +118,10 @@ function PlovilaContent() {
           min={0} max={CENA_MAX_IDX} low={cenaIdx[0]} high={cenaIdx[1]} step={1}
           onChange={(l, h) => { setCenaIdx([l, h]); setStran(1) }}
           format={(idx) => formatCena(CENA_VALUES[idx])}
+          parse={(text) => {
+            const eur = parseCenaInput(text)
+            return eur === null ? null : cenaValueToIdx(eur)
+          }}
         />
       </div>
     </div>

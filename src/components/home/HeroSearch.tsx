@@ -6,7 +6,7 @@ import { Search, SlidersHorizontal, ChevronDown, ChevronUp, ShoppingBag, Anchor 
 import RangeSlider from '@/components/plovila/RangeSlider'
 import TipPlovilaIzbirnikTamno from '@/components/home/TipPlovilaIzbirnikTamno'
 import TipCharterjaIzbirnik from '@/components/charterji/TipCharterjaIzbirnik'
-import { CENA_VALUES, cenaValueToIdx, formatCena } from '@/lib/cenaSlider'
+import { CENA_VALUES, cenaValueToIdx, formatCena, parseCenaInput } from '@/lib/cenaSlider'
 import type { TipPlovila, TipCharterPlovila } from '@/types/database'
 
 const CENA_MAX_IDX = CENA_VALUES.length - 1
@@ -127,6 +127,10 @@ export default function HeroSearch({
                 step={1}
                 onChange={(l, h) => setCenaIdx([l, h])}
                 format={(idx) => formatCena(CENA_VALUES[idx])}
+                parse={(text) => {
+                  const eur = parseCenaInput(text)
+                  return eur === null ? null : cenaValueToIdx(eur)
+                }}
                 light
               />
               <RangeSlider

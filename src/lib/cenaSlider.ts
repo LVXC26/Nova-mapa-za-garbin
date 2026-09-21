@@ -23,3 +23,16 @@ export function formatCena(v: number): string {
   if (v >= 1_000) return `${(v / 1_000).toFixed(0)}k €`
   return `${v} €`
 }
+
+// Sprejme vnose kot "1M", "1.5m", "500k", "1000000", "500 000 €" ...
+export function parseCenaInput(text: string): number | null {
+  const t = text.trim().toLowerCase().replace(/€/g, '').replace(/\s/g, '')
+  if (!t) return null
+  const m = t.match(/^(\d+(?:[.,]\d+)?)(k|m)?$/)
+  if (!m) return null
+  let num = parseFloat(m[1].replace(',', '.'))
+  if (Number.isNaN(num)) return null
+  if (m[2] === 'k') num *= 1_000
+  if (m[2] === 'm') num *= 1_000_000
+  return Math.round(num)
+}
