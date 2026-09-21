@@ -462,8 +462,8 @@ export default function HomePage() {
                 <Link key={novica.id} href={`/novice/${novica.slug}`} className="group block">
                   <article className="h-full bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
                     <div className="h-44 bg-gradient-to-br from-[#0c2340] to-[#1e3a5f] relative flex items-center justify-center overflow-hidden">
-                      {unsplashNovice[novica.slug] ? (
-                        <img src={unsplashNovice[novica.slug]} alt={novica.naslov} className="absolute inset-0 w-full h-full object-cover" />
+                      {novica.slika_url || unsplashNovice[novica.slug] ? (
+                        <img src={novica.slika_url ?? unsplashNovice[novica.slug]} alt={novica.naslov} className="absolute inset-0 w-full h-full object-cover" />
                       ) : (
                         <span className="text-5xl opacity-20">{i === 0 ? '⛵' : i === 1 ? '📈' : '🔧'}</span>
                       )}
