@@ -89,11 +89,9 @@ function useFavorite(id: string) {
 interface Props {
   plovilo: Plovilo
   promoted?: boolean
-  prikaziOglede?: boolean
 }
 
-export default function PloviloKartica({ plovilo, promoted = false, prikaziOglede = false }: Props) {
-  const mockOgledi = prikaziOglede ? (parseInt(plovilo.id.replace(/\D/g, '') || '7') * 17 + 23) % 191 + 10 : null
+export default function PloviloKartica({ plovilo, promoted = false }: Props) {
   const { isFav, toggle } = useFavorite(plovilo.id)
   const { dodajVPrimerjavo, odstraniIzPrimerjave, jePrimerjavno, primerjava } = usePrimerjava()
   const vPrimerjavi = jePrimerjavno(plovilo.id)
@@ -196,13 +194,6 @@ export default function PloviloKartica({ plovilo, promoted = false, prikaziOgled
               </span>
             )}
           </div>
-          {prikaziOglede && mockOgledi !== null && (
-            <div className="absolute bottom-3 left-3">
-              <span className="text-xs font-medium text-white/80 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
-                👁 {mockOgledi} ogledov
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="p-4">

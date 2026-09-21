@@ -28,6 +28,7 @@ export interface Plovilo {
   cena_na_zahtevo?: boolean
   urgentno?: boolean
   urgentno_do?: string | null
+  ogledi?: number
   user_id: string | null
   created_at: string
   updated_at?: string
@@ -398,7 +399,9 @@ export interface Database {
         Relationships: []
       }
     }
-    Functions: Record<string, never>
+    Functions: {
+      povecaj_oglede: { Args: { p_id: string }; Returns: void }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

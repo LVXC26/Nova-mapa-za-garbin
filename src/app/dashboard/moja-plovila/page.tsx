@@ -14,10 +14,6 @@ const tipIkone: Record<string, string> = {
   jadrnica: '⛵', motorni: '🚤', gumenjak: '🛟', katamaran: '⛵', jet: '💨', drugo: '⚓',
 }
 
-function mockOglediZaId(id: string): number {
-  return (parseInt(id.replace(/\D/g, '') || '7') * 17 + 23) % 191 + 10
-}
-
 function MojaPlovilaContent() {
   const { user, vloga, demoMode } = useAuth()
   const searchParams = useSearchParams()
@@ -263,7 +259,7 @@ function MojaPlovilaContent() {
             {filtirana.map((plovilo) => {
               const jeProdano = prodana[plovilo.id] ?? false
               const jeUrgentno = jeUrgentnoAktivno(plovilo)
-              const ogledi = mockOglediZaId(plovilo.id)
+              const ogledi = plovilo.ogledi ?? 0
 
               return (
                 <div

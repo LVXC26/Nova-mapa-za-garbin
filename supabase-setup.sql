@@ -2055,3 +2055,40 @@ $$ language plpgsql security definer set search_path = public;
 -- ═══════════════════════════════════════════════════════════════════
 
 alter table novice add column if not exists avtor_user_id uuid references auth.users(id) on delete set null;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- PLOVILA: PRAVO ŠTEVILO OGLEDOV — "Moji oglasi" je doslej kazal
+-- izmišljeno število ogledov (mockOglediZaId, izpeljano iz ID-ja, ne iz
+-- dejanskih obiskov). Zdaj šteje dejanske oglede detajlne strani
+-- plovila (glej PloviloVsebina.tsx) prek spodnje funkcije.
+--
+-- povecaj_oglede je SECURITY DEFINER, ker mora obisk lahko zabeleži
+-- tudi anonimen (neprijavljen) obiskovalec, ki na "plovila" nima UPDATE
+-- pravice (RLS dovoljuje update samo lastniku) — funkcija namenoma
+-- dovoljuje SAMO ta ozek increment, nič drugega.
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table plovila add column if not exists ogledi integer not null default 0;
+
+create or replace function povecaj_oglede(p_id uuid)
+returns void as $$
+  update plovila set ogledi = ogledi + 1 where id = p_id and potrjeno = true;
+$$ language sql security definer set search_path = public;
+
+grant execute on function povecaj_oglede(uuid) to anon, authenticated;
+
+drop view if exists plovila_javno;
+
+create view plovila_javno
+with (security_invoker = false)
+as select
+  id, naziv, opis, cena, letnik, dolzina_m, postelje, max_oseb, tip, tip_oglasa, stanje, lokacija,
+  case when tip_oglasa = 'najem' then null else kontakt_email end as kontakt_email,
+  case when tip_oglasa = 'najem' then null else kontakt_tel end as kontakt_tel,
+  slike, model_3d_url, oprema, potrjeno, promoted, promoted_do, prodano,
+  cena_na_zahtevo, urgentno, urgentno_do, ogledi, user_id, created_at, updated_at
+from plovila
+where potrjeno = true;
+
+revoke insert, update, delete, truncate, references, trigger on plovila_javno from public, anon, authenticated;
+grant select on plovila_javno to anon, authenticated;
