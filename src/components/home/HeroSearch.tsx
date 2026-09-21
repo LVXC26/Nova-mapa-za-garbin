@@ -12,8 +12,11 @@ import type { TipPlovila, TipCharterPlovila } from '@/types/database'
 const CENA_MAX_IDX = CENA_VALUES.length - 1
 const DOLZINA_MIN = 3
 const DOLZINA_MAX = 150
+const LEZISCA_MIN = 0
+const LEZISCA_MAX = 20
 
 const stanja = ['odlično', 'dobro', 'potrebuje popravilo']
+const LEZISCA_OPCIJE = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20]
 
 type Nacin = 'kupi' | 'najemi'
 
@@ -30,6 +33,7 @@ export default function HeroSearch({
   const [tip, setTip] = useState<TipPlovila | ''>('')
   const [cenaIdx, setCenaIdx] = useState<[number, number]>([0, CENA_MAX_IDX])
   const [dolzina, setDolzina] = useState<[number, number]>([DOLZINA_MIN, DOLZINA_MAX])
+  const [lezisca, setLezisca] = useState<[number, number]>([LEZISCA_MIN, LEZISCA_MAX])
   const [razsirenFiltr, setRazsirenFiltr] = useState(false)
   const [izbranaStanja, setIzbranaStanja] = useState<string[]>([])
 
@@ -39,6 +43,7 @@ export default function HeroSearch({
   const [datumDo, setDatumDo] = useState('')
   const [tipNajema, setTipNajema] = useState<TipCharterPlovila | ''>('')
   const [steviloOseb, setSteviloOseb] = useState('')
+  const [leziscaNajem, setLeziscaNajem] = useState('')
 
   function poisciKupi() {
     const params = new URLSearchParams()
@@ -49,6 +54,8 @@ export default function HeroSearch({
     if (cenaMax < CENA_VALUES[CENA_MAX_IDX]) params.set('cena_max', String(cenaMax))
     if (dolzina[0] > DOLZINA_MIN) params.set('dolzina_min', String(dolzina[0]))
     if (dolzina[1] < DOLZINA_MAX) params.set('dolzina_max', String(dolzina[1]))
+    if (lezisca[0] > LEZISCA_MIN) params.set('lezisca_min', String(lezisca[0]))
+    if (lezisca[1] < LEZISCA_MAX) params.set('lezisca_max', String(lezisca[1]))
     if (izbranaStanja.length > 0) params.set('stanje', izbranaStanja.join(','))
     router.push(`/plovila${params.toString() ? `?${params}` : ''}`)
   }
@@ -59,6 +66,7 @@ export default function HeroSearch({
     // "jahta" je charter-specifičen tip brez ustreznice med tipi plovil na
     // /plovila (glej TipPlovila) — ga zato ne prenesemo naprej kot filter.
     if (tipNajema && tipNajema !== 'jahta') params.set('tip', tipNajema)
+    if (leziscaNajem) params.set('lezisca_min', leziscaNajem)
     // Destinacija/datum/število oseb: /plovila teh filtrov še ne podpira —
     // sledi kot naslednji korak, ko dodelava filtre za najem podrobneje.
     router.push(`/plovila?${params}`)
@@ -145,23 +153,36 @@ export default function HeroSearch({
               </button>
 
               {razsirenFiltr && (
-                <div className="mb-4">
-                  <p className="text-xs text-white/50 mb-2 uppercase tracking-wide font-medium">Stanje plovila</p>
-                  <div className="flex flex-wrap gap-2">
-                    {stanja.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => toggleStanje(s)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
-                          izbranaStanja.includes(s)
-                            ? 'bg-[#c9a84c] text-[#0c2340]'
-                            : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                <div className="mb-4 space-y-4">
+                  <div>
+                    <p className="text-xs text-white/50 mb-2 uppercase tracking-wide font-medium">Stanje plovila</p>
+                    <div className="flex flex-wrap gap-2">
+                      {stanja.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => toggleStanje(s)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
+                            izbranaStanja.includes(s)
+                              ? 'bg-[#c9a84c] text-[#0c2340]'
+                              : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/20'
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  <RangeSlider
+                    label="Število ležišč"
+                    min={LEZISCA_MIN}
+                    max={LEZISCA_MAX}
+                    low={lezisca[0]}
+                    high={lezisca[1]}
+                    step={1}
+                    onChange={(l, h) => setLezisca([l, h])}
+                    format={(v) => `${v}`}
+                    light
+                  />
                 </div>
               )}
 
@@ -208,6 +229,21 @@ export default function HeroSearch({
                   <option value="" className="text-gray-800">Koliko oseb?</option>
                   {[2, 4, 6, 8, 10, 15, 20, 30, 50].map(n => (
                     <option key={n} value={n} className="text-gray-800">{n} oseb</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Število ležišč */}
+              <div>
+                <label className="block text-xs font-semibold text-white/60 uppercase tracking-wide mb-2">Število ležišč</label>
+                <select
+                  value={leziscaNajem}
+                  onChange={(e) => setLeziscaNajem(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:border-[#c9a84c] transition-colors appearance-none"
+                >
+                  <option value="" className="text-gray-800">Vsaj koliko ležišč?</option>
+                  {LEZISCA_OPCIJE.map(n => (
+                    <option key={n} value={n} className="text-gray-800">vsaj {n} ležišč</option>
                   ))}
                 </select>
               </div>

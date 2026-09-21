@@ -16,6 +16,8 @@ const OSEBE_MIN = 1
 const OSEBE_MAX = 50
 const DOLZINA_MIN = 5
 const DOLZINA_MAX = 80
+const LEZISCA_MIN = 0
+const LEZISCA_MAX = 20
 
 export default function CharterjiPage() {
   const { user, imaCharterProfil } = useAuth()
@@ -23,19 +25,36 @@ export default function CharterjiPage() {
   const [tipPlovila, setTipPlovila] = useState<TipCharterPlovila | ''>('')
   const [osebe, setOsebe] = useState<[number, number]>([OSEBE_MIN, OSEBE_MAX])
   const [dolzina, setDolzina] = useState<[number, number]>([DOLZINA_MIN, DOLZINA_MAX])
+  const [lezisca, setLezisca] = useState<[number, number]>([LEZISCA_MIN, LEZISCA_MAX])
 
   // Sekundarni filter (podjetje/zasebnik) — ločen
   const [filter, setFilter] = useState<TipCharterja | 'vse'>('vse')
 
   const [realCharterji, setRealCharterji] = useState<Charter[]>([])
+  // Charterji sami nimajo podatka o št. ležišč (to je last. posameznega
+  // plovila, ne charter podjetja) — zato za ta filter preverimo njihovo
+  // floto najem-oglasov (plovila_javno, tip_oglasa='najem') po user_id.
+  const [leziscaPoUporabniku, setLeziscaPoUporabniku] = useState<Record<string, number[]>>({})
 
   useEffect(() => {
     const supabase = createClient()
     supabase.from('charterji_javno').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setRealCharterji(data) })
+    supabase.from('plovila_javno').select('user_id, postelje').eq('tip_oglasa', 'najem')
+      .then(({ data }) => {
+        if (!data) return
+        const map: Record<string, number[]> = {}
+        for (const p of data) {
+          if (!p.user_id || p.postelje === null) continue
+          map[p.user_id] = map[p.user_id] ? [...map[p.user_id], p.postelje] : [p.postelje]
+        }
+        setLeziscaPoUporabniku(map)
+      })
   }, [])
 
   const vsiCharterji = realCharterji
+
+  const leziscaAktiven = lezisca[0] > LEZISCA_MIN || lezisca[1] < LEZISCA_MAX
 
   const filtrirani = useMemo(() => {
     return vsiCharterji.filter((c) => {
@@ -46,21 +65,28 @@ export default function CharterjiPage() {
       // trajno izginili iz iskanja, ne glede na izbrane filtre.
       if (c.max_oseb > 0 && (c.max_oseb < osebe[0] || c.max_oseb > osebe[1])) return false
       if (c.max_dolzina_m > 0 && (c.max_dolzina_m < dolzina[0] || c.max_dolzina_m > dolzina[1])) return false
+      if (leziscaAktiven) {
+        const flota = c.user_id ? leziscaPoUporabniku[c.user_id] : undefined
+        const imaUstrezno = flota?.some((n) => n >= lezisca[0] && n <= lezisca[1])
+        if (!imaUstrezno) return false
+      }
       return true
     })
-  }, [vsiCharterji, filter, tipPlovila, osebe, dolzina])
+  }, [vsiCharterji, filter, tipPlovila, osebe, dolzina, lezisca, leziscaAktiven, leziscaPoUporabniku])
 
   const aktivniFilter =
     tipPlovila !== '' ||
     osebe[0] > OSEBE_MIN ||
     osebe[1] < OSEBE_MAX ||
     dolzina[0] > DOLZINA_MIN ||
-    dolzina[1] < DOLZINA_MAX
+    dolzina[1] < DOLZINA_MAX ||
+    leziscaAktiven
 
   function resetFiltre() {
     setTipPlovila('')
     setOsebe([OSEBE_MIN, OSEBE_MAX])
     setDolzina([DOLZINA_MIN, DOLZINA_MAX])
+    setLezisca([LEZISCA_MIN, LEZISCA_MAX])
   }
 
   return (
@@ -99,7 +125,7 @@ export default function CharterjiPage() {
               </div>
 
               {/* Sliderji */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <RangeSlider
                   label="Število oseb"
                   min={OSEBE_MIN}
@@ -120,6 +146,17 @@ export default function CharterjiPage() {
                   step={1}
                   onChange={(l, h) => setDolzina([l, h])}
                   format={(v) => `${v} m`}
+                  light
+                />
+                <RangeSlider
+                  label="Število ležišč"
+                  min={LEZISCA_MIN}
+                  max={LEZISCA_MAX}
+                  low={lezisca[0]}
+                  high={lezisca[1]}
+                  step={1}
+                  onChange={(l, h) => setLezisca([l, h])}
+                  format={(v) => `${v}`}
                   light
                 />
               </div>

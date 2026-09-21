@@ -37,12 +37,14 @@ function PlovilaContent() {
   const initCenaMin = cenaValueToIdx(Number(params.get('cena_min') ?? 0))
   const initCenaMax = cenaValueToIdx(Number(params.get('cena_max') ?? CENA_VALUES[CENA_MAX_IDX]))
   const initOglas = params.get('oglas') === 'najem' ? 'najem' : 'prodaja'
+  const initLeziscaMin = Number(params.get('lezisca_min') ?? LEZISCA_MIN)
+  const initLeziscaMax = Number(params.get('lezisca_max') ?? LEZISCA_MAX)
 
   const [oglas, setOglas] = useState<'prodaja' | 'najem'>(initOglas)
   const [tip, setTip] = useState<TipPlovila | 'vse'>(initTip)
   const [cenaIdx, setCenaIdx] = useState<[number, number]>([initCenaMin, initCenaMax])
   const [dolzina, setDolzina] = useState<[number, number]>([DOLZINA_MIN, DOLZINA_MAX])
-  const [lezisca, setLezisca] = useState<[number, number]>([LEZISCA_MIN, LEZISCA_MAX])
+  const [lezisca, setLezisca] = useState<[number, number]>([initLeziscaMin, initLeziscaMax])
   const [sortiranje, setSortiranje] = useState<SortKey>('privzeto')
   const [stran, setStran] = useState(1)
 
