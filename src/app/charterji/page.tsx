@@ -136,6 +136,7 @@ export default function CharterjiPage() {
                   step={1}
                   onChange={(l, h) => setOsebe([l, h])}
                   format={(v) => `${v} oseb`}
+                  parse={parsePlainNumber}
                   light
                 />
                 <RangeSlider
