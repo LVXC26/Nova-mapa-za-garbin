@@ -80,7 +80,7 @@ export default function HeroSearch({
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto">
       {/* Toggle Kupi / Najemi */}
       <div className="flex justify-center mb-6">
         <div className="inline-flex bg-white/10 border border-white/20 rounded-full p-1 gap-1">

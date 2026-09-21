@@ -43,42 +43,43 @@ export default function RangeSlider({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3 gap-2">
-        <span className={`text-sm font-semibold shrink-0 ${light ? 'text-white' : 'text-[#0c2340]'}`}>{label}</span>
-        {parse ? (
-          <div className="flex items-center gap-1">
-            <input
-              key={`low-${low}`}
-              type="text"
-              defaultValue={format(low)}
-              onBlur={(e) => commit(e.target.value, 'low')}
-              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-              className={`w-[4.5rem] px-1.5 py-0.5 rounded-md text-xs text-right tabular-nums bg-transparent border focus:outline-none ${
-                light
-                  ? 'border-white/20 text-white focus:border-[#c9a84c]'
-                  : 'border-gray-200 text-gray-600 focus:border-[#c9a84c]'
-              }`}
-            />
-            <span className={`text-xs shrink-0 ${light ? 'text-white/40' : 'text-gray-300'}`}>–</span>
-            <input
-              key={`high-${high}`}
-              type="text"
-              defaultValue={format(high)}
-              onBlur={(e) => commit(e.target.value, 'high')}
-              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-              className={`w-[4.5rem] px-1.5 py-0.5 rounded-md text-xs text-right tabular-nums bg-transparent border focus:outline-none ${
-                light
-                  ? 'border-white/20 text-white focus:border-[#c9a84c]'
-                  : 'border-gray-200 text-gray-600 focus:border-[#c9a84c]'
-              }`}
-            />
-          </div>
-        ) : (
+      <div className={`flex items-center justify-between gap-2 ${parse ? 'mb-2' : 'mb-3'}`}>
+        <span className={`text-sm font-semibold ${light ? 'text-white' : 'text-[#0c2340]'}`}>{label}</span>
+        {!parse && (
           <span className={`text-sm tabular-nums ${light ? 'text-white/70' : 'text-gray-400'}`}>
             {format(low)} – {format(high)}
           </span>
         )}
       </div>
+      {parse && (
+        <div className="flex items-center gap-1.5 mb-3">
+          <input
+            key={`low-${low}`}
+            type="text"
+            defaultValue={format(low)}
+            onBlur={(e) => commit(e.target.value, 'low')}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+            className={`min-w-0 flex-1 px-2 py-1 rounded-md text-xs text-center tabular-nums bg-transparent border focus:outline-none ${
+              light
+                ? 'border-white/20 text-white focus:border-[#c9a84c]'
+                : 'border-gray-200 text-gray-600 focus:border-[#c9a84c]'
+            }`}
+          />
+          <span className={`text-xs shrink-0 ${light ? 'text-white/40' : 'text-gray-300'}`}>–</span>
+          <input
+            key={`high-${high}`}
+            type="text"
+            defaultValue={format(high)}
+            onBlur={(e) => commit(e.target.value, 'high')}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+            className={`min-w-0 flex-1 px-2 py-1 rounded-md text-xs text-center tabular-nums bg-transparent border focus:outline-none ${
+              light
+                ? 'border-white/20 text-white focus:border-[#c9a84c]'
+                : 'border-gray-200 text-gray-600 focus:border-[#c9a84c]'
+            }`}
+          />
+        </div>
+      )}
       <div className="relative h-8 flex items-center select-none">
         {/* Track bg */}
         <div className={`absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full ${light ? 'bg-white/20' : 'bg-gray-200'}`}>
