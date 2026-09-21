@@ -10,6 +10,7 @@ import OglasniBanner from '@/components/oglasi/OglasniBanner'
 import { LocaleProvider } from '@/lib/i18n/LocaleContext'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://garbin.net'),
   title: 'Garbin — Vaš zaupanja vredni pomorski portal',
   description: 'Kupite ali prodajte jadrnico, motorni čoln ali gumenjak. Najdite charter in skiperja. Slovensko tržišče plovil.',
   openGraph: {

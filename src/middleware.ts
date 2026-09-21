@@ -1,8 +1,26 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const KANONICNI_HOST = 'garbin.net'
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+
+  // SEO: garbin.net je bil hkrati dosegljiv tudi na www.garbin.net IN na
+  // Vercelovem privzetem garbin-tau.vercel.app aliasu, oba brez preusmeritve
+  // — Google Search Console je zato javljal "Duplicate without user-selected
+  // canonical" (ista vsebina na 3 razlicnih domenah). Trajna (308)
+  // preusmeritev vsega na en sam kanonicni host to reši. localhost izvzet,
+  // da lokalni razvoj ne konca na produkciji.
+  const host = request.headers.get('host') ?? ''
+  if (host !== KANONICNI_HOST && !host.startsWith('localhost') && !host.startsWith('127.0.0.1')) {
+    const url = new URL(request.url)
+    url.protocol = 'https:'
+    url.host = KANONICNI_HOST
+    url.port = ''
+    return NextResponse.redirect(url, 308)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   // Admin zaščita — vedno preveri
