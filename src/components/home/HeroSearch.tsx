@@ -7,6 +7,7 @@ import RangeSlider from '@/components/plovila/RangeSlider'
 import TipPlovilaIzbirnikTamno from '@/components/home/TipPlovilaIzbirnikTamno'
 import TipCharterjaIzbirnik from '@/components/charterji/TipCharterjaIzbirnik'
 import { CENA_VALUES, cenaValueToIdx, formatCena, parseCenaInput } from '@/lib/cenaSlider'
+import { parsePlainNumber } from '@/lib/parseNumberInput'
 import type { TipPlovila, TipCharterPlovila } from '@/types/database'
 
 const CENA_MAX_IDX = CENA_VALUES.length - 1
@@ -142,6 +143,7 @@ export default function HeroSearch({
                 step={1}
                 onChange={(l, h) => setDolzina([l, h])}
                 format={(v) => `${v} m`}
+                parse={parsePlainNumber}
                 light
               />
               <RangeSlider
@@ -153,6 +155,7 @@ export default function HeroSearch({
                 step={1}
                 onChange={(l, h) => setLezisca([l, h])}
                 format={(v) => `${v}`}
+                parse={parsePlainNumber}
                 light
               />
             </div>

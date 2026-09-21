@@ -10,6 +10,7 @@ import PloviloKartica from '@/components/plovila/PloviloKartica'
 import RangeSlider from '@/components/plovila/RangeSlider'
 import TipPlovilaIzbirnik from '@/components/plovila/TipPlovilaIzbirnik'
 import { CENA_VALUES, cenaValueToIdx, formatCena, parseCenaInput } from '@/lib/cenaSlider'
+import { parsePlainNumber } from '@/lib/parseNumberInput'
 import { usePrimerjava } from '@/context/PrimerjaContext'
 import { createClient } from '@/lib/supabase/client'
 import type { TipPlovila, Plovilo } from '@/types/database'
@@ -138,6 +139,7 @@ function PlovilaContent() {
           min={DOLZINA_MIN} max={DOLZINA_MAX} low={dolzina[0]} high={dolzina[1]} step={1}
           onChange={(l, h) => { setDolzina([l, h]); setStran(1) }}
           format={(v) => `${v} m`}
+          parse={parsePlainNumber}
         />
       </div>
     </div>
@@ -154,6 +156,7 @@ function PlovilaContent() {
           min={LEZISCA_MIN} max={LEZISCA_MAX} low={lezisca[0]} high={lezisca[1]} step={1}
           onChange={(l, h) => { setLezisca([l, h]); setStran(1) }}
           format={(v) => `${v}`}
+          parse={parsePlainNumber}
         />
       </div>
     </div>

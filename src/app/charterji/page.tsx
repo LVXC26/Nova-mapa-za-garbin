@@ -9,6 +9,7 @@ import CharterKartica from '@/components/charterji/CharterKartica'
 import TipCharterjaIzbirnik from '@/components/charterji/TipCharterjaIzbirnik'
 import RangeSlider from '@/components/plovila/RangeSlider'
 import { createClient } from '@/lib/supabase/client'
+import { parsePlainNumber } from '@/lib/parseNumberInput'
 import { useAuth } from '@/components/providers/AuthProvider'
 import type { TipCharterja, TipCharterPlovila, Charter } from '@/types/database'
 
@@ -146,6 +147,7 @@ export default function CharterjiPage() {
                   step={1}
                   onChange={(l, h) => setDolzina([l, h])}
                   format={(v) => `${v} m`}
+                  parse={parsePlainNumber}
                   light
                 />
                 <RangeSlider
@@ -157,6 +159,7 @@ export default function CharterjiPage() {
                   step={1}
                   onChange={(l, h) => setLezisca([l, h])}
                   format={(v) => `${v}`}
+                  parse={parsePlainNumber}
                   light
                 />
               </div>
