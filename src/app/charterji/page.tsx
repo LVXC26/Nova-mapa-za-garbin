@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Building2, User, CheckCircle, Send, Ship, Search, X } from 'lucide-react'
+import Link from 'next/link'
+import { Ship, Search, X, ArrowRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import CharterKartica from '@/components/charterji/CharterKartica'
 import TipCharterjaIzbirnik from '@/components/charterji/TipCharterjaIzbirnik'
 import RangeSlider from '@/components/plovila/RangeSlider'
 import { createClient } from '@/lib/supabase/client'
-import { oddajPovprasevanje } from '@/app/actions/povprasevanje'
 import type { TipCharterja, TipCharterPlovila, Charter } from '@/types/database'
 
 const OSEBE_MIN = 1
@@ -24,18 +24,6 @@ export default function CharterjiPage() {
 
   // Sekundarni filter (podjetje/zasebnik) — ločen
   const [filter, setFilter] = useState<TipCharterja | 'vse'>('vse')
-
-  // Obrazec
-  const [poslano, setPoslano] = useState(false)
-  const [posilja, setPosilja] = useState(false)
-  const [obrazecNapaka, setObrazecNapaka] = useState('')
-  const [form, setForm] = useState({
-    naziv: '',
-    tip: 'podjetje' as TipCharterja,
-    email: '',
-    tel: '',
-    opis: '',
-  })
 
   const [realCharterji, setRealCharterji] = useState<Charter[]>([])
 
@@ -71,26 +59,6 @@ export default function CharterjiPage() {
     setTipPlovila('')
     setOsebe([OSEBE_MIN, OSEBE_MAX])
     setDolzina([DOLZINA_MIN, DOLZINA_MAX])
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setObrazecNapaka('')
-    setPosilja(true)
-
-    const rezultat = await oddajPovprasevanje({
-      tip: 'prijava-charter',
-      target_id: form.tip,
-      ime: form.naziv,
-      email: form.email,
-      telefon: form.tel,
-      termin: '',
-      sporocilo: form.opis,
-    })
-
-    setPosilja(false)
-    if (!rezultat.uspeh) { setObrazecNapaka(rezultat.napaka ?? 'Napaka pri pošiljanju prijave. Poskusite znova.'); return }
-    setPoslano(true)
   }
 
   return (
@@ -220,21 +188,23 @@ export default function CharterjiPage() {
           </div>
         </section>
 
-        {/* PRIJAVNI OBRAZEC */}
+        {/* REGISTRACIJSKI CTA — prej dolg "prijavni obrazec" (posilje se
+            samo povprasevanje, ki ga mora nekdo rocno obdelati brez
+            kakrsnegakoli admin orodja za to), ceprav /registracija ze
+            ponuja pravo, takojsnjo samopostrezno registracijo (izbira
+            vloge "Charter" -> onboarding -> ziv profil brez cakanja).
+            Enak popravek kot na /skiperji. */}
         <section className="py-20 bg-white" id="prijava">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#c9a84c]/15 text-[#9a7a2e] text-sm font-medium mb-4">
-                <Ship className="w-4 h-4" /> Postanite ponudnik
-              </div>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340] mb-3">
-                Prijavite se kot charter
-              </h2>
-              <p className="text-gray-500 text-lg">
-                Bodisi podjetje ali zasebnik — vaša plovila bodo vidna tisoče potencialnim najemnikom.
-              </p>
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#c9a84c]/15 text-[#9a7a2e] text-sm font-medium mb-4">
+              <Ship className="w-4 h-4" /> Postanite ponudnik
             </div>
-
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340] mb-3">
+              Prijavite se kot charter
+            </h2>
+            <p className="text-gray-500 text-lg mb-8">
+              Bodisi podjetje ali zasebnik — vaša plovila bodo vidna tisoče potencialnim najemnikom, registracija traja manj kot minuto.
+            </p>
             <div className="grid grid-cols-3 gap-4 mb-10">
               {[
                 { ikona: '📋', besedilo: 'Brezplačna prijava' },
@@ -247,104 +217,12 @@ export default function CharterjiPage() {
                 </div>
               ))}
             </div>
-
-            {poslano ? (
-              <div className="flex flex-col items-center gap-4 py-14 text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-emerald-500" />
-                </div>
-                <h3 className="font-display text-2xl font-semibold text-[#0c2340]">Prijava poslana!</h3>
-                <p className="text-gray-500">Kontaktirali vas bomo v 12 urah.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="bg-[#f8fafc] rounded-2xl border border-gray-100 p-8 space-y-5">
-                {obrazecNapaka && (
-                  <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{obrazecNapaka}</p>
-                )}
-                <div>
-                  <label className="block text-sm font-semibold text-[#0c2340] mb-2">Sem</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {([
-                      { vrednost: 'podjetje', label: 'Podjetje / agencija', ikona: Building2 },
-                      { vrednost: 'zasebnik', label: 'Zasebnik', ikona: User },
-                    ] as { vrednost: TipCharterja; label: string; ikona: React.ElementType }[]).map(({ vrednost, label, ikona: Ikona }) => (
-                      <button
-                        key={vrednost}
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, tip: vrednost }))}
-                        className={`flex items-center gap-3 p-4 rounded-xl border-2 text-sm font-medium transition-all ${
-                          form.tip === vrednost
-                            ? 'border-[#c9a84c] bg-[#c9a84c]/10 text-[#0c2340]'
-                            : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                        }`}
-                      >
-                        <Ikona className="w-4 h-4" />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">
-                    {form.tip === 'podjetje' ? 'Naziv podjetja' : 'Ime in priimek'}
-                  </label>
-                  <input
-                    required
-                    value={form.naziv}
-                    onChange={(e) => setForm((f) => ({ ...f, naziv: e.target.value }))}
-                    placeholder={form.tip === 'podjetje' ? 'Adriatic Charter d.o.o.' : 'Janez Novak'}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">E-mail</label>
-                    <input
-                      required
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                      placeholder="info@primer.si"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Telefon</label>
-                    <input
-                      required
-                      type="tel"
-                      value={form.tel}
-                      onChange={(e) => setForm((f) => ({ ...f, tel: e.target.value }))}
-                      placeholder="+386 41 ..."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Kratka predstavitev</label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={form.opis}
-                    onChange={(e) => setForm((f) => ({ ...f, opis: e.target.value }))}
-                    placeholder="Opišite svoja plovila, lokacijo in pogoje najema..."
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white resize-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={posilja}
-                  className="w-full flex items-center justify-center gap-2 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.01] shadow-lg shadow-[#c9a84c]/20"
-                >
-                  <Send className="w-4 h-4" />
-                  {posilja ? 'Pošiljam...' : 'Pošlji prijavo'}
-                </button>
-              </form>
-            )}
+            <Link
+              href="/registracija"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.02] shadow-lg shadow-[#c9a84c]/20"
+            >
+              Ustvari brezplačen profil <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </section>
 

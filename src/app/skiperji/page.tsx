@@ -2,12 +2,11 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { Star, MapPin, CheckCircle, Send, Compass, Search, X, ChevronDown } from 'lucide-react'
+import { Star, MapPin, CheckCircle, Compass, Search, X, ChevronDown, ArrowRight } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { unsplashSkipperji } from '@/data/mock'
 import { createClient } from '@/lib/supabase/client'
-import { oddajPovprasevanje } from '@/app/actions/povprasevanje'
 import type { Skipper } from '@/types/database'
 
 const lokacije = ['Vse', 'Portorož', 'Izola', 'Koper', 'Piran', 'Split']
@@ -22,15 +21,6 @@ export default function SkiperjiPage() {
   const [minIzkusnje, setMinIzkusnje] = useState(0)
   const [tipSkiper, setTipSkiper] = useState<TipSkiper>('vse')
   const [prikaziFiltre, setPrikaziFiltre] = useState(false)
-
-  // Registracijski obrazec
-  const [poslano, setPoslano] = useState(false)
-  const [posilja, setPosilja] = useState(false)
-  const [obrazecNapaka, setObrazecNapaka] = useState('')
-  const [forma, setForma] = useState({
-    ime: '', email: '', tel: '', lokacija: '',
-    izkusnje: '', certifikati: '', plovila: '', cena: '', opis: '',
-  })
 
   const [realSkiperji, setRealSkiperji] = useState<Skipper[]>([])
   const [profilneSlike, setProfilneSlike] = useState<Record<string, string>>({})
@@ -69,34 +59,6 @@ export default function SkiperjiPage() {
 
   function toggleJezik(j: string) {
     setJeziki(prev => prev.includes(j) ? prev.filter(x => x !== j) : [...prev, j])
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setObrazecNapaka('')
-    setPosilja(true)
-
-    const sporocilo = [
-      forma.opis,
-      forma.izkusnje && `Leta izkušenj: ${forma.izkusnje}`,
-      forma.certifikati && `Certifikati: ${forma.certifikati}`,
-      forma.plovila && `Plovila: ${forma.plovila}`,
-      forma.cena && `Cena/dan: ${forma.cena} €`,
-    ].filter(Boolean).join('\n')
-
-    const rezultat = await oddajPovprasevanje({
-      tip: 'prijava-skipper',
-      target_id: forma.lokacija || 'skipper',
-      ime: forma.ime,
-      email: forma.email,
-      telefon: forma.tel,
-      termin: '',
-      sporocilo,
-    })
-
-    setPosilja(false)
-    if (!rezultat.uspeh) { setObrazecNapaka(rezultat.napaka ?? 'Napaka pri pošiljanju vloge. Poskusite znova.'); return }
-    setPoslano(true)
   }
 
   return (
@@ -305,21 +267,22 @@ export default function SkiperjiPage() {
           </div>
         </section>
 
-        {/* REGISTRACIJSKI CTA + FORMA */}
+        {/* REGISTRACIJSKI CTA — prej dolg obrazec ("vloga", ki jo mora nekdo
+            rocno obdelati brez kakrsnegakoli admin orodja za to), ceprav
+            /registracija ze ponuja pravo, takojsnjo samopostrezno
+            registracijo (izbira vloge "Skipper" -> onboarding -> ziv profil
+            brez cakanja). Enak popravek kot na /charterji. */}
         <section className="py-20 bg-white" id="registracija">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#0c2340]/10 text-[#0c2340] text-sm font-medium mb-4">
-                <Compass className="w-4 h-4" /> Postanite skipper
-              </div>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340] mb-3">
-                Ustvarite skipper profil
-              </h2>
-              <p className="text-gray-500 text-lg">
-                Povežite se s strankami, ki iščejo izkušenega vodnika za plovbo po Jadranu.
-              </p>
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#0c2340]/10 text-[#0c2340] text-sm font-medium mb-4">
+              <Compass className="w-4 h-4" /> Postanite skipper
             </div>
-
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#0c2340] mb-3">
+              Ustvarite skipper profil
+            </h2>
+            <p className="text-gray-500 text-lg mb-8">
+              Povežite se s strankami, ki iščejo izkušenega vodnika za plovbo po Jadranu — registracija traja manj kot minuto.
+            </p>
             <div className="grid grid-cols-3 gap-4 mb-10">
               {[
                 { ikona: '👤', besedilo: 'Brezplačen profil' },
@@ -332,81 +295,12 @@ export default function SkiperjiPage() {
                 </div>
               ))}
             </div>
-
-            {poslano ? (
-              <div className="flex flex-col items-center gap-4 py-14 text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-emerald-500" />
-                </div>
-                <h3 className="font-display text-2xl font-semibold text-[#0c2340]">Vloga poslana!</h3>
-                <p className="text-gray-500">Kontaktirali vas bomo v 12 urah.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="bg-[#f8fafc] rounded-2xl border border-gray-100 p-8 space-y-4">
-                {obrazecNapaka && (
-                  <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{obrazecNapaka}</p>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Ime in priimek</label>
-                    <input required value={forma.ime} onChange={e => setForma(f => ({...f, ime: e.target.value}))}
-                      placeholder="Janez Novak"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">E-mail</label>
-                    <input required type="email" value={forma.email} onChange={e => setForma(f => ({...f, email: e.target.value}))}
-                      placeholder="janez@primer.si"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Telefon</label>
-                    <input required type="tel" value={forma.tel} onChange={e => setForma(f => ({...f, tel: e.target.value}))}
-                      placeholder="+386 41 ..."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Lokacija</label>
-                    <input required value={forma.lokacija} onChange={e => setForma(f => ({...f, lokacija: e.target.value}))}
-                      placeholder="Portorož"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Leta izkušenj</label>
-                    <input required type="number" min="1" value={forma.izkusnje} onChange={e => setForma(f => ({...f, izkusnje: e.target.value}))}
-                      placeholder="10"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Cena / dan (€)</label>
-                    <input required type="number" min="0" value={forma.cena} onChange={e => setForma(f => ({...f, cena: e.target.value}))}
-                      placeholder="150"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Certifikati</label>
-                  <input required value={forma.certifikati} onChange={e => setForma(f => ({...f, certifikati: e.target.value}))}
-                    placeholder="ICC, VHF SRC, RYA Day Skipper..."
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Plovila ki jih vodite</label>
-                  <input required value={forma.plovila} onChange={e => setForma(f => ({...f, plovila: e.target.value}))}
-                    placeholder="jadrnica, motorni čoln, katamaran..."
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#0c2340] mb-1.5">Kratka predstavitev</label>
-                  <textarea required rows={3} value={forma.opis} onChange={e => setForma(f => ({...f, opis: e.target.value}))}
-                    placeholder="Opišite vaše izkušnje, specializacijo in območje plovbe..."
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#c9a84c] bg-white resize-none" />
-                </div>
-                <button type="submit" disabled={posilja} className="w-full flex items-center justify-center gap-2 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] disabled:opacity-60 text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.01]">
-                  <Send className="w-4 h-4" /> {posilja ? 'Pošiljam...' : 'Pošlji vlogo'}
-                </button>
-              </form>
-            )}
+            <Link
+              href="/registracija"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold rounded-full transition-all hover:scale-[1.02]"
+            >
+              Ustvari brezplačen profil <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </section>
 
