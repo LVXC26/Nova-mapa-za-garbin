@@ -32,7 +32,9 @@ const csp = [
   // cdn.jsdelivr.net: Tawk.to od tam naloži "emojione" knjižnico za izris
   // emojijev v sporočilih (npr. 👋 v pozdravnem sporočilu) — brez tega se
   // sporočilo z emojijem sploh ne izpiše.
-  `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to https://cdn.jsdelivr.net${jeRazvoj ? " 'unsafe-eval'" : ''}`,
+  // va.vercel-scripts.com: Vercel Web Analytics (@vercel/analytics) — brez
+  // tega CSP tiho blokira nalaganje njegovega skripta.
+  `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://embed.tawk.to https://cdn.jsdelivr.net https://va.vercel-scripts.com${jeRazvoj ? " 'unsafe-eval'" : ''}`,
   // Tawk.to widget nalaga svoje CSS datoteke neposredno v strani (ne samo
   // znotraj svojega iframe-a) — brez https://*.tawk.to tu je bil gumb za
   // klepet viden, a povsem nestiliziran/pokvarjen.
@@ -54,7 +56,10 @@ const csp = [
   // supabase.channel(...).on('postgres_changes', ...) — WebSocket, ločena
   // shema od https:, CSP ju obravnava kot različna vira) — brez tega je bila
   // chat stran tiho pokvarjena. Enako wss://*.tawk.to za widget podpore.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://*.tawk.to wss://*.tawk.to",
+  // vitals.vercel-insights.com: kamor @vercel/analytics posilja dejanske
+  // ogledih strani (script-src zgoraj dovoli samo nalaganje skripta, ne pa
+  // tudi njegovih fetch/beacon klicev).
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://*.tawk.to wss://*.tawk.to https://va.vercel-scripts.com https://vitals.vercel-insights.com",
   // worker-src: heic2any (pretvorba iPhonovih .heic/.heif slik v JPEG pred
   // nalaganjem, glej stisniSliko.ts) svoj WASM dekoder (libheif) požene v
   // Web Workerju iz blob: URL-ja — brez te vrstice CSP privzeto pade nazaj

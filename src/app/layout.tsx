@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { AuthProvider } from '@/components/providers/AuthProvider'
 import { PrimerjaProvider } from '@/context/PrimerjaContext'
@@ -58,6 +59,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <AnalyticsScripts />
             {/* Živi klepet za podporo — naložen vedno, glej TawkChat.tsx zakaj ni vezan na GDPR soglasje */}
             <TawkChat />
+            {/* Vercel Web Analytics — brez piškotkov in brez osebnih podatkov
+                (samo anonimni/agregirani ogledi strani), zato ni vezano na
+                GDPR soglasje kot GA4/Meta Pixel zgoraj (glej AnalyticsScripts.tsx). */}
+            <Analytics />
           </LocaleProvider>
           </PrimerjaProvider>
         </AuthProvider>
