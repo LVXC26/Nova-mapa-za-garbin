@@ -157,7 +157,9 @@ export default function HomePage() {
             barvo/paddingom, ki bi sicer pustil prazno vrzel na strani. */}
         <OglasniBanner pozicija="Homepage top" className="block w-full max-w-4xl h-[90px] sm:h-[120px] mx-auto my-6 px-4" />
 
-        {/* STATS */}
+        {/* STATS — zacasno skrito (uporabnik: "niso realni podatki"), dokler
+            ne bomo imeli pravih stevilk. Koda ostane spodaj, da jo je lahko
+            ponovno vklopiti, ko bodo podatki resnicni.
         <section className="py-10 bg-[#f8fafc]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -176,6 +178,7 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        */}
 
         {/* PLOVILA ZA PRODAJO / NAJEM — sledi hero preklopu Kupi/Najemi */}
         <section className="py-20 bg-[#f8fafc]">
