@@ -502,11 +502,18 @@ export default function SkipperVsebina({ params }: { params: Promise<{ id: strin
 
               </div>
 
-              {/* DESNA — kontakt sticky */}
+              {/* DESNA — kontakt */}
               <div className="space-y-4">
 
-                {/* Kontakt kartica */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-20">
+                {/* Kontakt kartica — namenoma NE sticky (enak popravek kot na
+                    /plovila/[id], glej opombo tam): kartica je visoka (cel
+                    obrazec s povprasevanjem), zato je pri "sticky" ostajala
+                    prilepljena na vrh skozi skoraj cel scroll te kolone in
+                    je s tem vizualno prekrivala "Statistike"/"Certifikati"/
+                    oglasni banner, ki so za njo - ti so bili zato prakticno
+                    nedosegljivi (samo par pikslov roba je bilo videti tik
+                    pred nogo strani). */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                   {/* Cena — javno "po dogovoru", admin vidi tudi pravi znesek */}
                   <div className="mb-5">
                     <p className="text-2xl font-display font-bold text-[#0c2340]">Cena po dogovoru</p>

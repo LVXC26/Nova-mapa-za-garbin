@@ -400,8 +400,13 @@ export default function CharterVsebina({ params }: { params: Promise<{ id: strin
 
               {/* DESNA STRAN — kontakt */}
               <div className="space-y-4">
-                {/* Kontaktna kartica */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-20">
+                {/* Kontaktna kartica — namenoma NE sticky (enak popravek kot
+                    na /plovila/[id] in /skiperji/[id], glej opombo tam):
+                    visoka kartica je pri "sticky" vizualno prekrivala
+                    "Tip plovil"/"Kapacitete"/oglasni banner za njo, zaradi
+                    cesar so bili prakticno nedosegljivi pri navadnem
+                    skrolanju. */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                   <h3 className="font-semibold text-[#0c2340] mb-1">Pošlji povpraševanje</h3>
                   {/* Kontakt charterja (telefon/e-mail) se namenoma ne razkriva
                       neposredno — vsako povpraševanje gre prek Garbin ekipe,
