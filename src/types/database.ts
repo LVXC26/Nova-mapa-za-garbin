@@ -191,6 +191,9 @@ export interface Povprasevanje {
   telefon: string | null
   termin: string | null
   sporocilo: string
+  // Pravi racun posiljatelja — obvezen za tip 'charter'/'skipper' (glej
+  // povprasevanje.ts), null za ostale tipe (tam prijava ni zahtevana).
+  sender_user_id?: string | null
   created_at: string
 }
 

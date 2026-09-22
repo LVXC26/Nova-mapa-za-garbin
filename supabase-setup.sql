@@ -2092,3 +2092,16 @@ where potrjeno = true;
 
 revoke insert, update, delete, truncate, references, trigger on plovila_javno from public, anon, authenticated;
 grant select on plovila_javno to anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- POVPRASEVANJA: PRAVI RACUN POSILJATELJA — direktorjevo navodilo: za
+-- charter/skipper povprasevanja mora biti razviden pravi uporabniski
+-- racun posiljatelja (ne samo prosto vpisano ime/email), povezan s
+-- ciljnim charterjem/skiperjem ("prodajalcem"). Ker gre pri charter/
+-- skipper tipih zdaj (glej povprasevanje.ts) za obvezno prijavljene
+-- uporabnike, je sender_user_id za te vrstice vedno izpolnjen; za
+-- ostale tipe (plovilo/kontakt/prijava-*) ostane lahko null, saj tam
+-- prijava ni bila zahtevana.
+-- ═══════════════════════════════════════════════════════════════════
+
+alter table povprasevanja add column if not exists sender_user_id uuid references auth.users(id) on delete set null;

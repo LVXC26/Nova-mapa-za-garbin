@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Send, CheckCircle, AlertCircle, UserCircle2, CalendarDays } from 'lucide-react'
+import Link from 'next/link'
+import { Send, CheckCircle, AlertCircle, UserCircle2, CalendarDays, LogIn } from 'lucide-react'
 import { oddajPovprasevanje, type PovprasevanjeInput } from '@/app/actions/povprasevanje'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -71,6 +72,31 @@ export default function PovprasevanjeForma({ tip, targetId, terminZunaj }: Props
         setStanje('napaka')
       }
     })
+  }
+
+  // Direktorjevo navodilo: za povprasevanja charterju/skiperju mora biti
+  // razviden pravi racun posiljatelja (ne samo prosto vpisano ime/email) -
+  // zato je za ta dva tipa prijava zdaj obvezna (glej tudi enako preverbo
+  // na streznikuju v povprasevanje.ts). "plovilo"/"kontakt"/prijava-*
+  // ostanejo dostopni brez prijave.
+  if ((tip === 'charter' || tip === 'skipper') && !user) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 text-center">
+        <div className="w-12 h-12 rounded-full bg-[#0c2340]/5 flex items-center justify-center">
+          <LogIn className="w-5 h-5 text-[#0c2340]" />
+        </div>
+        <p className="font-semibold text-[#0c2340] text-sm">Za pošiljanje povpraševanja se prijavite</p>
+        <p className="text-xs text-gray-500 max-w-xs">
+          Tako lahko {tip === 'charter' ? 'charter' : 'skiper'} vidi, da povpraševanje res prihaja od vas.
+        </p>
+        <Link
+          href="/prijava"
+          className="mt-1 inline-flex items-center gap-2 px-5 py-2.5 bg-[#c9a84c] hover:bg-[#e8c76d] text-[#0c2340] font-semibold text-sm rounded-full transition-all hover:scale-[1.02]"
+        >
+          <LogIn className="w-4 h-4" /> Prijava
+        </Link>
+      </div>
+    )
   }
 
   if (stanje === 'poslano') {

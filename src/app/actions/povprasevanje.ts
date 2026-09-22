@@ -30,6 +30,18 @@ export type PovprasevanjeInput = {
 export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ uspeh: boolean; napaka?: string }> {
   const supabase = await createClient()
 
+  // Direktorjevo navodilo: za povprasevanja charterju/skiperju mora biti
+  // razviden pravi racun posiljatelja, povezan s ciljnim "prodajalcem"
+  // (charter/skipper). sender_user_id beremo iz seje na streznikuju (ne
+  // iz podatkov, ki jih poslje klient) - tako ga ni mogoce ponarediti.
+  // Za ta dva tipa je prijava zdaj obvezna (glej tudi PovprasevanjeForma.tsx,
+  // ki neprijavljenemu uporabniku obrazca sploh ne pokaze) - ce kdo vseeno
+  // poskusi mimo obrazca (npr. neposreden klic akcije), ga tu zavrnemo.
+  const { data: { user } } = await supabase.auth.getUser()
+  if ((data.tip === 'charter' || data.tip === 'skipper') && !user) {
+    return { uspeh: false, napaka: 'Za pošiljanje povpraševanja se morate prijaviti.' }
+  }
+
   const insertData: {
     tip: 'charter' | 'skipper' | 'plovilo' | 'kontakt' | 'prijava-charter' | 'prijava-skipper'
     target_id: string
@@ -38,6 +50,7 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
     telefon: string | null
     termin: string | null
     sporocilo: string
+    sender_user_id: string | null
   } = {
     tip: data.tip,
     target_id: data.target_id,
@@ -46,6 +59,7 @@ export async function oddajPovprasevanje(data: PovprasevanjeInput): Promise<{ us
     telefon: data.telefon || null,
     termin: data.termin || null,
     sporocilo: data.sporocilo,
+    sender_user_id: user?.id ?? null,
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
