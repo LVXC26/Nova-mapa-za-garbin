@@ -9,7 +9,7 @@ import type { Banner } from '@/types/database'
 
 const MAX_VELIKOST_MB = 30
 
-const pozicije = ['Homepage top', 'Homepage mid', 'Homepage bottom', 'Plovila sidebar', 'Charterji sidebar', 'Skiperji sidebar', 'Detail stran', 'Rezervni deli detail', 'Stranski pas levo', 'Stranski pas desno']
+const pozicije = ['Homepage top', 'Homepage mid', 'Homepage promocije', 'Homepage bottom', 'Plovila sidebar', 'Plovila glavna', 'Charterji sidebar', 'Skiperji sidebar', 'Detail stran', 'Rezervni deli detail', 'Stranski pas levo', 'Stranski pas desno']
 
 const PRAZNA_FORMA = { naziv: '', pozicija: pozicije[0], dimenzije: '', slika_url: '', link_url: '' }
 

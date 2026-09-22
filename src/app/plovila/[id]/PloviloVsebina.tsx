@@ -382,13 +382,11 @@ export default function PloviloVsebina({ params }: { params: Promise<{ id: strin
                   />
                 )}
 
-                {/* Oglaševalski banner placeholder */}
-                <div className="w-full h-[90px] bg-[#0c2340] rounded-2xl flex items-center justify-center border border-[#1e3a5f] relative overflow-hidden">
-                  <div className="text-center">
-                    <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">728 × 90</p>
-                    <p className="text-white/50 text-sm">Oglaševalski prostor</p>
-                  </div>
-                </div>
+                {/* Prej statican placeholder, ki ni nikoli bral iz baze -
+                    glej isto opombo pri "Plovila sidebar" nizje. Locena
+                    pozicija od "Plovila sidebar" (ta je v glavnem stolpcu,
+                    ne v desnem stranskem). */}
+                <OglasniBanner pozicija="Plovila glavna" className="w-full h-[90px] rounded-2xl" />
 
                 {/* Podobna plovila */}
                 {podobna.length > 0 && (

@@ -410,18 +410,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* OGLAŠEVALSKI BANNER PLACEHOLDER */}
-        <section className="py-8 bg-[#f8fafc]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="w-full h-[90px] bg-[#0c2340] rounded-2xl flex items-center justify-center border border-[#1e3a5f] relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0c2340] via-[#1e3a5f] to-[#0c2340] opacity-50" />
-              <div className="relative z-10 text-center">
-                <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">728 × 90</p>
-                <p className="text-white/50 text-sm font-medium">{t('Oglaševalski prostor')} · matej@lumavx.com</p>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Prej statican "728x90 Oglasevalski prostor" placeholder, ki
+            (enako kot je bilo prej za vse ostale) ni nikoli bral iz baze -
+            zdaj pravi OglasniBanner, glej isto opombo pri "Homepage top". */}
+        <OglasniBanner pozicija="Homepage promocije" className="block w-full max-w-4xl h-[90px] sm:h-[120px] mx-auto my-6 px-4" />
 
         {/* FEATURED CHARTERJI */}
         <section className="py-20 bg-white">
