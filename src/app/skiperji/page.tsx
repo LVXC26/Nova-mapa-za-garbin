@@ -32,7 +32,10 @@ export default function SkiperjiPage() {
     // skiperji_javno — javni pogled brez cena_dan (osnovna tabela skiperji
     // je omejena na lastnika + admina, glej supabase-setup.sql). aktiven=true
     // — neaktivni skiperji (daljša odsotnost) se ne prikažejo.
-    supabase.from('skiperji_javno').select('*').eq('aktiven', true).order('created_at', { ascending: false })
+    // Direktorjevo navodilo: bolje ocenjeni naj se prikazejo visje od slabse
+    // ocenjenih. Neocenjeni (ocena 0) ostanejo med sabo urejeni po datumu
+    // (novejsi prej), da jih to ne potisne trajno na dno drug proti drugemu.
+    supabase.from('skiperji_javno').select('*').eq('aktiven', true).order('ocena', { ascending: false }).order('created_at', { ascending: false })
       .then(({ data }) => {
         if (!data) return
         setRealSkiperji(data)

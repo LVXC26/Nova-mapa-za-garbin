@@ -39,7 +39,10 @@ export default function CharterjiPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('charterji_javno').select('*').order('created_at', { ascending: false })
+    // Direktorjevo navodilo: bolje ocenjeni naj se prikazejo visje od slabse
+    // ocenjenih. Neocenjeni (ocena 0) ostanejo med sabo urejeni po datumu
+    // (novejsi prej), da jih to ne potisne trajno na dno drug proti drugemu.
+    supabase.from('charterji_javno').select('*').order('ocena', { ascending: false }).order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setRealCharterji(data) })
     supabase.from('plovila_javno').select('user_id, postelje').eq('tip_oglasa', 'najem')
       .then(({ data }) => {

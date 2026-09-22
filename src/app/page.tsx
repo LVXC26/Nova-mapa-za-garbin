@@ -64,7 +64,9 @@ export default function HomePage() {
     supabase.from('plovila_javno').select('*').eq('tip_oglasa', 'najem')
       .order('created_at', { ascending: false }).limit(50)
       .then(({ data }) => { if (data) setRealnaNajemPlovila(data) })
-    supabase.from('charterji_javno').select('*').order('created_at', { ascending: false }).limit(3)
+    // Direktorjevo navodilo: bolje ocenjeni naj se prikazejo visje - tudi
+    // med "izpostavljenimi" na domaci strani, isti vzorec kot /charterji.
+    supabase.from('charterji_javno').select('*').order('ocena', { ascending: false }).order('created_at', { ascending: false }).limit(3)
       .then(({ data }) => { if (data) setRealniCharterji(data) })
     supabase.from('promocije').select('*').eq('aktivna', true).order('created_at', { ascending: false }).limit(4)
       .then(({ data }) => { if (data) setRealnePromocije(data) })
