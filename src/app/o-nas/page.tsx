@@ -132,9 +132,9 @@ export default function ONasPage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-8">
               <div>
-                <h2 className="font-display text-2xl font-bold text-[#0c2340] mb-2">Najdete nas v Portorožu</h2>
+                <h2 className="font-display text-2xl font-bold text-[#0c2340] mb-2">Najdete nas v Lukovici</h2>
                 <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                  <MapPin className="w-4 h-4 text-[#c9a84c]" /> Obala 14, 6320 Portorož, Slovenija
+                  <MapPin className="w-4 h-4 text-[#c9a84c]" /> Cesta sv. Vida 10, 1225 Lukovica, Slovenija
                 </div>
                 <div className="flex items-center gap-2 text-gray-500 text-sm">
                   <Mail className="w-4 h-4 text-[#c9a84c]" /> matej@lumavx.com

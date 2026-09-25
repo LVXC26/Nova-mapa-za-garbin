@@ -35,7 +35,7 @@ export default function PogojiUporabePage() {
             <Razdelek naslov="1. Splošno">
               <p>
                 Ti pogoji uporabe urejajo uporabo spletne strani garbin.net ("Garbin", "platforma"), ki jo upravlja
-                LUMAVX s.p., Obala 14, 6320 Portorož. Z registracijo ali uporabo platforme sprejemate te pogoje.
+                LUMAVX s.p., Cesta sv. Vida 10, 1225 Lukovica. Z registracijo ali uporabo platforme sprejemate te pogoje.
                 Če se z njimi ne strinjate, platforme ne uporabljajte.
               </p>
             </Razdelek>
