@@ -78,6 +78,11 @@ export default function PogojiUporabePage() {
                 Plačila obdela zunanji ponudnik Stripe; Garbin ne shranjuje podatkov vaše plačilne kartice. Plačane
                 promocije se praviloma ne vračajo, razen v primeru tehnične napake na naši strani.
               </p>
+              <p>
+                Garbin lahko v določenih primerih deluje kot posrednik med stranko in charter podjetjem/skiperjem. V
+                takih primerih se Garbin s ponudnikom (charterjem/skiperjem) dogovori za nadomestilo (provizijo) za
+                posredovanje stranke. Višina nadomestila se določi individualno in ni javno objavljena.
+              </p>
             </Razdelek>
 
             <Razdelek naslov="6. Intelektualna lastnina">
