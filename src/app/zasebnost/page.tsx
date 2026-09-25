@@ -34,8 +34,7 @@ export default function ZasebnostPage() {
 
             <Razdelek naslov="1. Upravljavec osebnih podatkov">
               <p>
-                Upravljavec osebnih podatkov je <strong>LUMAVX s.p.</strong> (platforma Garbin), Obala 14, 6320 Portorož, Slovenija
-                (matična in davčna številka: <em>[vpiše se pred objavo]</em>).
+                Upravljavec osebnih podatkov je <strong>LUMAVX s.p.</strong> (platforma Garbin), Obala 14, 6320 Portorož, Slovenija.
               </p>
               <p>
                 Za vsa vprašanja glede zasebnosti in obdelave osebnih podatkov nas lahko kontaktirate na{' '}
@@ -49,7 +48,7 @@ export default function ZasebnostPage() {
                 <li><strong>Podatki ob registraciji:</strong> ime, e-poštni naslov, geslo (shranjeno šifrirano), vloga (kupec, charter, skipper).</li>
                 <li><strong>Podatki profila:</strong> naziv agencije, opis, fotografije, kontaktni podatki, ki jih sami dodate.</li>
                 <li><strong>Podatki o oglasih:</strong> informacije o plovilih, cene, lokacije, fotografije, ki jih objavite.</li>
-                <li><strong>Komunikacija:</strong> sporočila v internem klepetu med uporabniki in vsebina obrazcev za povpraševanje (ime, e-pošta, telefon, sporočilo).</li>
+                <li><strong>Komunikacija:</strong> sporočila v internem klepetu med uporabniki in vsebina obrazcev za povpraševanje (ime, e-pošta, telefon, sporočilo). Za povpraševanja, poslana charterju ali skiperju, je potrebna prijava — povpraševanje se poveže z vašim uporabniškim računom (ne samo s prosto vpisanimi podatki).</li>
                 <li><strong>Plačilni podatki:</strong> pri nakupu promocijskih paketov plačilo obdela Stripe — Garbin ne vidi in ne shranjuje številke vaše kartice.</li>
                 <li><strong>Tehnični podatki:</strong> IP naslov, tip naprave/brskalnika, obiskane strani — zbrano prek Google Analytics, samo če ste to dovolili.</li>
               </ul>
